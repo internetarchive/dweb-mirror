@@ -1,0 +1,45 @@
+{
+  "bugs": {
+    "url": "https://github.com/internetarchive/dweb-transport/issues"
+  },
+  "homepage": "https://github.com/internetarchive/dweb-transport#readme",
+  "name": "dweb-transport",
+  "version": "0.0.1",
+  "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
+  "dependencies": {
+    "dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git",
+    "dweb-objects": "git+https://git@github.com/internetarchive/dweb-objects.git",
+    "dweb-serviceworker": "git+https://git@github.com/internetarchive/dweb-serviceworker.git",
+    "dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git"
+  },
+  "keywords": [],
+  "license": "AGPL-3.0",
+  "author": {
+    "name": "Mitra Ardron",
+    "email": "mitra@archive.org",
+    "url": "http://www.mitra.biz"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babelify": "^8.0.0",
+    "browserify": "^14.5.0",
+    "chai": "^4.1.2",
+    "copy-webpack-plugin": "^4.5.1",
+    "watchify": "^3.11.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/internetarchive/dweb-transport.git"
+  },
+  "scripts": {
+    "test": "cd js; node ./test.js",
+    "bundletest": "cd js; browserify ./test_ipfs.js > ../examples/test_ipfs_bundled.js",
+    "help": "echo 'copyotherrepos: copies bundles from other places'",
+    "copyotherrepos": "cp ../dweb-transports/dist/dweb-transports-bundle.js ../dweb-objects/dist/dweb-objects-bundle.js ../dweb-serviceworker/dist/*-bundle.js  ./examples",
+    "copyarchive": "cp -r ../dweb-archive/dist/* ./examples",
+    "linkotherrepos": "cd examples; for i in ../node_modules/dweb-{transports,objects,serviceworker,archive}/dist/dweb*bundle.js; do ln -s $i .; done",
+    "build": "npm run linkotherrepos; npm run copyarchive"
+  }
+}
