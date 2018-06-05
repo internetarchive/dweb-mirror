@@ -1,4 +1,4 @@
-const errors = require('../js/Errors.js');
+const errors = require('./Errors.js');
 
 class MirrorUI {
 /*

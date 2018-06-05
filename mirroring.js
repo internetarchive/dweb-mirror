@@ -1,9 +1,7 @@
-//require('babel-core/register')({ presets: ['env', 'react']}); // ES6 JS below!
-//TODO unclear if need babel - esp if dont serve JSX internally
-const HashStore = require('./HashStore.js');
 //global.window = {}; // Target for things like window.onpopstate in Nav.js
-global.DwebTransports = require('../../dweb-transports/index.js'); //TODO-MIRROR move to repo
-global.DwebObjects = require('../../dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
+global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move to repo
+global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
+const HashStore = require('./HashStore.js');
 const MirrorItemFromStream = require('./MirrorItemFromStream.js');
 const MirrorCollection = require('./MirrorCollection.js');
 
@@ -28,8 +26,8 @@ class Mirror {
             // Incremental development building and testing components to path in README.md
             await DwebTransports.p_connect({transports: ["HTTP"]}, verbose);
             let itemid = "prelinger";
-            let limit = 10;
-            let maxpages = 5  ;
+            let limit = 3;
+            let maxpages = 3  ;
             let col = new MirrorCollection({itemid});
             let mifs = new MirrorItemFromStream({highWaterMark: 200});
             let through = await col.crawl_stream({limit, maxpages});

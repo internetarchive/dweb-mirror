@@ -9,5 +9,11 @@ class IntentionallyUnimplementedError extends Error {
         this.name = "IntentionallyUnimplementedError"
     }
 }
+class ToBeImplementedError extends Error {
+    constructor(message) {
+        super(message || "To be implemented");
+        this.name = "ToBeImplementedError"
+    }
+}
 
 errors.IntentionallyUnimplementedError = IntentionallyUnimplementedError;
