@@ -19,7 +19,6 @@ class MirrorItemFromStream extends stream.Transform {
         try {
             let itemid = searchres.identifier;
             let ai = new ArchiveItem({itemid});
-            console.log("XXX@MIFS_t after AI");
             ai.fetch().then(() =>  cb(null, ai)); // Async Gets metadata
         } catch(err) {
             cb(err);

@@ -26,10 +26,10 @@ class Mirror {
             // Incremental development building and testing components to path in README.md
             await DwebTransports.p_connect({transports: ["HTTP"]}, verbose);
             let itemid = "prelinger";
-            let limit = 3;
-            let maxpages = 3  ;
+            let limit = 10;
+            let maxpages = 3 ;
             let col = new MirrorCollection({itemid});
-            let mifs = new MirrorItemFromStream({highWaterMark: 200});
+            let mifs = new MirrorItemFromStream({highWaterMark: 6});
             let through = await col.crawl_stream({limit, maxpages});
             through.pipe(mifs);
             mifs.on('data', (data) => { console.log("Got",data.itemid); });

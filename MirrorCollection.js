@@ -16,42 +16,63 @@ class MirrorCollection extends ArchiveItem {
         this.options = options;
     }
 
-    async p_crawl({limit=100, maxpages=5, through=undefined}) {
-        /* Crawl a collection, calls a cb repetitively if provided
+
+
+    crawl_stream({limit=100, maxpages=5}) {
+        /* Crawl a collection, pass output to a stream
             maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
             limit:      How many items to fetch each time. 100 is probably about optimal //TODO-@IA check
+            returns:    PassThrough stream to read from
 
             The ArchiveItem will have numFound, start, page  set after each fetch
          */
+        let through = new stream.PassThrough({objectMode: true, highWaterMark: 3});
+        let self = this; // this is unavailable in _p_crawl
         try {
             if (limit) this.limit = limit;
-            this.page = 0;
-            while (this.page <= maxpages && ((typeof(this.numFound) === "undefined") || ((this.start + this.limit) < this.numFound))) {
-                this.page++;
-                await this.fetch(); // Should fetch next page of search, won't re-fetch metadata after first tie
-                if (verbose) console.log(this.start, this.items[0].identifier);
-                if (through) {
-                    this.items.map(i => {
-                        let success = through.write(i);
-                        if (!success) console.error("Failed to write stream=========================");
-                    });
-                }
-            }
-            through.end('FINISHED');
+            this.page = 0;                      // Reset page count, _p_crawl will call itself repeatedly until reaches maxpages
+            _p_crawl({maxpages, through}); // Don't wait on result of async call, as can exit under backpressure
         } catch(err) {
+            // Would be unexpected to see error here, more likely _p_crawl will catch it asynchronously
             console.error(err);
             through.destroy(new Error("Failure in p_crawl:" + err.message))
         }
         console.log("XXX@p_crawl ending");
-    }
+        return through;
 
-    crawl_stream(options) {
-        /* Create a stream and pass it the items read from the collection.
-            options see p_crawl
-         */
-        options.through = new stream.PassThrough({objectMode: true, highWaterMark: 3});
-        this.p_crawl(options);   // Note, not waiting on it
-        return options.through; // Readable Stream
+        async function _p_crawl() {
+            /* Crawl a collection, calls a cb repetitively if provided
+                maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
+                limit:      How many items to fetch each time. 100 is probably about optimal //TODO-@IA check
+
+                The ArchiveItem will have numFound, start, page  set after each fetch
+             */
+            console.log("Continuing _p_crawl")
+            try {
+                while (self.page <= maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
+                    self.page++;
+                    await self.fetch(); // Should fetch next page of search, won't re-fetch metadata after first tie
+                    if (verbose) console.log(self.start, self.items[0].identifier);
+                    let freeflowing;
+                    self.items.map(i => {
+                        freeflowing = through.write(i);
+                        if (!freeflowing) console.error(`Pushback at ${i.identifier} from stream=========================`);
+                        //if (freeflowing) console.log(`Success writing ${i.identifier} to stream >>>>>>>>>>>>>>>`)
+                    }); //map
+                    // Slightly unorthodox, keep writing one set of results even if backpressure, but if exit still under
+                    // backpressure then wait for the drain event.
+                    if (!freeflowing) {
+                        through.once("drain", _p_crawl);
+                        return; // Without finishing
+                    }
+                } //while
+                // Notice the return above will exit if sees backpressure
+                through.end('FINISHED');
+            } catch(err) {
+                console.error(err);
+                through.destroy(new Error("Failure in _p_crawl:" + err.message))
+            }
+        }
     }
 
     static async test() {
