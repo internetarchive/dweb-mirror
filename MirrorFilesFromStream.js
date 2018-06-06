@@ -1,6 +1,7 @@
-const stream = require('readable-stream');
 ArchiveItem = require('dweb-archive/ArchiveItem'); //TODO-MIRROR move to repo
+const stream = require('readable-stream');
 
+XXX uncompleted template
 
 class MirrorItemFromStream extends stream.Transform {
     /* Turn a stream of search results (and possibly other things) into a stream of ArchiveItems

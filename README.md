@@ -46,7 +46,6 @@ These will move to GIT once this moves to its own repository.
 * Incremental development ...
     * First target - mirror collection to disk
         * MIFS now passing back a stream of fetched ArchiveItem objects
-        * MC pushback when new MIFS stream is full HighWater of 200 is masking it, set it to 3 to make it fail
         * MC stream of AI items -> ItemResolverStream
         * MM - kick off MC
         * MM - pass metadata want to keep to HashStore

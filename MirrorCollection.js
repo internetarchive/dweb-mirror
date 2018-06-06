@@ -18,11 +18,11 @@ class MirrorCollection extends ArchiveItem {
 
 
 
-    crawl_stream({limit=100, maxpages=5}) {
+    s_searchitems({limit=100, maxpages=5}) {
         /* Crawl a collection, pass output to a stream
             maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
             limit:      How many items to fetch each time. 100 is probably about optimal //TODO-@IA check
-            returns:    PassThrough stream to read from
+            returns:    PassThrough stream to read from which will be a stream of ArchiveItem
 
             The ArchiveItem will have numFound, start, page  set after each fetch
          */
