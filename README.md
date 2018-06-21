@@ -38,48 +38,8 @@ Mirror|Stub|One class to rule them all
 
 
 ## API
+TODO - write this
 
-## TODO
-These will move to GIT once this moves to its own repository. 
-* Move to own repo... then add these points as issues
-
-* Incremental development ...
-    * First target - mirror collection to disk
-        * MIFS now passing back a stream of fetched ArchiveItem objects
-        * MC stream of AI items -> ItemResolverStream
-        * MM - kick off MC
-        * MM - pass metadata want to keep to HashStore
-        * MM - apply filters at item level
-        * MM - apply filters at file level
-        * MM - retrieve files
-        * MM - pass to FC
-        * MF - read stream of files 
-        * MF - store to Filesystem
-
-
-* Collection manager (MC)
-    * Manages external collections
-* File System manager (MF)
-    * Manages <config>/<item>/<file>
-    * Manages metadata in level db or json files
-* Mirror manager MM
-    * Schedules crawls based on configuration
-    * For a collection Knows how to retrieve metadata; crawl items; 
-* Serve:
-    * WebTorrent
-        * Integrated or via Aux app
-        * Make sure can see DHT
-    * IFPS
-        * Will probably need unixfs
-        * Will probably need add/pin
-* WebUI:
-    * Configuration
-        * Reads and writes a configuration table (In hashstore)
-        * Presents a simple UI via a browser
-        * Allows editing of collections being mirrored and any parameters
-    * Viewing
-        * Builds on archive.html - may in fact be integrated there
-        
         
 
 

@@ -41,7 +41,7 @@ class MirrorCollection extends ArchiveItem {
         return through;
 
         async function _p_crawl() {
-            /* Crawl a collection, calls a cb repetitively if provided
+            /* Crawl a collection, calls itself repeatedly after pushback
                 maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
                 limit:      How many items to fetch each time. 100 is probably about optimal //TODO-@IA check
 

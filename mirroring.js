@@ -5,6 +5,7 @@ global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing s
 const HashStore = require('./HashStore.js');
 const MirrorItemFromStream = require('./MirrorItemFromStream.js');
 const MirrorCollection = require('./MirrorCollection.js');
+const MirrorFilesFromStream = require('./MirrorFilesFromStream.js');
 
 
 config = {
@@ -19,10 +20,11 @@ class MirrorStreamDebug extends stream.Transform {
         /* cb is function to turn item into something console.log can handle */
         let name = options.name || "Results";
         delete options.name;
-        let map = options.map || function(m) { return m};
+        let map = options.map || function(m) { return m};   // A function to transform data, not normally used
         delete options.name;
         let log = options.log || function(m) { return [name, ":", m]};
         delete options.log;
+        options.highWaterMark = options.highWaterMark || 99999; // Dont let this debugging cause backpressure itself
         options.objectMode = true;
         super(options);
         this.name = name;
@@ -60,11 +62,18 @@ class Mirror {
             // Total number of results will be ~ maxpages * limit
             let limit = 3;
             let maxpages = 3 ;
-            new MirrorCollection({itemid})
-                .s_searchitems({limit, maxpages})
+            new MirrorCollection({itemid})          // Initialize collection
+                // Collection ready to search
+                .s_searchitems({limit, maxpages})   // Repeatedly fetch new pages for the collection
+                // a stream of Search results (minimal JSON) ready for fetching
                 .pipe(new MirrorStreamDebug({log: (m)=>["SearchResult:", m.identifier]}))
                 .pipe(new MirrorItemFromStream({highWaterMark: 3}))
+                // a stream of ArchiveItem's with metadata fetched
                 .pipe(new MirrorStreamDebug({log: (m)=>["ItemResult:", m.itemid]}))
+                .pipe(new MirrorFilesFromStream({highWaterMark: 3}))
+                .pipe(new MirrorStreamDebug({log: (m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]}))
+                // a stream of ArchiveFiles's with metadata fetched
+
         } catch(err) {
             console.error(err);
         }

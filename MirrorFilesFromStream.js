@@ -1,29 +1,34 @@
-ArchiveItem = require('dweb-archive/ArchiveItem'); //TODO-MIRROR move to repo
 const stream = require('readable-stream');
 
-XXX uncompleted template
-
-class MirrorItemFromStream extends stream.Transform {
-    /* Turn a stream of search results (and possibly other things) into a stream of ArchiveItems
-
+class MirrorFilesFromStream extends stream.Transform {
+    /*
+    input stream - search results or collection as ArchiveItems with metadata fetched TODO maybe accept other things
+    output stream of ArchiveFile suitable for retrieving
      */
     constructor(options) {
+        /*
+        options: { highWaterMark: number of items in stream before start pushing back}
+         */
         options.objectMode = true;
         super(options);
     }
-    _transform(searchres, encoding, cb) {    // A search result got written to this stream
-        // TODO may be other kinds of things we want to accept a stream of
-        if (typeof encoding === 'function') {
+    _transform(archiveitem, encoding, cb) {    // A search result got written to this stream
+        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
         }
         try {
-            let itemid = searchres.identifier;
-            let ai = new ArchiveItem({itemid});
-            ai.fetch().then(() =>  cb(null, ai)); // Async Gets metadata
+            console.log("Trying",archiveitem.itemid)
+            let self=this;
+            //this.push(archiveitem._list[0]) //Works
+            if (archiveitem._list) {  // Will be undefined if no files
+                archiveitem._list.forEach(archivefile => console.log("XXX", archivefile.metadata.name)); //Fails
+                archiveitem._list.forEach(archivefile => self.push(archivefile)); //Fails
+            }
+            cb();
         } catch(err) {
             cb(err);
         }
     }
 }
-exports = module.exports = MirrorItemFromStream;
+exports = module.exports = MirrorFilesFromStream;
