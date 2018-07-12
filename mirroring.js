@@ -4,7 +4,7 @@ global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move 
 global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
-const s = require('./MirrorMapStream.js');
+const s = require('./MirrorStreams.js');
 
 
 config = {

@@ -60,8 +60,11 @@ class s {
     map(cb) {
         return new _MirrorMapStream(cb, this.options);
     }
+
     split() {
+        // TODO could add options as to whether should handle single objs as well as arrays and whether to ignore undefined
         return new _MirrorSplitStream(this.options);
+
     }
 }
 
