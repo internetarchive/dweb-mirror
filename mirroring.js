@@ -65,14 +65,15 @@ class Mirror {
                 // Collection ready to search
                 .s_searchitems({limit, maxpages})   // Repeatedly fetch new pages for the collection
                 // a stream of Search results (minimal JSON) ready for fetching
+                .pipe(new s().slice(0,1))   //TODO-MIRROR remove this debugging
                 .pipe(new MirrorStreamDebug({log: (m)=>["SearchResult:", m.identifier]}))
                 //.pipe(new MirrorItemFromStream({highWaterMark: 3}))
-
                 //.pipe(new MirrorMapStream((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
                 .pipe(new s().map((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
                 // a stream of arrays of ArchiveFiles
                 .pipe(new s().split())
                 // a stream of ArchiveFiles's with metadata fetched
+                .pipe(new s().slice(0,1))   //TODO-MIRROR remove this debugging
                 .pipe(new MirrorStreamDebug({log: (m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]}))
                 //.pipe(new MirrorStreamDebug())
 

@@ -51,6 +51,36 @@ class _MirrorSplitStream extends MirrorBaseStream {
         }
     }
 }
+class _MirrorSliceStream extends MirrorBaseStream {
+    /*
+    input stream - of objects (or anything really)
+    output stream - equivalent of .splice(
+     */
+
+
+    constructor(begin=0, end=undefined, options={}) {
+        super(options)
+        this.beginx = begin;
+        this.endx = end; // Not included, undefined to continue
+        this.count = 0; // How many already processed
+    }
+
+    _transform(o, encoding, cb) {    // A search result got written to this stream
+        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
+            cb = encoding;
+            encoding = null;
+        }
+        try {
+            if ((this.beginx <= this.count) && ((typeof this.endx  === "undefined")|| this.count < this.endx)) {
+                this.push(o);
+            }
+            this.count++; //Note count is how many processed, not how many pushed
+            cb();
+        } catch(err) {
+            cb(err);
+        }
+    }
+}
 
 
 class s {
@@ -60,11 +90,12 @@ class s {
     map(cb) {
         return new _MirrorMapStream(cb, this.options);
     }
-
     split() {
         // TODO could add options as to whether should handle single objs as well as arrays and whether to ignore undefined
         return new _MirrorSplitStream(this.options);
-
+    }
+    slice(begin, end) {
+        return new _MirrorSliceStream(begin, end, this.options);
     }
 }
 
