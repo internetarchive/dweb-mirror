@@ -1,5 +1,5 @@
 const stream = require('readable-stream');
-ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
+ArchiveItem = require('dweb-archive-require/ArchiveItem');  //TODO-MIRROR move to repo
 
 class MirrorCollection extends ArchiveItem {
     constructor(options) {

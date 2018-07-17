@@ -9,11 +9,23 @@ class IntentionallyUnimplementedError extends Error {
         this.name = "IntentionallyUnimplementedError"
     }
 }
+errors.IntentionallyUnimplementedError = IntentionallyUnimplementedError;
+
 class ToBeImplementedError extends Error {
     constructor(message) {
         super(message || "To be implemented");
         this.name = "ToBeImplementedError"
     }
 }
+errors.ToBeImplementedError = ToBeImplementedError;
 
-errors.IntentionallyUnimplementedError = IntentionallyUnimplementedError;
+class MissingDirectoryError extends Error {
+    constructor(message) {
+        super(message || "Directory is missing");
+        this.name = "MissingDirectoryError"
+    }
+
+}
+errors.MissingDirectoryError = MissingDirectoryError;
+
+exports = module.exports = errors;

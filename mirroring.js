@@ -4,8 +4,8 @@ global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move 
 global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
+const MirrorFS = require('./MirrorFS.js');
 const s = require('./MirrorStreams.js');
-
 
 config = {
     hashstore: { file: "level_db" },
@@ -75,6 +75,7 @@ class Mirror {
                 // a stream of ArchiveFiles's with metadata fetched
                 .pipe(new s().slice(0,1))   //TODO-MIRROR remove this debugging
                 .pipe(new MirrorStreamDebug({log: (m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]}))
+                .pipe(new MirrorFS({directory: "/Users/mitra/temp/mirrored"}))
                 //.pipe(new MirrorStreamDebug())
 
         } catch(err) {
