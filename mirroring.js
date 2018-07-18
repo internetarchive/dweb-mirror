@@ -6,11 +6,13 @@ const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorFS = require('./MirrorFS.js');
 const s = require('./MirrorStreams.js');
+ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
 
 config = {
     hashstore: { file: "level_db" },
     ui: {},
     fs: {},
+    directory: "/Users/mitra/temp/mirrored",
 };
 
 class MirrorStreamDebug extends stream.Transform {
@@ -56,7 +58,7 @@ class Mirror {
         try {
             global.verbose = false;
             // Incremental development building and testing components to path in README.md
-            await DwebTransports.p_connect({transports: ["HTTP"]}, verbose);
+            await DwebTransports.p_connect({transports: ["HTTP", "WEBTORRENT"]}, verbose);
             let itemid = "prelinger";
             // Total number of results will be ~ maxpages * limit
             let limit = 3;
@@ -65,7 +67,7 @@ class Mirror {
                 // Collection ready to search
                 .s_searchitems({limit, maxpages})   // Repeatedly fetch new pages for the collection
                 // a stream of Search results (minimal JSON) ready for fetching
-                .pipe(new s().slice(0,1))   //TODO-MIRROR remove this debugging
+                //.pipe(new s().slice(0,1))   //Restrict to first Archive Item
                 .pipe(new MirrorStreamDebug({log: (m)=>["SearchResult:", m.identifier]}))
                 //.pipe(new MirrorItemFromStream({highWaterMark: 3}))
                 //.pipe(new MirrorMapStream((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
@@ -73,9 +75,11 @@ class Mirror {
                 // a stream of arrays of ArchiveFiles
                 .pipe(new s().split())
                 // a stream of ArchiveFiles's with metadata fetched
-                .pipe(new s().slice(0,1))   //TODO-MIRROR remove this debugging
+                .pipe(new s().filter(af => af.metadata.size < 1000000))
+                .pipe(new s().slice(0,100))   //TODO-MIRROR remove this debugging - limits to first ArchiveItem found
                 .pipe(new MirrorStreamDebug({log: (m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]}))
-                .pipe(new MirrorFS({directory: "/Users/mitra/temp/mirrored"}))
+                .pipe(new MirrorFS({directory: config.directory, parallel: true }))
+                //.pipe(new MirrorStreamDebug({log: (o)=>["MirrorFS Result:", `${o.archivefile.itemid}/${o.archivefile.metadata.name} size=${o.size} expect size=${o.archivefile.metadata.size}`]}))
                 //.pipe(new MirrorStreamDebug())
 
         } catch(err) {

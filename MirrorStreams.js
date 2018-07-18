@@ -82,7 +82,32 @@ class _MirrorSliceStream extends MirrorBaseStream {
     }
 }
 
+class _MirrorFilterStream extends MirrorBaseStream {
+    /*
+    input stream
+    output stream filtered by cb
+     */
+    constructor(cb, options={}) {
+        super(options); // None currently
+        this.cb = cb;
+    }
 
+
+    _transform(o, encoding, cb) {    // A search result got written to this stream
+        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
+            cb = encoding;
+            encoding = null;
+        }
+        try {
+            if (this.cb(o)) {
+                this.push(o);   // Only push if matches filter
+            }
+            cb();
+        } catch(err) {
+            cb(err);
+        }
+    }
+}
 class s {
     constructor(options={}) {
         this.options=options;
@@ -96,6 +121,9 @@ class s {
     }
     slice(begin, end) {
         return new _MirrorSliceStream(begin, end, this.options);
+    }
+    filter(cb) {
+        return new _MirrorFilterStream(cb, this.options);
     }
 }
 

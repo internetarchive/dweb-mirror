@@ -2,15 +2,44 @@ process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const MirrorBaseStream = require('./MirrorBaseStream');
 const errors = require('./Errors.js');
+const ArchiveFile = require('dweb-archive/ArchiveFile.js');
+const DwebTransports = require('dweb-transports');
+const DTerrors = require('dweb-transports/Errors.js');
 
 class MirrorFS extends MirrorBaseStream {
 
     constructor(options={}) {
         super(options);
         this.directory = options.directory;
+        this.parallel = options.parallel;
+    }
+    async _streamFrom(source, cb) {
+        /*
+            Takes an archivefile, may extend to other types
+            source:   Data source, currently supports ArchiveFile only.
+            cb(err, stream): Called with open stream.
+            TODO-MIRROR move this to ArchiveFile, its generally useful - if so, make it return a promise if cb not defined
+         */
+        if (source instanceof ArchiveFile) {
+            let urls = await source.p_urls();
+            try {
+                let crs = await DwebTransports.p_f_createReadStream(urls, {verbose});
+                cb(null, crs({start:0}));
+            } catch(err) {
+                if (err instanceof DTerrors.TransportError) {
+                    console.warn("MirrorFS._streamFrom caught", err.message);
+                } else {
+                    console.error("MirrorFS._streamFrom caught", err);
+                }
+                cb(err);
+            }
+        } else {
+            cb(new Error("Cannot _streamFrom", source))
+        }
+
     }
 
-    _afopen(root, dir, f, cb){  // cb(fd)
+    _fileopen(root, dir, f, cb){  // cb(fd)
         try {
             let dirname = `${root}/${dir}`;
             let filename = `${root}/${dir}/${f}`;
@@ -47,12 +76,45 @@ class MirrorFS extends MirrorBaseStream {
         }
         try {
             console.log("XXX@MirrorFS");
-            this._afopen(this.directory, archivefile.itemid, archivefile.metadata.name, (err, fd) => {
-                console.log("XXX after _afopen",err,fd);
-                fs.close(fd);
-            })
-            cb();
+            this._streamFrom(archivefile, (err, s) => {
+                if (err) {
+                    console.warn("MirrorFS._transform ignoring error",err.message);
+                    cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
+                    // Dont try and write it
+                } else {
+                    this._fileopen(this.directory, archivefile.itemid, archivefile.metadata.name, (err, fd) => {
+                        if (err) {
+                            console.log("MirrorFS._transform passing on error", err.message);
+                            cb(err);
+                        } else {
+                            // fd is the file descriptor of the newly opened file;
+                            console.log("XXX after _afopen", err, fd);
+                            let writable = fs.createWriteStream(null, {fd: fd});
+                            writable.on('close', () => {
+                                let expected = archivefile.metadata.size;
+                                let bytesWritten = writable.bytesWritten;
+                                if (expected != bytesWritten) {  // Intentionally != as expected is a string
+                                    console.warn(`File ${archivefile.itemid}/${archivefile.metadata.name} size=${bytesWritten} doesnt match expected ${expected}`)
+                                } else {
+                                    console.log(`Closing ${archivefile.itemid}/${archivefile.metadata.name} size=${writable.bytesWritten}`)
+                                }
+                                if (! this.parallel) {
+                                    cb(null, {archivefile, size: writable.bytesWritten});
+                                } else {
+                                    //this.push({archivefile, size: writable.bytesWritten})); //TODO-MIRROR wont work - as pushes after stream closed
+                                }});
+                            s.pipe(writable);
+                            if (this.parallel) {
+                                cb(null);   // Return quickly and allow push to pass it on
+                            }
+                            //fs.close(fd); Should be auto closed
+                            // Note at this point file is neither finished, nor closed, its being written.
+                        }
+                    })
+                }
+            });
         } catch(err) {
+            console.log("MirrorFS caught error", err.message)
             cb(err);
         }
     }
