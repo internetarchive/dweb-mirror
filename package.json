@@ -10,7 +10,8 @@
     "dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
     "dweb-objects": "git+https://git@github.com/internetarchive/dweb-objects.git",
     "dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
-    "level": "^4.0.0"
+    "level": "^4.0.0",
+    "wrtc": "latest"
   },
   "keywords": [],
   "license": "AGPL-3.0",

@@ -7,7 +7,7 @@ const MirrorCollection = require('./MirrorCollection.js');
 const MirrorFS = require('./MirrorFS.js');
 const s = require('./MirrorStreams.js');
 ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
-
+const wrtc = require('wrtc');
 config = {
     hashstore: { file: "level_db" },
     ui: {},
@@ -56,9 +56,13 @@ class Mirror {
     }
     static async p_dev_mirror() {
         try {
-            global.verbose = false;
+            global.verbose = true;
             // Incremental development building and testing components to path in README.md
-            await DwebTransports.p_connect({transports: ["HTTP", "WEBTORRENT"]}, verbose);
+            await DwebTransports.p_connect({
+                    transports: ["HTTP", "WEBTORRENT"],
+                    webtorrent: {tracker: { wrtc }},
+                }, verbose);
+            //TODO-MIRROR this is working around default that HTTP doesnt support streams, till sure can use same interface with http & WT
             let itemid = "prelinger";
             // Total number of results will be ~ maxpages * limit
             let limit = 3;
