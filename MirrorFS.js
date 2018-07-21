@@ -5,6 +5,7 @@ const errors = require('./Errors.js');
 const ArchiveFile = require('dweb-archive/ArchiveFile.js');
 const DwebTransports = require('dweb-transports');
 const DTerrors = require('dweb-transports/Errors.js');
+const path = require('path');
 
 class MirrorFS extends MirrorBaseStream {
 
@@ -40,7 +41,23 @@ class MirrorFS extends MirrorBaseStream {
 
     }
 
-    _fileopen(root, dir, f, cb){  // cb(fd)
+    _mkdir(dirname, cb) {
+        fs.mkdir(dirname, err => {
+            if (err) {
+                if (err.code === "ENOENT") { // missing parent dir
+                    let parentdir = path.dirname(dirname);
+                    this._mkdir(parentdir, err => {
+                        if (err) cb(err); // Dont know how to tackle error from _mkdir
+                        fs.mkdir(dirname, cb);
+                    })
+                } else {
+                    cb(err); // Throw any other error
+                }
+            }
+            cb();
+        })
+    }
+    _fileopen(root, dir, f, cb){  // cb(err, fd)
         try {
             let dirname = `${root}/${dir}`;
             let filename = `${root}/${dir}/${f}`;
@@ -51,8 +68,9 @@ class MirrorFS extends MirrorBaseStream {
                             if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${this.directory} is missing - please create by hand`);
                             //TODO-MIRROR-LATER check directory writable from the stats
                             console.log("MirrorFS creating directory: ")
-                            fs.mkdir(dirname, err => {
-                                if (err) {console.log("Failed to mkdir", dirname); throw err; }
+                            this._mkdir(path.dirname(filename), err => {
+                                if (err) {
+                                    console.log("Failed to mkdir", dirname); cb(err); }
                                 fs.open(filename, 'w', (err, fd) => {
                                     if (err) { console.log("Failed to open", filename, "after mkdir"); throw err; }
                                     cb(null, fd)
@@ -60,7 +78,7 @@ class MirrorFS extends MirrorBaseStream {
                             });
                         });
                     } else {
-                        throw(err); // Not specifically handling it - so throw it up
+                        cb(err); // Not specifically handling it - so throw it up
                     }
                 } else {
                     cb(null, fd);
