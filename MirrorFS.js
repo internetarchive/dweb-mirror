@@ -24,7 +24,8 @@ class MirrorFS extends MirrorBaseStream {
             let urls = await source.p_urls();
             try {
                 let crs = await DwebTransports.p_f_createReadStream(urls, {verbose});
-                cb(null, crs({start:0}));
+                let temp = await crs({start:0});
+                cb(null, temp ); //TODO-MIRROR check that await crs works if crs is not a promise
             } catch(err) {
                 if (err instanceof DTerrors.TransportError) {
                     console.warn("MirrorFS._streamFrom caught", err.message);

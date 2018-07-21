@@ -63,6 +63,7 @@ class Mirror {
                     webtorrent: {tracker: { wrtc }},
                 }, verbose);
             //TODO-MIRROR this is working around default that HTTP doesnt support streams, till sure can use same interface with http & WT
+            DwebTransports.http(verbose).supportFunctions.push("createReadStream");
             let itemid = "prelinger";
             // Total number of results will be ~ maxpages * limit
             let limit = 3;
