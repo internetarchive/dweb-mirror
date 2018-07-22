@@ -6,6 +6,7 @@ const ArchiveFile = require('dweb-archive/ArchiveFile.js');
 const DwebTransports = require('dweb-transports');
 const DTerrors = require('dweb-transports/Errors.js');
 const path = require('path');
+const sha = require('sha');
 
 class MirrorFS extends MirrorBaseStream {
 
@@ -59,10 +60,8 @@ class MirrorFS extends MirrorBaseStream {
             cb();
         })
     }
-    _fileopen(root, dir, f, cb){  // cb(err, fd)
+    _fileopen(filename, cb){  // cb(err, fd)
         try {
-            let dirname = `${root}/${dir}`;
-            let filename = `${root}/${dir}/${f}`;
             fs.open(filename, 'w', (err, fd) => {
                 if (err) {
                     if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
@@ -71,8 +70,7 @@ class MirrorFS extends MirrorBaseStream {
                             //TODO-MIRROR-LATER check directory writable from the stats
                             console.log("MirrorFS creating directory: ")
                             this._mkdir(path.dirname(filename), err => {
-                                if (err) {
-                                    console.log("Failed to mkdir", dirname); cb(err); }
+                                if (err) { console.log("Failed to mkdir for", filename); cb(err); }
                                 fs.open(filename, 'w', (err, fd) => {
                                     if (err) { console.log("Failed to open", filename, "after mkdir"); throw err; }
                                     cb(null, fd)
@@ -100,6 +98,7 @@ class MirrorFS extends MirrorBaseStream {
         cb();
     }
 
+
     _transform(archivefile, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
@@ -107,48 +106,57 @@ class MirrorFS extends MirrorBaseStream {
         }
         if (this.parallelcount >= this.parallel) {
             console.log("MirrorFS: waiting for parallel availability using", this.parallelcount,"of", this.parallel);
-            setTimeout(()=>this._transform(archivefile, encoding, cb))
+            setTimeout(()=>this._transform(archivefile, encoding, cb), 200);
             return;
         }
         try {
             this.parallelcount++;
             if (this.parallelcount > this.parallelmax) this.parallelmax = this.parallelcount;
-            this._streamFrom(archivefile, (err, s) => {
+            let filepath = path.join(this.directory, archivefile.itemid, archivefile.metadata.name);
+            sha.check(filepath, archivefile.metadata.sha1, (err) => {
                 if (err) {
-                    console.warn("MirrorFS._transform ignoring error",err.message);
-                    cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
-                    // Dont try and write it
-                } else {
-                    this._fileopen(this.directory, archivefile.itemid, archivefile.metadata.name, (err, fd) => {
+                    this._streamFrom(archivefile, (err, s) => {
                         if (err) {
-                            console.log("MirrorFS._transform passing on error", err.message);
-                            cb(err);
+                            console.warn("MirrorFS._transform ignoring error", err.message);
+                            cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
+                            // Dont try and write it
                         } else {
-                            // fd is the file descriptor of the newly opened file;
-                            let writable = fs.createWriteStream(null, {fd: fd});
-                            writable.on('close', () => {
-                                let expected = archivefile.metadata.size;
-                                let bytesWritten = writable.bytesWritten;
-                                if (expected != bytesWritten) {  // Intentionally != as expected is a string
-                                    console.warn(`File ${archivefile.itemid}/${archivefile.metadata.name} size=${bytesWritten} doesnt match expected ${expected}`)
+                            this._fileopen(filepath, (err, fd) => {
+                                if (err) {
+                                    console.log("MirrorFS._transform passing on error", err.message);
+                                    cb(err);
                                 } else {
-                                    console.log(`Closing ${archivefile.itemid}/${archivefile.metadata.name} size=${writable.bytesWritten}`)
+                                    // fd is the file descriptor of the newly opened file;
+                                    let writable = fs.createWriteStream(null, {fd: fd});
+                                    writable.on('close', () => {
+                                        let expected = archivefile.metadata.size;
+                                        let bytesWritten = writable.bytesWritten;
+                                        if (expected != bytesWritten) {  // Intentionally != as expected is a string
+                                            console.warn(`File ${archivefile.itemid}/${archivefile.metadata.name} size=${bytesWritten} doesnt match expected ${expected}`)
+                                        } else {
+                                            console.log(`Closing ${archivefile.itemid}/${archivefile.metadata.name} size=${writable.bytesWritten}`)
+                                        }
+                                        if (!this.parallel) {
+                                            cb(null, {archivefile, size: writable.bytesWritten});
+                                        } else {
+                                            this.push({archivefile, size: writable.bytesWritten}); //TODO-MIRROR wont work - as pushes after stream closed
+                                        }
+                                        this.parallelcount--;
+                                    });
+                                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                                    if (this.parallel) {
+                                        cb(null);   // Return quickly and allow push to pass it on
+                                    }
+                                    //fs.close(fd); Should be auto closed
+                                    // Note at this point file is neither finished, nor closed, its being written.
                                 }
-                                if (! this.parallel) {
-                                    cb(null, {archivefile, size: writable.bytesWritten});
-                                } else {
-                                    this.push({archivefile, size: writable.bytesWritten}); //TODO-MIRROR wont work - as pushes after stream closed
-                                }
-                                this.parallelcount--;
-                            });
-                            s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                            if (this.parallel) {
-                                cb(null);   // Return quickly and allow push to pass it on
-                            }
-                            //fs.close(fd); Should be auto closed
-                            // Note at this point file is neither finished, nor closed, its being written.
+                            })
                         }
-                    })
+                    });
+                } else { // sha1 matched, skip
+                    console.log("Skipping", filepath, "as sha1 matches");
+                    this.parallelcount--;
+                    cb(null,  {archivefile, size: -1});
                 }
             });
         } catch(err) {

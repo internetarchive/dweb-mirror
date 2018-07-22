@@ -82,9 +82,9 @@ class Mirror {
                 .pipe(new s().split())
                 // a stream of ArchiveFiles's with metadata fetched
                 .pipe(new s().filter(af => af.metadata.size < 1000000))
-                .pipe(new s().slice(0,100))   //TODO-MIRROR remove this debugging - limits to first ArchiveItem found
+                .pipe(new s().slice(0,200))   //TODO-MIRROR remove this debugging - limits to first ArchiveItem found
                 .pipe(new MirrorStreamDebug({log: (m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]}))
-                .pipe(new MirrorFS({directory: config.directory, parallel: 2 }))
+                .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))
                 .pipe(new MirrorStreamDebug({log: (o)=>["MirrorFS Result:", `${o.archivefile.itemid}/${o.archivefile.metadata.name} size=${o.size} expect size=${o.archivefile.metadata.size}`]}))
                 //.pipe(new MirrorStreamDebug())
 

@@ -11,6 +11,7 @@
     "dweb-objects": "git+https://git@github.com/internetarchive/dweb-objects.git",
     "dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
     "level": "^4.0.0",
+    "sha": "^2.0.1",
     "wrtc": "latest"
   },
   "keywords": [],
