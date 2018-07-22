@@ -13,6 +13,8 @@ class MirrorFS extends MirrorBaseStream {
         super(options);
         this.directory = options.directory;
         this.parallel = options.parallel;
+        this.parallelcount = 0; // Keeps track of number of parallel threads running
+        this.parallelmax = 0;
     }
     async _streamFrom(source, cb) {
         /*
@@ -88,13 +90,29 @@ class MirrorFS extends MirrorBaseStream {
             cb(err);
         }
     }
+    _final(cb) {
+        if (this.parallelcount) {
+            console.log("MirrorFS: Waiting on", this.parallelcount,"threads to close");
+            setTimeout(()=>this._final(cb), 1000);
+            return;
+        }
+        console.log("MirrorFS: Closing parallel streams");
+        cb();
+    }
+
     _transform(archivefile, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
         }
+        if (this.parallelcount >= this.parallel) {
+            console.log("MirrorFS: waiting for parallel availability using", this.parallelcount,"of", this.parallel);
+            setTimeout(()=>this._transform(archivefile, encoding, cb))
+            return;
+        }
         try {
-            console.log("XXX@MirrorFS");
+            this.parallelcount++;
+            if (this.parallelcount > this.parallelmax) this.parallelmax = this.parallelcount;
             this._streamFrom(archivefile, (err, s) => {
                 if (err) {
                     console.warn("MirrorFS._transform ignoring error",err.message);
@@ -107,7 +125,6 @@ class MirrorFS extends MirrorBaseStream {
                             cb(err);
                         } else {
                             // fd is the file descriptor of the newly opened file;
-                            console.log("XXX after _afopen", err, fd);
                             let writable = fs.createWriteStream(null, {fd: fd});
                             writable.on('close', () => {
                                 let expected = archivefile.metadata.size;
@@ -120,9 +137,11 @@ class MirrorFS extends MirrorBaseStream {
                                 if (! this.parallel) {
                                     cb(null, {archivefile, size: writable.bytesWritten});
                                 } else {
-                                    //this.push({archivefile, size: writable.bytesWritten})); //TODO-MIRROR wont work - as pushes after stream closed
-                                }});
-                            s.pipe(writable);
+                                    this.push({archivefile, size: writable.bytesWritten}); //TODO-MIRROR wont work - as pushes after stream closed
+                                }
+                                this.parallelcount--;
+                            });
+                            s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                             if (this.parallel) {
                                 cb(null);   // Return quickly and allow push to pass it on
                             }
@@ -133,7 +152,8 @@ class MirrorFS extends MirrorBaseStream {
                 }
             });
         } catch(err) {
-            console.log("MirrorFS caught error", err.message)
+            console.log("MirrorFS caught error", err.message);
+            this.parallelcount--;
             cb(err);
         }
     }
