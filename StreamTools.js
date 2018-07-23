@@ -10,7 +10,7 @@ class _MirrorMapStream extends ParallelStream {
         this.mapfunction = cb;
     }
 
-    _transform(o, encoding, cb) {    // A search result got written to this stream
+    _parallel(o, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
@@ -34,7 +34,7 @@ class _MirrorSplitStream extends ParallelStream {
     input stream - of arrays
     output stream - expand arrays into a single stream
      */
-    _transform(oo, encoding, cb) {    // A search result got written to this stream
+    _parallel(oo, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
@@ -65,7 +65,7 @@ class _MirrorSliceStream extends ParallelStream {
         this.count = 0; // How many already processed
     }
 
-    _transform(o, encoding, cb) {
+    _parallel(o, encoding, cb) {
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
@@ -93,7 +93,7 @@ class _MirrorFilterStream extends ParallelStream {
     }
 
 
-    _transform(o, encoding, cb) {    // A search result got written to this stream
+    _parallel(o, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
