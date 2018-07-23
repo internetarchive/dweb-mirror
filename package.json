@@ -1,11 +1,13 @@
 {
+  "author": {
+    "name": "Mitra Ardron",
+    "email": "mitra@archive.org",
+    "url": "http://www.mitra.biz"
+  },
   "bugs": {
     "url": "https://github.com/internetarchive/dweb-mirror/issues"
   },
-  "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
   "name": "dweb-mirror",
-  "version": "0.0.1",
-  "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "dependencies": {
     "dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
     "dweb-objects": "git+https://git@github.com/internetarchive/dweb-objects.git",
@@ -14,19 +16,17 @@
     "sha": "^2.0.1",
     "wrtc": "latest"
   },
+  "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
+  "devDependencies": {},
+  "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
   "keywords": [],
   "license": "AGPL-3.0",
-  "author": {
-    "name": "Mitra Ardron",
-    "email": "mitra@archive.org",
-    "url": "http://www.mitra.biz"
-  },
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git://github.com/internetarchive/dweb-mirror.git"
   },
   "scripts": {
     "build": "echo 'TODO: build is Not defined yet'"
-  }
+  },
+  "version": "0.0.2"
 }
