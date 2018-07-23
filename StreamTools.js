@@ -1,6 +1,6 @@
-const MirrorBaseStream = require('./MirrorBaseStream');
+const ParallelStream = require('./ParallelStream');
 
-class _MirrorMapStream extends MirrorBaseStream {
+class _MirrorMapStream extends ParallelStream {
     /*
     input stream - any objects
     output stream - transformed depending
@@ -29,7 +29,7 @@ class _MirrorMapStream extends MirrorBaseStream {
     }
 }
 
-class _MirrorSplitStream extends MirrorBaseStream {
+class _MirrorSplitStream extends ParallelStream {
     /*
     input stream - of arrays
     output stream - expand arrays into a single stream
@@ -51,10 +51,10 @@ class _MirrorSplitStream extends MirrorBaseStream {
         }
     }
 }
-class _MirrorSliceStream extends MirrorBaseStream {
+class _MirrorSliceStream extends ParallelStream {
     /*
     input stream - of objects (or anything really)
-    output stream - equivalent of .splice(
+    output stream - equivalent of .splice
      */
 
 
@@ -65,7 +65,7 @@ class _MirrorSliceStream extends MirrorBaseStream {
         this.count = 0; // How many already processed
     }
 
-    _transform(o, encoding, cb) {    // A search result got written to this stream
+    _transform(o, encoding, cb) {
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
@@ -82,7 +82,7 @@ class _MirrorSliceStream extends MirrorBaseStream {
     }
 }
 
-class _MirrorFilterStream extends MirrorBaseStream {
+class _MirrorFilterStream extends ParallelStream {
     /*
     input stream
     output stream filtered by cb

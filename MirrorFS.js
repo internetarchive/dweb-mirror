@@ -1,6 +1,6 @@
 process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const MirrorBaseStream = require('./MirrorBaseStream');
+const ParallelStream = require('./ParallelStream');
 const errors = require('./Errors.js');
 const ArchiveFile = require('dweb-archive/ArchiveFile.js');
 const DwebTransports = require('dweb-transports');
@@ -8,14 +8,14 @@ const DTerrors = require('dweb-transports/Errors.js');
 const path = require('path');
 const sha = require('sha');
 
-class MirrorFS extends MirrorBaseStream {
+class MirrorFS extends ParallelStream {
 
     constructor(options={}) {
-        super(options);
+        const defaultoptions = {
+            parallel: 10,
+        }
+        super(Object.assign(defaultoptions, options));
         this.directory = options.directory;
-        this.parallel = options.parallel;
-        this.parallelcount = 0; // Keeps track of number of parallel threads running
-        this.parallelmax = 0;
     }
     async _streamFrom(source, cb) {
         /*
@@ -89,29 +89,28 @@ class MirrorFS extends MirrorBaseStream {
         }
     }
     _final(cb) {
-        if (this.parallelcount) {
-            console.log("MirrorFS: Waiting on", this.parallelcount,"threads to close");
+        if (this.parallel.count) {
+            console.log("MirrorFS: Waiting on", this.parallel.count,"of max",this.parallel.max,"threads to close");
             setTimeout(()=>this._final(cb), 1000);
             return;
         }
-        console.log("MirrorFS: Closing parallel streams");
+        console.log("MirrorFS: Closed parallel streams was max=", this.parallel.max);
         cb();
     }
 
 
-    _transform(archivefile, encoding, cb) {    // A search result got written to this stream
+    _parallel(archivefile, encoding, cb) {    // A archivefile got written to this stream, fetch and store
+        /*
+        _parallel has same profile as _transform except is run in parallel
+        All paths through this must end with a cb with an optional final data.
+        It is allowable to use this.push() before the final cb() but not after.
+         */
+        //
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
         }
-        if (this.parallelcount >= this.parallel) {
-            console.log("MirrorFS: waiting for parallel availability using", this.parallelcount,"of", this.parallel);
-            setTimeout(()=>this._transform(archivefile, encoding, cb), 200);
-            return;
-        }
         try {
-            this.parallelcount++;
-            if (this.parallelcount > this.parallelmax) this.parallelmax = this.parallelcount;
             let filepath = path.join(this.directory, archivefile.itemid, archivefile.metadata.name);
             sha.check(filepath, archivefile.metadata.sha1, (err) => {
                 if (err) {
@@ -136,17 +135,9 @@ class MirrorFS extends MirrorBaseStream {
                                         } else {
                                             console.log(`Closing ${archivefile.itemid}/${archivefile.metadata.name} size=${writable.bytesWritten}`)
                                         }
-                                        if (!this.parallel) {
-                                            cb(null, {archivefile, size: writable.bytesWritten});
-                                        } else {
-                                            this.push({archivefile, size: writable.bytesWritten}); //TODO-MIRROR wont work - as pushes after stream closed
-                                        }
-                                        this.parallelcount--;
+                                        cb(null, {archivefile, size: writable.bytesWritten});
                                     });
                                     s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                                    if (this.parallel) {
-                                        cb(null);   // Return quickly and allow push to pass it on
-                                    }
                                     //fs.close(fd); Should be auto closed
                                     // Note at this point file is neither finished, nor closed, its being written.
                                 }
@@ -155,37 +146,44 @@ class MirrorFS extends MirrorBaseStream {
                     });
                 } else { // sha1 matched, skip
                     console.log("Skipping", filepath, "as sha1 matches");
-                    this.parallelcount--;
                     cb(null,  {archivefile, size: -1});
                 }
             });
         } catch(err) {
-            console.log("MirrorFS caught error", err.message);
-            this.parallelcount--;
+            console.log("MirrorFS._parallel caught error", err.message);
+            cb(err);
+        }
+    }
+
+    _transform(data, encoding, cb) {    // A search result got written to this stream
+        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
+            cb = encoding;
+            encoding = null;
+        }
+        if (this.parallel.count >= this.parallel.limit) {
+            console.log("MirrorFS: waiting for parallel availability using", this.parallel.count,"of", this.parallel.limit);
+            setTimeout(()=>this._transform(data, encoding, cb), 100);   // Delay 100ms and try again
+            return;
+        }
+        try {
+            this.parallel.count++;
+            if (this.parallel.count > this.parallel.max) this.parallel.max = this.parallel.count;
+            this._parallel(data, encoding, (err, data) => {
+                if (!this.parallel) {
+                    cb(err, data);
+                } else {
+                    this.push(data);
+                }
+                this.parallel.count--;
+            });
+            if (this.parallel) {
+                cb(null);   // Return quickly and allow push to pass it on
+            }
+        } catch(err) { // Shouldnt catch errors - they should only happen inside _parallel and be caught there, triggering cb(err)
+            console.log("MirrorFS._transform caught error that _parallel missed", err.message);
+            this.parallel.count--;
             cb(err);
         }
     }
 }
 exports = module.exports = MirrorFS;
-
-/*
-fs.open(Buffer.from('/open/some/file.txt'), 'r', (err, fd) => {
-  if (err) throw err;
-  fs.close(fd, (err) => {
-    if (err) throw err;
-  });
-});
-fs.open('myfile', 'wx', (err, fd) => {
-  if (err) {
-    if (err.code === 'EEXIST') {
-      console.error('myfile already exists');
-      return;
-    }
-
-    throw err;
-  }
-
-  writeMyData(fd);
-});
-
- */
