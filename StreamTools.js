@@ -6,7 +6,7 @@ class _MirrorMapStream extends ParallelStream {
     output stream - transformed depending
      */
     constructor(cb, options={}) {
-        super(options)
+        super(options);
         this.mapfunction = cb;
     }
 
@@ -59,7 +59,7 @@ class _MirrorSliceStream extends ParallelStream {
 
 
     constructor(begin=0, end=undefined, options={}) {
-        super(options)
+        super(options);
         this.beginx = begin;
         this.endx = end; // Not included, undefined to continue
         this.count = 0; // How many already processed

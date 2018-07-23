@@ -39,8 +39,8 @@
                 END OF COPIED MATERIAL */
             } catch(err) { // Catch any uncaught errors here, log and alert.
                 console.log("App Error:", err);
-                throw(err);
                 alert(err.message);
+                throw(err);
             }
         }
 
@@ -129,6 +129,7 @@ The files are mirrored in a local file system for several reasons:<ul>
     // These have to be at global level so they can be found anywhere.
     var searchparams = new URL(window.location.href).searchParams;
     var verbose = searchparams.get("verbose") || false;  // Anything specified for verbose is true (could truthify buy no need)
+    // noinspection JSIgnoredPromiseFromCall
     main();
 </script>
 </body>

@@ -20,7 +20,7 @@ class ParallelStream extends stream.Transform {
         const defaultopts = {
             objectMode: true, // Default to object mode rather than stream of bytes
             highWaterMark: 3
-        }   // Default to pushback after 3, will probably raise this
+        };  // Default to pushback after 3, will probably raise this
         super(Object.assign(defaultopts, options));
         this.parallel = { limit: options.parallel, count: 0, max: 0} ;    // Note default is NOT to run in parallel (limit undefined)
     }

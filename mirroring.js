@@ -6,9 +6,9 @@ const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorFS = require('./MirrorFS.js');
 const s = require('./StreamTools.js');
-ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
+const ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
 const wrtc = require('wrtc');
-config = {
+var config = {
     hashstore: { file: "level_db" },
     ui: {},
     fs: {},
@@ -33,6 +33,7 @@ class MirrorStreamDebug extends stream.Transform {
         this.map = map;
         this.log = log;
     }
+    // noinspection JSUnusedGlobalSymbols
     _transform(data, encoding, cb) {    // A search result got written to this stream
         // TODO may be other kinds of things we want to accept a stream of
         if (typeof encoding === 'function') {
@@ -95,7 +96,7 @@ class Mirror {
 }
 
 
-Mirror.init();
-//Mirror.test();
-Mirror.p_dev_mirror();  // Async
-console.log("tested waiting for output");
+Mirror.init()
+    //.then(() => Mirror.test())
+    .then(() => Mirror.p_dev_mirror())
+    .then(() => console.log("tested waiting for output"));

@@ -10,8 +10,8 @@ class MirrorCollection extends ArchiveItem {
         super(options); // Note not passing item
         delete options.item;    // Handled by super
         delete options.itemid;  // Handled by super
-        this.query = 'collection:'+this.itemid;
-        this.sort = options.sort;
+        this.query = 'collection:'+this.itemid; // Used by ArchiveItem.fetch
+        this.sort = options.sort;   // Used by ArchiveItem.fetch
         delete options.sort;
         this.options = options;
     }
@@ -26,12 +26,14 @@ class MirrorCollection extends ArchiveItem {
 
             The ArchiveItem will have numFound, start, page  set after each fetch
          */
+        // noinspection JSUnresolvedFunction
         let through = new stream.PassThrough({objectMode: true, highWaterMark: 3});
         let self = this; // this is unavailable in _p_crawl
         try {
             if (limit) this.limit = limit;
             this.page = 0;                      // Reset page count, _p_crawl will call itself repeatedly until reaches maxpages
-            _p_crawl({maxpages, through}); // Don't wait on result of async call, as can exit under backpressure
+            // noinspection JSIgnoredPromiseFromCall
+            _p_crawl({maxpages, through});      // Don't wait on result of async call, as can exit under backpressure
         } catch(err) {
             // Would be unexpected to see error here, more likely _p_crawl will catch it asynchronously
             console.error(err);
@@ -47,7 +49,7 @@ class MirrorCollection extends ArchiveItem {
 
                 The ArchiveItem will have numFound, start, page  set after each fetch
              */
-            console.log("Continuing _p_crawl")
+            console.log("Continuing _p_crawl");
             try {
                 while (self.page <= maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
                     self.page++;
@@ -79,7 +81,7 @@ class MirrorCollection extends ArchiveItem {
         try {
             let itemid = "prelinger";
             let foo = new MirrorCollection({itemid});
-            await foo.fetch() // Note this hasn't been passed the "item" just the itemid
+            await foo.fetch(); // Note this hasn't been passed the "item" just the itemid
             console.log("Completed test");
         } catch(err) {
             console.error(err);

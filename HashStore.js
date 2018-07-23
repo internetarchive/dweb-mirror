@@ -79,13 +79,13 @@ class HashStore {
             console.assert(res === "testval");
             await this.put("Testtable", {A: "AAA", B: "BBB"});
             res = await this.get("Testtable", "A");
-            console.log("Get after put obj, res=", res)
+            console.log("Get after put obj, res=", res);
             console.assert(res === "AAA");
             res = await this.get("Testtable", "B");
             console.assert(res === "BBB");
             res = await this.del("Testtable", "A");
             res = await this.get("Testtable", "A");
-            console.log("Get after del res=", res)
+            console.log("Get after del res=", res);
             console.assert(res === undefined);
             res = await this.keys("Testtable");
             console.log("DONE",res)

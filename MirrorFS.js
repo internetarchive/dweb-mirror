@@ -13,7 +13,7 @@ class MirrorFS extends ParallelStream {
     constructor(options={}) {
         const defaultoptions = {
             parallel: 10,
-        }
+        };
         super(Object.assign(defaultoptions, options));
         this.directory = options.directory;
     }
@@ -39,7 +39,7 @@ class MirrorFS extends ParallelStream {
                 cb(err);
             }
         } else {
-            cb(new Error("Cannot _streamFrom", source))
+            cb(new Error("Cannot _streamFrom "+source))
         }
 
     }
@@ -65,10 +65,11 @@ class MirrorFS extends ParallelStream {
             fs.open(filename, 'w', (err, fd) => {
                 if (err) {
                     if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
+                        // noinspection JSUnusedLocalSymbols
                         fs.stat(this.directory, (err, stats) => {
                             if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${this.directory} is missing - please create by hand`);
                             //TODO-MIRROR-LATER check directory writable from the stats
-                            console.log("MirrorFS creating directory: ")
+                            console.log("MirrorFS creating directory: ");
                             this._mkdir(path.dirname(filename), err => {
                                 if (err) { console.log("Failed to mkdir for", filename); cb(err); }
                                 fs.open(filename, 'w', (err, fd) => {
@@ -114,7 +115,8 @@ class MirrorFS extends ParallelStream {
             let filepath = path.join(this.directory, archivefile.itemid, archivefile.metadata.name);
             sha.check(filepath, archivefile.metadata.sha1, (err) => {
                 if (err) {
-                    this._streamFrom(archivefile, (err, s) => {
+                    // noinspection JSIgnoredPromiseFromCall
+                    this._streamFrom(archivefile, (err, s) => { //Returns a promise, but not waiting for it
                         if (err) {
                             console.warn("MirrorFS._transform ignoring error", err.message);
                             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
@@ -130,6 +132,7 @@ class MirrorFS extends ParallelStream {
                                     writable.on('close', () => {
                                         let expected = archivefile.metadata.size;
                                         let bytesWritten = writable.bytesWritten;
+                                        // noinspection EqualityComparisonWithCoercionJS
                                         if (expected != bytesWritten) {  // Intentionally != as expected is a string
                                             console.warn(`File ${archivefile.itemid}/${archivefile.metadata.name} size=${bytesWritten} doesnt match expected ${expected}`)
                                         } else {
