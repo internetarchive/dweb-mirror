@@ -17,7 +17,6 @@ class MirrorCollection extends ArchiveItem {
     }
 
 
-
     s_searchitems({limit=100, maxpages=5}) {
         /* Crawl a collection, pass output to a stream
             maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
@@ -33,17 +32,19 @@ class MirrorCollection extends ArchiveItem {
             if (limit) this.limit = limit;
             this.page = 0;                      // Reset page count, _p_crawl will call itself repeatedly until reaches maxpages
             // noinspection JSIgnoredPromiseFromCall
-            _p_crawl({maxpages, through});      // Don't wait on result of async call, as can exit under backpressure
+            _p_crawl();      // Don't wait on result of async call, as can exit under backpressure  \
         } catch(err) {
             // Would be unexpected to see error here, more likely _p_crawl will catch it asynchronously
             console.error(err);
-            through.destroy(new Error("Failure in p_crawl:" + err.message))
+            //Dont destroy, this may be reading a stream of collections.
+            //through.destroy(new Error("Failure in p_crawl:" + err.message))
         }
         console.log("XXX@p_crawl ending");
         return through;
 
         async function _p_crawl() {
             /* Crawl a collection, calls itself repeatedly after pushback
+                Note maxpages and limit are defined in enclosing function
                 maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
                 limit:      How many items to fetch each time. 100 is probably about optimal //TODO-@IA check
 
@@ -69,12 +70,37 @@ class MirrorCollection extends ArchiveItem {
                     }
                 } //while
                 // Notice the return above will exit if sees backpressure
-                through.end('FINISHED');
+                //Dont end, this may be reading a stream of collections.
+                //through.end();
             } catch(err) {
                 console.error(err);
-                through.destroy(new Error("Failure in _p_crawl:" + err.message))
+                //Dont destroy, this may be reading a stream of collections.
+                //through.destroy(new Error("Failure in _p_crawl:" + err.message))
             }
         }
+    }
+
+    async s_searchitems2(cb, {limit=100, maxpages=5}) {
+        /* Crawl a collection, pass output as array of ArchiveItems as sequence of calls to cb
+            maxpages:   Max number of times to do a search, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default
+            limit:      How many items to fetch each time. 100 is probably about optimal //TODO-@IA check
+            returns:    Promise
+
+            The ArchiveItem will have numFound, start, page  set after each fetch
+         */
+        // noinspection JSUnresolvedFunction
+        try {
+            this.page = 0;                      // Reset page count
+            while (this.page <= maxpages && ((typeof(this.numFound) === "undefined") || ((this.start + limit) < this.numFound))) {
+                this.page++;
+                await this.fetch(); // Should fetch next page of search, won't re-fetch metadata after first tie
+                if (verbose) console.log("XXXXXXXXX Check this>", this.identifier, this.start, this.items[0].identifier);
+                cb(this.items); // Array of ArchiveItems
+            }
+        } catch(err) {
+            console.error(err);
+        }
+        console.log(this.identifier, "searchitems ending");
     }
 
     static async test() {
@@ -89,4 +115,5 @@ class MirrorCollection extends ArchiveItem {
     }
 
 }
+
 exports = module.exports = MirrorCollection;
