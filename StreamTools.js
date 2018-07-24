@@ -1,5 +1,29 @@
 const ParallelStream = require('./ParallelStream');
 
+class _MirrorDebugStream extends ParallelStream {
+
+    constructor(cb, options={}) {
+        /* cb is function to turn item into something console.log can handle */
+        options.highWaterMark = options.highWaterMark || 99999; // Dont let this debugging cause backpressure itself
+        options.objectMode = true;
+        super(options);
+        this.logfunction = cb;
+    }
+    // noinspection JSUnusedGlobalSymbols
+    _transform(data, encoding, cb) {    // A search result got written to this stream
+        if (typeof encoding === 'function') {
+            cb = encoding;
+            encoding = null;
+        }
+        try {
+            console.log(...this.logfunction(data));
+            cb(null, data);
+        } catch(err) {
+            cb(err);
+        }
+    }
+}
+
 class _MirrorMapStream extends ParallelStream {
     /*
     input stream - any objects
@@ -125,6 +149,11 @@ class s {
     filter(cb) {
         return new _MirrorFilterStream(cb, this.options);
     }
+    log(cb) {
+        return new _MirrorDebugStream(cb, this.options);
+    }
+
+
 }
 
 // usage .pipe(new s(options).map(cb))
