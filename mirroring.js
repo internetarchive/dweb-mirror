@@ -9,10 +9,17 @@ const s = require('./StreamTools.js');
 const ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
 const wrtc = require('wrtc');
 var config = {
-    hashstore: { file: "level_db" },
-    ui: {},
-    fs: {},
+    //hashstore: { file: "level_db" },
+    //ui: {},
+    //fs: {},
     directory: "/Users/mitra/temp/mirrored",
+    limititemspersearchpage: 5, // Optimum is probably around 100
+    limitpagespercollection: 5, // So max #items is limititemspersearchpage * limitpagespercollection
+    limittotalfiles: 250,
+    limitfilesize: 1000000,
+    collections: {  //TODO-MIRROR not yet paying attention to this - issue#18
+        "prelinger": {}
+    }
 };
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is
@@ -31,18 +38,18 @@ class Mirror {
             global.verbose = true;
             // Incremental development building and testing components to path in README.md
             await DwebTransports.p_connect({
-                    transports: ["HTTP", "WEBTORRENT"],
+                    transports: ["HTTP", "WEBTORRENT", "IPFS"],
                     webtorrent: {tracker: { wrtc }},
                 }, verbose);
-            //TODO-MIRROR this is working around default that HTTP doesnt support streams, till sure can use same interface with http & WT
+            //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http(verbose).supportFunctions.push("createReadStream");
             let itemid = "prelinger";
             // Total number of results will be ~ maxpages * limit
-            let limit = 3;
-            let maxpages = 3 ;
-            new MirrorCollection({itemid})          // Initialize collection
+            new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
+                .pipe(new s().log((m)=>["Collection:", m.identifier]))
+                .pipe(new s().map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - gets metadata but not search results
                 // Collection ready to search
-                .s_searchitems({limit, maxpages})   // Repeatedly fetch new pages for the collection
+                .s_searchitems({limit: config.limititemspersearchpage, maxpages: config.limitpagespercollection})   // Repeatedly fetch new pages for the collection
                 // a stream of Search results (minimal JSON) ready for fetching
                 //.pipe(new s().slice(0,1))   //Restrict to first Archive Item
                 .pipe(new s().log((m)=>["SearchResult:", m.identifier]))
@@ -52,8 +59,8 @@ class Mirror {
                 // a stream of arrays of ArchiveFiles
                 .pipe(new s().split())
                 // a stream of ArchiveFiles's with metadata fetched
-                .pipe(new s().filter(af => af.metadata.size < 1000000))
-                .pipe(new s().slice(0,200))   //TODO-MIRROR remove this debugging - limits to first ArchiveItem found
+                .pipe(new s().filter(af => af.metadata.size < config.limitfilesize))
+                .pipe(new s().slice(0,config.limittotalfiles))
                 .pipe(new s().log((m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]))
                 .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))    // Parallel retrieve to file system
                 .pipe(new s().log((o)=>["MirrorFS Result:", `${o.archivefile.itemid}/${o.archivefile.metadata.name} size=${o.size} expect size=${o.archivefile.metadata.size}`]))

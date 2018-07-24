@@ -1,3 +1,4 @@
+const stream = require('readable-stream');
 const ParallelStream = require('./ParallelStream');
 
 class _MirrorDebugStream extends ParallelStream {
@@ -154,6 +155,45 @@ class s {
     }
 
 
+    fromEdibleArray(ediblearr) {
+        /*
+            Consume array, feeding it to a new stream
+         */
+        // noinspection JSUnresolvedFunction
+        let through = new stream.PassThrough({objectMode: true, highWaterMark: 3});
+        let name = this.name || ""; // As this unavailable in _pushbackablewrite
+        //Unused: let self = this; // this is unavailable in _pushbackablewrite
+        try {
+            _pushbackablewrite();
+        } catch (err) {
+            // Would be unexpected to see error here, more likely _p_crawl will catch it asynchronously
+            console.error(err);
+            through.destroy(new Error(`Failure in ${name}.s_fromEdibleArray: ${err.message}`))
+        }
+        console.log(name, "s_fromEdibleArray ending");
+        return through;
+
+        function _pushbackablewrite() { // Asynchronous, retriggerable
+            // Note consumes eatable array from parent
+            console.log(`Continuing ${name}`);
+            try {
+                let i;
+                while (i = ediblearr.shift()) {
+                    let freeflowing;
+                    if (!through.write(i)) { // It still got written, but there is pushback
+                        console.error(`Pushback at ${name}.${i} from stream=========================`);
+                        through.once("drain", _pushbackablewrite);
+                        return; // Without finishing
+                    }
+                } //while
+                // Notice the return above will exit if sees backpressure
+                through.end();    // Only end on final loop
+            } catch(err) {
+                console.error(err);
+                through.destroy(new Error(`Failure in ${name}._pushbackablewrite: ${err.message}`))
+            }
+        }
+    }
 }
 
 // usage .pipe(new s(options).map(cb))
