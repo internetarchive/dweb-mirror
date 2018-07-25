@@ -65,7 +65,7 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
-                .pipe(new s({uniq}).uniq())
+                .pipe(new s({uniq}).uniq({name:"0 uniq"}))
 
                 .pipe(new s().log((m) => ["Level1 queueing", m])) //will display on MirrorCollectionSearchStream when processed
                 .pipe(new s({name: 'Create MirrorCollections 1'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
@@ -75,7 +75,7 @@ class Mirror {
                 .pipe(new s({name: '1 split arrays of AI'}).split())
                 .pipe(new s({name: '1 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
                 .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
-                .pipe(new s({uniq}).uniq())
+                .pipe(new s({uniq}).uniq({name:"1 uniq"}))
 
                 .pipe(new s().log((m) => ["Level2 queueing", m])) //will display on MirrorCollectionSearchStream when processed
                 .pipe(new s({name: 'Create MirrorCollections 2'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
@@ -85,17 +85,18 @@ class Mirror {
                 .pipe(new s({name: '2 split arrays of AI'}).split())
                 .pipe(new s({name: '2 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
                 .pipe(new s({name: '2 identifier'}).map((xx) => xx.identifier))
-                .pipe(new s({uniq}).uniq())
+                .pipe(new s({uniq}).uniq({name:"2 uniq"}))
 
 
                 .pipe(new s().log((m) => ["Level3 queueing:", m])) //will display on MirrorCollectionSearchStream when processed
                 .pipe(new s({name: 'Create MirrorCollections 3'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, parallel, silentwait: false}));
+                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, parallel, silentwait: false}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
+                .pipe(new s({name: "END 3level"}).end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count)));
 
             new s({name: "EatPopularCollections"}).fromEdibleArray([popularCollections])
-                .pipe(new s({uniq}).uniq())
+                .pipe(new s({uniq}).uniq({name:"Popular uniq"}))
                 .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
                 .pipe(new s({name: '1 split arrays of AI'}).split())
@@ -103,6 +104,7 @@ class Mirror {
                 .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
                 .pipe(new s({uniq}).uniq())
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, parallel, silentwait: false}))
+                .pipe(new s({name: "END Popular"}).end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count)));
             // No need to do something with these
 
             let popularCollections = new MirrorSearch({
