@@ -33,8 +33,8 @@ class MirrorCollectionSearchStream extends ParallelStream {
          */
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } //Allow missing enc
         let col = data;
-        console.log(this.name, col.itemid, "page", col.page )
         if (typeof col.page === "undefined") col.page = 0;
+        console.log(this.name, col.itemid, "page", col.page )
         if ((typeof col.limit === "undefined") && (typeof this.limit !== "undefined")) col.limit = this.limit;
         if (col.page < this.maxpages && ((typeof(col.numFound) === "undefined") || ((col.start + this.limit) < col.numFound))) {
             col.page++;

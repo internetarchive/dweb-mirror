@@ -80,7 +80,7 @@ class Mirror {
                 .pipe(new s().log((m) => ["Level2 queueing", m])) //will display on MirrorCollectionSearchStream when processed
                 .pipe(new s({name: 'Create MirrorCollections 2'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 2, parallel, silentwait: false}))
+                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
                 .pipe(new s({name: '2 split arrays of AI'}).split())
                 .pipe(new s({name: '2 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
