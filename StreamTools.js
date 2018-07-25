@@ -184,7 +184,7 @@ class s {
         let name = this.name || ""; // As this unavailable in _pushbackablewrite
         //Unused: let self = this; // this is unavailable in _pushbackablewrite
         try {
-            _pushbackablewrite();
+            _pushbackablewrite(); // Will .end stream when done
         } catch (err) {
             // Would be unexpected to see error here, more likely _p_crawl will catch it asynchronously
             console.error(err);

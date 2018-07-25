@@ -22,7 +22,7 @@ class ParallelStream extends stream.Transform {
             highWaterMark: 3,
         };  // Default to pushback after 3, will probably raise this
         super(Object.assign(defaultopts, options));
-        this.name = options.name || "No name passed";
+        this.name = options.name || "ParallelStream";
         this.parallel = { limit: options.parallel, count: 0, max: 0, retryms: options.retryms || 100, silentwait: options.silentwait || false} ;    // Note default is NOT to run in parallel (limit undefined)
     }
 
@@ -33,7 +33,9 @@ class ParallelStream extends stream.Transform {
                 setTimeout(()=>this._final(cb), 1000);
                 return;
             }
-            console.log("ParallelStream: Closed parallel streams. Was max=", this.parallel.max);
+            console.log(this.name, "_final Closing parallel. Was max=", this.parallel.max);
+        } else {
+            console.log(this.name, "_final Closing");
         }
         cb();
     }
@@ -51,7 +53,7 @@ class ParallelStream extends stream.Transform {
             cb = encoding;
             encoding = null;
         }
-        let name = this.name || "Parallel Stream";
+        let name = this.name;
         if (this.parallel.limit && (this.parallel.count >= this.parallel.limit)) {
             if (!this.parallel.silentwait)
                 console.log(name, ": waiting ", this.parallel.retryms, "ms for parallel availability using", this.parallel.count,"of", this.parallel.limit);
@@ -73,7 +75,7 @@ class ParallelStream extends stream.Transform {
                 cb(null);   // Return quickly and allow push to pass it on
             }
         } catch(err) { // Shouldnt catch errors - they should only happen inside _parallel and be caught there, triggering cb(err)
-            console.log("ParrallelStream._transform caught error that _parallel missed", err.message);
+            console.log(name, "._transform caught error that _parallel missed", err.message);
             this.parallel.count--;
             cb(err);
         }

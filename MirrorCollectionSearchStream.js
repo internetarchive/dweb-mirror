@@ -46,7 +46,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
                     this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })
         } else {
-            cb(); // Close stream on innermost recursion
+            cb(); // Acknowledge stream on innermost recursion
             console.log(this.name, col.itemid, "complete");
         }
     }
