@@ -64,7 +64,7 @@ class Mirror {
             global.verbose = true;
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http(verbose).supportFunctions.push("createReadStream");
-            let parallel = 3;
+            let parallel = 5;
 
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
