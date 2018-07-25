@@ -9,7 +9,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
 
     Options:    from data
     limit       col.limit || opt.limit || 100   How many items to fetch each time. 100 is probably about optimal
-    maxpages    opt.maxpages || 5               Max number of search pages, so max items is maxpages*limit  //TODO-MIRROR increase maxpages default    */
+    maxpages    opt.maxpages || 5               Max number of search pages, so max items is maxpages*limit
     name        opt.name || "CollectionStream"  Name used in debugging
 
     Inherited from ParallelStream:
