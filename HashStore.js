@@ -55,7 +55,7 @@ class HashStore {
     }
     static async keys(table) {
         let keys=[];
-        let db = this.db(table);    //syncronous
+        let db = this.db(table);    //synchronous
         return await new Promise(function(resolve, reject) {
                 try {
                     db

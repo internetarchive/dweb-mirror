@@ -13,7 +13,7 @@
     "dweb-objects": "git+https://git@github.com/internetarchive/dweb-objects.git",
     "dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
     "level": "^4.0.0",
-    "readable-stream": "^2.3.6",
+    "readable-stream": "latest",
     "sha": "^2.0.1",
     "wrtc": "latest"
   },
