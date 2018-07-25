@@ -128,7 +128,6 @@ class _MirrorUniqStream extends ParallelStream {
      */
     constructor(cb, options={}) {
         super(options); // None currently
-        this.cb = cb;
         this.uniq = Array.isArray(options.uniq) ? options.uniq : [] ; // Can pass an existing array, which will be filtered out
         this.uniqid = (typeof cb === "function" ? cb : function(a){return a} );
     }
@@ -200,7 +199,6 @@ class s {
             try {
                 let i;
                 while (i = ediblearr.shift()) {
-                    let freeflowing;
                     if (!through.write(i)) { // It still got written, but there is pushback
                         console.error(`Pushback at ${name}.${i} from stream=========================`);
                         through.once("drain", _pushbackablewrite);

@@ -1,5 +1,3 @@
-//global.window = {}; // Target for things like window.onpopstate in Nav.js
-const stream = require('readable-stream');
 global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move to repo
 global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
 const HashStore = require('./HashStore.js');
@@ -46,7 +44,6 @@ class Mirror {
                 }, verbose);
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http(verbose).supportFunctions.push("createReadStream");
-            let itemid = "prelinger";
             // Total number of results will be ~ maxpages * limit
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
                 .pipe(new s().log((m)=>["Collection:", m.identifier]))

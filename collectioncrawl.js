@@ -1,15 +1,11 @@
 //global.window = {}; // Target for things like window.onpopstate in Nav.js
-const stream = require('readable-stream');
 const wrtc = require('wrtc');
 
 global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move to repo
 global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
-const ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
 
-const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
-const MirrorFS = require('./MirrorFS.js');
 const MirrorSearch = require('./MirrorSearch.js');
 const s = require('./StreamTools.js');
 
@@ -95,13 +91,13 @@ class Mirror {
                 .pipe(new s().log((m) => ["Level3:", m]))
                 .pipe(new s({name: 'Create MirrorCollections'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({limit: 100, maxpages: 1, parallel, silentwait: true}))
+                .pipe(new MirrorCollectionSearchStream({limit: 100, maxpages: 1, parallel, silentwait: true}));
                 //IGNORED Stream of arrays of Archive Items (mixed)
 
             let popularCollections = new MirrorSearch({
                 query: 'mediatype:collection AND NOT _exists_:access-restricted',
                 sort: '-downloads',
-            })
+            });
 
             new s({name: "EatPopularCollections"}).fromEdibleArray([popularCollections])
                 .pipe(new s({uniq}).uniq())
@@ -111,12 +107,11 @@ class Mirror {
         }
     }
 
-    static async p_test() {
+    static async p_temp() { // Work area
         try {
             global.verbose = false;
             // Incremental development building and testing components to path in README.md
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
-                .pipe(this._s_crawlcollection())
                 .pipe(new s().log((m) => ["C", m]))
         } catch(err) {
             console.error(err);
@@ -128,5 +123,5 @@ class Mirror {
 Mirror.init()
     //.then(() => Mirror.test())
     .then(() => Mirror.p_dev_mirror())
-    //.then(() => Mirror.p_test())
+    //.then(() => Mirror.p_temp())
     .then(() => console.log("tested waiting for output"));

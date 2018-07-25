@@ -19,7 +19,7 @@ class MirrorFS extends ParallelStream {
     }
     async _streamFrom(source, cb) {
         /*
-            Takes an archivefile, may extend to other types
+            Takes an ArchiveFile, may extend to other types
             source:   Data source, currently supports ArchiveFile only.
             cb(err, stream): Called with open stream.
             TODO-MIRROR move this to ArchiveFile, its generally useful - if so, make it return a promise if cb not defined
