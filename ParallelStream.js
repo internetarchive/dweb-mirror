@@ -54,7 +54,7 @@ class ParallelStream extends stream.Transform {
         let name = this.name || "Parallel Stream";
         if (this.parallel.limit && (this.parallel.count >= this.parallel.limit)) {
             if (!this.parallel.silentwait)
-                console.log(name, ": waiting ", this.retryms, "ms for parallel availability using", this.parallel.count,"of", this.parallel.limit);
+                console.log(name, ": waiting ", this.parallel.retryms, "ms for parallel availability using", this.parallel.count,"of", this.parallel.limit);
             setTimeout(()=>this._transform(data, encoding, cb), this.parallel.retryms);   // Delay 100ms and try again
             return;
         }

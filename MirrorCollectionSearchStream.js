@@ -19,7 +19,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
     */
 
     constructor(options) {
-        options.retryms = options.retryms || 500; // How long to wait if threads busy
+        options.retryms = options.retryms || 2000; // How long to wait if threads busy
         options.name = options.name || "CollectionSearchStream";
         super(options);
         this.limit = options.limit || 100; // limit:      //TODO-@IA check
