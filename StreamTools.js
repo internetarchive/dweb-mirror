@@ -12,10 +12,7 @@ class _MirrorDebugStream extends ParallelStream {
     }
     // noinspection JSUnusedGlobalSymbols
     _parallel(data, encoding, cb) {    // A search result got written to this stream
-        if (typeof encoding === 'function') {
-            cb = encoding;
-            encoding = null;
-        }
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
         try {
             console.log(...this.logfunction(data));
         } catch(err) {
@@ -37,20 +34,14 @@ class _MirrorMapStream extends ParallelStream {
     }
 
     _parallel(o, encoding, cb) {    // A search result got written to this stream
-        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
-            cb = encoding;
-            encoding = null;
-        }
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
         try {
             // cb(null, this.mapfunction(o));   //TODO automate detection of promise
-            console.log("XXX@45",o);
             let p = this.mapfunction(o);
-            console.log("XXXX@47", p)
             if (p instanceof Promise) {
-                p.then((data) =>  { console.log("Map Par Promise Then"); cb(null, data)})
-                    .catch((err) => { console.log("Map Par Promise Catch"); cb(err)});
+                p.then((data) => cb(null, data))
+                    .catch((err) => cb(err));
             } else {
-                console.log("Map Par Else")
                 cb(null, p);
             }
         } catch(err) {
@@ -66,10 +57,7 @@ class _MirrorSplitStream extends ParallelStream {
     output stream - expand arrays into a single stream
      */
     _parallel(oo, encoding, cb) {    // A search result got written to this stream
-        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
-            cb = encoding;
-            encoding = null;
-        }
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
         try {
             if (Array.isArray(oo)) {
                 oo.forEach(o => this.push(o));
@@ -97,10 +85,7 @@ class _MirrorSliceStream extends ParallelStream {
     }
 
     _parallel(o, encoding, cb) {
-        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
-            cb = encoding;
-            encoding = null;
-        }
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
         try {
             if ((this.beginx <= this.count) && ((typeof this.endx  === "undefined")|| this.count < this.endx)) {
                 this.push(o);
@@ -125,10 +110,7 @@ class _MirrorFilterStream extends ParallelStream {
 
 
     _parallel(o, encoding, cb) {    // A search result got written to this stream
-        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
-            cb = encoding;
-            encoding = null;
-        }
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
         try {
             if (this.cb(o)) {
                 this.push(o);   // Only push if matches filter
@@ -139,6 +121,36 @@ class _MirrorFilterStream extends ParallelStream {
         }
     }
 }
+class _MirrorUniqStream extends ParallelStream {
+    /*
+    input stream
+    output stream with non uniq ids removed
+     */
+    constructor(cb, options={}) {
+        super(options); // None currently
+        this.cb = cb;
+        this.uniq = Array.isArray(options.uniq) ? options.uniq : [] ; // Can pass an existing array, which will be filtered out
+        this.uniqid = (typeof cb === "function" ? cb : function(a){return a} );
+    }
+
+    _parallel(o, encoding, cb) {    // A search result got written to this stream
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
+        try {
+            let id = this.uniqid(o);
+            if (! this.uniq.includes(id) ) {
+                //console.log("Not Duplicate with id=", id);
+                this.uniq.push(id);
+                this.push(o);   // Only push if uniq
+            } else {
+                console.log("Duplicate with id=", id);
+            }
+            cb();
+        } catch(err) {
+            cb(err);
+        }
+    }
+}
+
 class s {
     constructor(options={}) {
         this.options=options;
@@ -158,6 +170,9 @@ class s {
     }
     log(cb) {
         return new _MirrorDebugStream(cb, this.options);
+    }
+    uniq(cb) {
+        return new _MirrorUniqStream(cb, this.options);
     }
 
 

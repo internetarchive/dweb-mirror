@@ -8,6 +8,9 @@ const MirrorFS = require('./MirrorFS.js');
 const s = require('./StreamTools.js');
 const ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
 const wrtc = require('wrtc');
+const CollectionSearchStream = require('./MirrorCollectionSearchStream');
+
+
 var config = {
     //hashstore: { file: "level_db" },
     //ui: {},
@@ -47,10 +50,13 @@ class Mirror {
             // Total number of results will be ~ maxpages * limit
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
                 .pipe(new s().log((m)=>["Collection:", m.identifier]))
-                .pipe(new s().map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - gets metadata but not search results
-                // Collection ready to search
-                .s_searchitems({limit: config.limititemspersearchpage, maxpages: config.limitpagespercollection})   // Repeatedly fetch new pages for the collection
-                // a stream of Search results (minimal JSON) ready for fetching
+
+                .pipe(new s({name: 'Create MirrorCollections'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                // Stream of ArchiveItems - which should all be collections
+                .pipe(new CollectionSearchStream({limit: config.limititemspersearchpage, maxpages: config.limitpagespercollection, parallel, silentwait: true}))
+                // Stream of arrays of Search results (minimal JSON) ready for fetching
+                .pipe(new s({name: '1 split arrays of AI'}).split())
+                // Stream of Search results (mixed)
                 //.pipe(new s().slice(0,1))   //Restrict to first Archive Item
                 .pipe(new s().log((m)=>["SearchResult:", m.identifier]))
                 //.pipe(new MirrorItemFromStream({highWaterMark: 3}))

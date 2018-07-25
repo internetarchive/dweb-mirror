@@ -19,11 +19,11 @@ class ParallelStream extends stream.Transform {
     constructor(options={}) {
         const defaultopts = {
             objectMode: true, // Default to object mode rather than stream of bytes
-            highWaterMark: 3
+            highWaterMark: 3,
         };  // Default to pushback after 3, will probably raise this
         super(Object.assign(defaultopts, options));
         this.name = options.name || "No name passed";
-        this.parallel = { limit: options.parallel, count: 0, max: 0} ;    // Note default is NOT to run in parallel (limit undefined)
+        this.parallel = { limit: options.parallel, count: 0, max: 0, retryms: options.retryms || 100, silentwait: options.silentwait || false} ;    // Note default is NOT to run in parallel (limit undefined)
     }
 
     _final(cb) {
@@ -51,9 +51,11 @@ class ParallelStream extends stream.Transform {
             cb = encoding;
             encoding = null;
         }
+        let name = this.name || "Parallel Stream";
         if (this.parallel.limit && (this.parallel.count >= this.parallel.limit)) {
-            console.log("MirrorFS: waiting for parallel availability using", this.parallel.count,"of", this.parallel.limit);
-            setTimeout(()=>this._transform(data, encoding, cb), 100);   // Delay 100ms and try again
+            if (!this.parallel.silentwait)
+                console.log(name, ": waiting ", this.retryms, "ms for parallel availability using", this.parallel.count,"of", this.parallel.limit);
+            setTimeout(()=>this._transform(data, encoding, cb), this.parallel.retryms);   // Delay 100ms and try again
             return;
         }
         try {
