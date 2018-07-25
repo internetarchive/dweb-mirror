@@ -23,8 +23,8 @@ var config = {
     //ui: {},
     //fs: {},
     //directory: "/Users/mitra/temp/mirrored",
-    //limititemspersearchpage: 5, // Optimum is probably around 100
-    //limitpagespercollection: 5, // So max #items is limititemspersearchpage * limitpagespercollection
+    limititemspersearchpage: 5, // Optimum is probably around 100
+    limitpagespercollection: 5, // So max #items is limititemspersearchpage * limitpagespercollection
     //limittotalfiles: 250,
     //limitfilesize: 1000000,
     collections: {  //TODO-MIRROR not yet paying attention to this - issue#18
@@ -50,17 +50,21 @@ class CollectionSearchStream extends ParallelStream {
          */
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } //Allow missing enc
         let col = data;
-        let page = 0;
-        while (page <= this.maxpages && ((typeof(col.numFound) === "undefined") || ((col.start + this.limit) < col.numFound))) {
-            page++;
-            col.fetch() // Should fetch next page of search, won't re-fetch metadata after first tie
+        if (typeof col.page === "undefined") col.page = 0;
+        if ((typeof col.limit === "undefined") && (typeof this.limit !== "undefined")) col.limit = this.limit;
+        if (col.page <= this.maxpages && ((typeof(col.numFound) === "undefined") || ((col.start + this.limit) < col.numFound))) {
+            col.page++;
+            // Should fetch next page of search, and metadata on first time.
+            col.fetch()
                 .then(() => {
-                    if (verbose) console.log(col.itemid, col.start, col.items.length);
+                    if (verbose) console.log(col.itemid, col.items.length, "starting at", col.start );
                     this.push(col.items); // Array of ArchiveItems // col.items will get rewritten by next search, but with a new array so this passed on array is ok
+                    this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })
+        } else {
+            cb(); // Close stream on innermost recursion
+            console.log("searchitems of", col.itemid, "ending");
         }
-        cb();
-        console.log("searchitems of", col.itemid, "ending");
     }
 }
 
@@ -76,6 +80,7 @@ class Mirror {
         await HashStore.test();
     }
     */
+
     static async p_dev_mirror() {
         try {
             global.verbose = false;
@@ -91,17 +96,31 @@ class Mirror {
 
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
                 .pipe(new s().log((m)=>["Collection:", m]))
+                .pipe(new s({name: 'Create MirrorCollections'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                // Stream of ArchiveItems - which should all be collections
+                .pipe(new CollectionSearchStream({limit: config.limititemspersearchpage, maxpages: config.limitpagespercollection, parallel: 3}))
+                // Stream of arrays of Archive Items (mixed)
+                .pipe(new s({name: 'split arrays of AI'}).split())
+                .pipe(new s({name: 'filter by collection'}).filter((zz) => zz.mediatype === "collection"))
+                .pipe(new s({name: 'identifier'}).map((xx) => xx.identifier))
+
+                .pipe(new s().log((m) => ["Going to level 2 with collection:", m]))
                 .pipe(new s().map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
-                .pipe(new CollectionSearchStream({limit: 3, maxpages: 3}))
-                .pipe(new s().log((m) => ["Debug at end", m]))
+                .pipe(new CollectionSearchStream({limit: config.limititemspersearchpage, maxpages: config.limitpagespercollection, parallel: 3}))
+                .pipe(new s().split())
+                .pipe(new s().filter((ai) => ai.mediatype === "collection"))
+                .pipe(new s().log((m) => ["Would go to level 3 with collection:", m.identifier]))
+
+
+
         } catch(err) {
             console.error(err);
         }
     }
-}
 
 
 Mirror.init()
     //.then(() => Mirror.test())
-    .then(() => Mirror.p_dev_mirror())
+    //.then(() => Mirror.p_dev_mirror())
+    .then(() => Mirror.p_test())
     .then(() => console.log("tested waiting for output"));

@@ -22,6 +22,7 @@ class ParallelStream extends stream.Transform {
             highWaterMark: 3
         };  // Default to pushback after 3, will probably raise this
         super(Object.assign(defaultopts, options));
+        this.name = options.name || "No name passed";
         this.parallel = { limit: options.parallel, count: 0, max: 0} ;    // Note default is NOT to run in parallel (limit undefined)
     }
 
@@ -70,7 +71,7 @@ class ParallelStream extends stream.Transform {
                 cb(null);   // Return quickly and allow push to pass it on
             }
         } catch(err) { // Shouldnt catch errors - they should only happen inside _parallel and be caught there, triggering cb(err)
-            console.log("MirrorFS._transform caught error that _parallel missed", err.message);
+            console.log("ParrallelStream._transform caught error that _parallel missed", err.message);
             this.parallel.count--;
             cb(err);
         }

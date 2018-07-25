@@ -11,7 +11,7 @@ class MirrorCollection extends ArchiveItem {
         delete options.item;    // Handled by super
         delete options.itemid;  // Handled by super
         this.query = 'collection:'+this.itemid; // Used by ArchiveItem.fetch
-        this.sort = options.sort;   // Used by ArchiveItem.fetch
+        this.sort = options.sort || "-downloads";   // Used by ArchiveItem.fetch
         delete options.sort;
         this.options = options;
     }

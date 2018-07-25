@@ -11,17 +11,18 @@ class _MirrorDebugStream extends ParallelStream {
         this.logfunction = cb;
     }
     // noinspection JSUnusedGlobalSymbols
-    _transform(data, encoding, cb) {    // A search result got written to this stream
+    _parallel(data, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') {
             cb = encoding;
             encoding = null;
         }
         try {
             console.log(...this.logfunction(data));
-            cb(null, data);
         } catch(err) {
             cb(err);
+            return;
         }
+        cb(null, data);
     }
 }
 
@@ -42,13 +43,18 @@ class _MirrorMapStream extends ParallelStream {
         }
         try {
             // cb(null, this.mapfunction(o));   //TODO automate detection of promise
+            console.log("XXX@45",o);
             let p = this.mapfunction(o);
+            console.log("XXXX@47", p)
             if (p instanceof Promise) {
-                p.then((data) =>  cb(null, data));
+                p.then((data) =>  { console.log("Map Par Promise Then"); cb(null, data)})
+                    .catch((err) => { console.log("Map Par Promise Catch"); cb(err)});
             } else {
+                console.log("Map Par Else")
                 cb(null, p);
             }
         } catch(err) {
+            console.log("_MirrorMapStream._parallel caught error", err.message);
             cb(err);
         }
     }
