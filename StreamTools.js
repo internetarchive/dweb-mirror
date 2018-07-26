@@ -219,8 +219,8 @@ class s {
     uniq(cb) {
         return new _MirrorUniqStream(cb, this.options);
     }
-    end(cbperitem, cbfinal) {
-        return new _MirrorEndStream(cbperitem, cbfinal, this.options);
+    end(cbstart, cbperitem, cbfinal) {
+        return new _MirrorEndStream(cbstart, cbperitem, cbfinal, this.options);
     }
 
 
