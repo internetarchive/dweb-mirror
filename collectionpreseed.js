@@ -64,6 +64,7 @@ class Mirror {
 
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
+            /*
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
                 .pipe(new s({uniq}).uniq({name:"0 uniq"}))
 
@@ -94,23 +95,23 @@ class Mirror {
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, parallel, silentwait: false}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
                 .pipe(new s({name: "END 3level"}).end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count)));
+            */
+            let popularCollections = new MirrorSearch({
+                query: 'mediatype:collection AND NOT _exists_:access-restricted',
+                sort: '-downloads',
+            });
 
             new s({name: "EatPopularCollections"}).fromEdibleArray([popularCollections])
-                .pipe(new s({uniq}).uniq({name:"Popular uniq"}))
                 .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
                 .pipe(new s({name: '1 split arrays of AI'}).split())
                 .pipe(new s({name: '1 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
                 .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
                 .pipe(new s({uniq}).uniq())
+                .pipe(new s({name: 'Create MirrorCollections popular'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, parallel, silentwait: false}))
                 .pipe(new s({name: "END Popular"}).end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count)));
             // No need to do something with these
-
-            let popularCollections = new MirrorSearch({
-                query: 'mediatype:collection AND NOT _exists_:access-restricted',
-                sort: '-downloads',
-            });
 
         } catch(err) {
             console.error(err);

@@ -51,7 +51,7 @@ class _MirrorEndStream extends ParallelStream {
         if (this.parallel.limit) {
             console.log(this.name, "Probably Shouldnt be running an End stream in parallel")
             if (this.parallel.count) {
-                console.log("ParallelStream: Waiting on", this.parallel.count, "of max", this.parallel.max, "threads to close");
+                console.log("EndStream: Waiting on", this.parallel.count, "of max", this.parallel.max, "threads to close");
                 setTimeout(() => this._final(cb), 1000);
                 return;
             }
