@@ -29,7 +29,7 @@ class ParallelStream extends stream.Transform {
     _final(cb) {
         if (this.parallel.limit) {
             if (this.parallel.count) {
-                console.log("ParallelStream: Waiting on", this.parallel.count,"of max",this.parallel.max,"threads to close");
+                console.log(this.name, "Waiting on", this.parallel.count,"of max",this.parallel.max,"threads to close");
                 setTimeout(()=>this._final(cb), 1000);
                 return;
             }
