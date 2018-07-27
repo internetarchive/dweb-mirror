@@ -2,9 +2,9 @@ process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const ParallelStream = require('./ParallelStream');
 const errors = require('./Errors.js');
-const ArchiveFile = require('dweb-archive/ArchiveFile.js');
-const DwebTransports = require('dweb-transports');
-const DTerrors = require('dweb-transports/Errors.js');
+const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile.js');
+const DwebTransports = require('@internetarchive/dweb-transports');
+const DTerrors = require('@internetarchive/dweb-transports/Errors.js');
 const path = require('path');
 const sha = require('sha');
 

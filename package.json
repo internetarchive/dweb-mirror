@@ -9,9 +9,9 @@
   },
   "name": "dweb-mirror",
   "dependencies": {
-    "dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
-    "dweb-objects": "git+https://git@github.com/internetarchive/dweb-objects.git",
-    "dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
+    "@internetarchive/dweb-archive": "latest",
+    "@internetarchive/dweb-objects": "latest",
+    "@internetarchive/dweb-transports": "latest",
     "level": "^4.0.0",
     "readable-stream": "latest",
     "sha": "^2.0.1",

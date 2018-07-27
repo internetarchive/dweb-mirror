@@ -1,8 +1,8 @@
 //global.window = {}; // Target for things like window.onpopstate in Nav.js
 const wrtc = require('wrtc');
 
-global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move to repo
-global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
+global.DwebTransports = require('@internetarchive/dweb-transports');
+global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');

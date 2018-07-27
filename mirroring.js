@@ -1,10 +1,10 @@
-global.DwebTransports = require('dweb-transports/index.js'); //TODO-MIRROR move to repo
-global.DwebObjects = require('dweb-objects/index.js'); //Includes initializing support for names //TODO-MIRROR move to repo
+global.DwebTransports = require('@internetarchive/dweb-transports');
+global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorFS = require('./MirrorFS.js');
 const s = require('./StreamTools.js');
-const ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
+const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const wrtc = require('wrtc');
 const CollectionSearchStream = require('./MirrorCollectionSearchStream');
 

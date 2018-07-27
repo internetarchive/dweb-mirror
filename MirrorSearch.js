@@ -1,4 +1,4 @@
-const ArchiveItem = require('dweb-archive/ArchiveItem');  //TODO-MIRROR move to repo
+const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 
 class MirrorSearch extends ArchiveItem {
     constructor(options) {
