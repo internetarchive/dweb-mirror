@@ -1,6 +1,12 @@
 const MirrorSearch = require('./MirrorSearch');  //TODO-MIRROR move to repo
 
 class MirrorCollection extends MirrorSearch {
+    /*
+    A class to manage an Internet Archive 'Collection' by a special kind of query
+
+    TODO - handle other kinds of collections - https://github.com/internetarchive/dweb-mirror/issues/30
+     */
+
     constructor(options) {
         /*
         itemid:     the item to fetch - required if "item" not specified

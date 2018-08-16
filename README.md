@@ -42,6 +42,17 @@ MirrorUIconfig|Stub|User Interface to configuration and actions
 MirrorUIviewer|needs stub|User Interface to view collections - based on, or using, archive.html in dweb-archive
 Mirror|Stub|One class to rule them all
 
+#### Actual class hierarchy as built so far ...
+
+* collectionpressed.js and mirrored.js: applications using this
+* MirrorSearch - encapsulates an IA Search, keeps track of how many pages read etc
+    * MirrorCollection - sets up search queries for a IA Collection, 
+* stream.Transform
+    * ParallelStream - a transform stream that can run tasks in a configurable parallel manner
+        * MirrorCollectionSearchStream  MirrorCollection > Arrays of Search Results
+    * _MirrorXxxStream - a set of StreamTools to allow array like functions on a stream    
+* s - StreamTools task that creates _MirrorXxxStream classes
+
 ### Key Notes
 #### Crawling via Dweb
 The crawler is transport agnostic, it will as happily crawl the collection via IPFS as via HTTP, and does this transparantly 

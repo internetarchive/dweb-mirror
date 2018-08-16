@@ -5,6 +5,7 @@ const errors = require("./Errors.js"); // ToBeImplementedError
 class HashStore {
     /*
     A generic Hash Store built on top of level,
+    NOT CURRENTLY USED
 
     TODO - this could probably build on top of Redis as well.
      */
