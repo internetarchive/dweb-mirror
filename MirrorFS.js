@@ -9,10 +9,18 @@ const path = require('path');
 const sha = require('sha');
 
 class MirrorFS extends ParallelStream {
+    /*
+    Input: Stream of ArchiveFile (may extend to other types later
+    Output: Stream of {archivefile, size read (-1 if skipped)}
+
+    Fetchs an ArchiveFile and writes to disk
+    Optimised by checking the sha first and skipping if matches
+     */
 
     constructor(options={}) {
         const defaultoptions = {
-            parallel: 10,
+            parallel: {limit: 10, retryms: 100},
+            name: "MirrorFS",
         };
         super(Object.assign(defaultoptions, options));
         this.directory = options.directory;
@@ -105,7 +113,7 @@ class MirrorFS extends ParallelStream {
         _parallel has same profile as _transform except is run in parallel
         All paths through this must end with a cb with an optional final data.
         It is allowable to use this.push() before the final cb() but not after.
-         */
+        */
         //
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
@@ -158,35 +166,5 @@ class MirrorFS extends ParallelStream {
         }
     }
 
-    _transform(data, encoding, cb) {    // A search result got written to this stream
-        if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
-            cb = encoding;
-            encoding = null;
-        }
-        if (this.parallel.count >= this.parallel.limit) {
-            console.log("MirrorFS: waiting for parallel availability using", this.parallel.count,"of", this.parallel.limit);
-            setTimeout(()=>this._transform(data, encoding, cb), 100);   // Delay 100ms and try again
-            return;
-        }
-        try {
-            this.parallel.count++;
-            if (this.parallel.count > this.parallel.max) this.parallel.max = this.parallel.count;
-            this._parallel(data, encoding, (err, data) => {
-                if (!this.parallel) {
-                    cb(err, data);
-                } else {
-                    this.push(data);
-                }
-                this.parallel.count--;
-            });
-            if (this.parallel) {
-                cb(null);   // Return quickly and allow push to pass it on
-            }
-        } catch(err) { // Shouldnt catch errors - they should only happen inside _parallel and be caught there, triggering cb(err)
-            console.log("MirrorFS._transform caught error that _parallel missed", err.message);
-            this.parallel.count--;
-            cb(err);
-        }
-    }
 }
 exports = module.exports = MirrorFS;
