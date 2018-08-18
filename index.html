@@ -32,7 +32,7 @@
                         // noinspection JSIgnoredPromiseFromCall
                         onlogin(event.values); }
                 });
-                await Dweb.Domain.p_rootSet({verbose});
+                await Dweb.Domain.p_rootSet();
                 console.log("==Login should have finished-== output after here implies async issue ===");
                 let el_root_ul = document.getElementById("treeroot_ul");
                 addsubdomain(el_root_ul, "/", Dweb.Domain.root);
@@ -128,7 +128,6 @@ The files are mirrored in a local file system for several reasons:<ul>
 <script type="text/javascript">
     // These have to be at global level so they can be found anywhere.
     var searchparams = new URL(window.location.href).searchParams;
-    var verbose = searchparams.get("verbose") || false;  // Anything specified for verbose is true (could truthify buy no need)
     // noinspection JSIgnoredPromiseFromCall
     main();
 </script>

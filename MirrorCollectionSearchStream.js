@@ -41,7 +41,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
             // Should fetch next page of search, and metadata on first time.
             col.fetch()
                 .then(() => {
-                    if (verbose) console.log(this.name, col.itemid, "found:", col.items.length, "starting at", col.start );
+                    // console.log(this.name, col.itemid, "found:", col.items.length, "starting at", col.start );
                     this.push(col.items); // Array of ArchiveItems // col.items will get rewritten by next search, but with a new array so this passed on array is ok
                     this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })

@@ -36,7 +36,7 @@ class MirrorFS extends ParallelStream {
         if (source instanceof ArchiveFile) {
             let urls = await source.p_urls();
             try {
-                let crs = await DwebTransports.p_f_createReadStream(urls, {verbose});
+                let crs = await DwebTransports.p_f_createReadStream(urls);
                 let temp = await crs({start:0});
                 cb(null, temp ); //TODO-MIRROR check that await crs works if crs is not a promise
             } catch(err) {
@@ -78,7 +78,7 @@ class MirrorFS extends ParallelStream {
                         fs.stat(this.directory, (err, stats) => {
                             if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${this.directory} is missing - please create by hand`);
                             //TODO-MIRROR-LATER check directory writable from the stats
-                            console.log("MirrorFS creating directory: ");
+                            console.log("MirrorFS creating directory: ", path.dirname(filename));
                             this._mkdir(path.dirname(filename), err => {
                                 if (err) { console.log("Failed to mkdir for", filename); cb(err); }
                                 fs.open(filename, 'w', (err, fd) => {
@@ -127,13 +127,13 @@ class MirrorFS extends ParallelStream {
                     // noinspection JSIgnoredPromiseFromCall
                     this._streamFrom(archivefile, (err, s) => { //Returns a promise, but not waiting for it
                         if (err) {
-                            console.warn("MirrorFS._transform ignoring error", err.message);
+                            console.warn("MirrorFS._transform ignoring error on", archivefile.itemid, err.message);
                             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
                             // Dont try and write it
                         } else {
                             this._fileopen(filepath, (err, fd) => {
                                 if (err) {
-                                    console.log("MirrorFS._transform passing on error", err.message);
+                                    console.log("MirrorFS._transform passing on error for",archivefile.itemid, err.message);
                                     cb(err);
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
@@ -162,7 +162,7 @@ class MirrorFS extends ParallelStream {
                 }
             });
         } catch(err) {
-            console.log("MirrorFS._parallel caught error", err.message);
+            console.error("MirrorFS._parallel caught error", err.message);
             cb(err);
         }
     }

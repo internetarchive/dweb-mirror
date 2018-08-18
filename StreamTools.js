@@ -1,5 +1,6 @@
 const stream = require('readable-stream');
 const ParallelStream = require('./ParallelStream');
+const debug = require('debug'); // Note this is a function, not the usual require with a parameter to instantiate one debugger
 
 class _MirrorDebugStream extends ParallelStream {
 
@@ -10,12 +11,13 @@ class _MirrorDebugStream extends ParallelStream {
         options.name = options.name || "log";
         super(options);
         this.logfunction = cb;
+        this.debug = debug(`dweb-mirror:${options.name.replace(' ','')}`); // Debugger for this log stream
     }
     // noinspection JSUnusedGlobalSymbols
     _parallel(data, encoding, cb) {    // A search result got written to this stream
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
         try {
-            console.log(...this.logfunction(data));
+            this.debug(...this.logfunction(data));
         } catch(err) {
             cb(err);
             return;
@@ -89,7 +91,7 @@ class _MirrorMapStream extends ParallelStream {
                 cb(null, p);
             }
         } catch(err) {
-            console.log("_MirrorMapStream._parallel caught error", err.message);
+            console.error("_MirrorMapStream._parallel caught error", err.message);
             cb(err);
         }
     }
@@ -249,7 +251,7 @@ class s {
                 let i;
                 while (i = ediblearr.shift()) {
                     if (!through.write(i)) { // It still got written, but there is pushback
-                        console.error(`Pushback at ${name}.${i} from stream=========================`);
+                        console.warn(`Pushback at ${name}.${i} from stream=========================`);
                         through.once("drain", _pushbackablewrite);
                         return; // Without finishing
                     }

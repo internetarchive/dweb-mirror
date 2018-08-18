@@ -47,15 +47,13 @@ class Mirror {
 
     static async p_dev_mirror() {
         try {
-            global.verbose = false;
             // Incremental development building and testing components to path in README.md
             await DwebTransports.p_connect({
                     transports: ["HTTP", "WEBTORRENT", "IPFS"],
                     webtorrent: {tracker: { wrtc }},
                 }, false);
-            global.verbose = true;
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-            DwebTransports.http(verbose).supportFunctions.push("createReadStream");
+            DwebTransports.http().supportFunctions.push("createReadStream");
             let parallel = 5;
 
                 // Stream of ArchiveItems - which should all be collections
@@ -116,7 +114,6 @@ class Mirror {
 
     static async p_temp() { // Work area
         try {
-            global.verbose = false;
             // Incremental development building and testing components to path in README.md
             new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
                 .pipe(new s().log((m) => ["C", m]))
