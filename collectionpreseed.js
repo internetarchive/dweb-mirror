@@ -7,9 +7,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const MirrorSearch = require('./MirrorSearch.js');
-const s = require('./StreamTools.js');
-
-
+const ParallelStream = require('./ParallelStream.js');
 
 /* Collection crawl is a "eat your own dogfood" application to see whether this set of tools does what we need.
     Challenge - crawl the collections in the archive, dont mirror but trigger the metadata search so that the server preloads IPFS
@@ -59,52 +57,52 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
 
-            new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
-                .pipe(new s({uniq}).uniq({name:"0 uniq"}))
+            ParallelStream.fromEdibleArray(Object.keys(config.collections), {name: "EatConfig"})
+                .uniq(null, {uniq, name:"0 uniq"}))
 
-                .pipe(new s().log((m) => ["Level1 queueing", m])) //will display on MirrorCollectionSearchStream when processed
-                .pipe(new s({name: 'Create MirrorCollections 1'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                .log((m) => ["Level1 queueing", m]) //will display on MirrorCollectionSearchStream when processed
+                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 1'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 1", limit: 100, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: '1 flatten arrays of AI'}).flatten())
-                .pipe(new s({name: '1 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
-                .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
-                .pipe(new s({uniq}).uniq({name:"1 uniq"}))
+                .flatten({name: '1 flatten arrays of AI'})
+                .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
+                .map((xx) => xx.identifier, {name: '1 identifier'})
+                .uniq(null, {uniq, name:"1 uniq"})
 
-                .pipe(new s().log((m) => ["Level2 queueing", m])) //will display on MirrorCollectionSearchStream when processed
-                .pipe(new s({name: 'Create MirrorCollections 2'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                .log((m) => ["Level2 queueing", m]) //will display on MirrorCollectionSearchStream when processed
+                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 2'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: '2 flatten arrays of AI'}).flatten())
-                .pipe(new s({name: '2 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
-                .pipe(new s({name: '2 identifier'}).map((xx) => xx.identifier))
-                .pipe(new s({uniq}).uniq({name:"2 uniq"}))
+                .flatten({name: '2 flatten arrays of AI'})
+                .filter((zz) => zz.mediatype === "collection", {name: '2 filter by collection'})
+                .map((xx) => xx.identifier, {name: '2 identifier'})
+                .uniq(null, {uniq, name:"2 uniq"}))
 
 
-                .pipe(new s().log((m) => ["Level3 queueing:", m])) //will display on MirrorCollectionSearchStream when processed
-                .pipe(new s({name: 'Create MirrorCollections 3'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                .log((m) => ["Level3 queueing:", m])//will display on MirrorCollectionSearchStream when processed
+                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 3'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, parallel, silentwait: false}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: "END 3level"}).end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count)));
+                .end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count), {name: "END 3level"});
 
             let popularCollections = new MirrorSearch({
                 query: 'mediatype:collection AND NOT _exists_:access-restricted',
                 sort: '-downloads',
             });
 
-            new s({name: "EatPopularCollections"}).fromEdibleArray([popularCollections])
+            ParallelStream.fromEdibleArray([popularCollections], {name: "EatPopularCollections"})
                 .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: '1 flatten arrays of AI'}).flatten())
-                .pipe(new s({name: '1 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
-                .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
-                .pipe(new s().uniq()) // Use own uniq as going more items deep, but not recursing into subcollections
-                .pipe(new s({name: 'Create MirrorCollections popular'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                .flatten({name: '1 flatten arrays of AI'})
+                .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
+                .map((xx) => xx.identifier, {name: '1 identifier'})
+                .uniq(null, {name: "Popular uniq"}) // Use own uniq as going more items deep, but not recursing into subcollections
+                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular'} )  // Initialize collection - doesnt get metadata or search results
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, parallel, silentwait: false}))
-                .pipe(new s({name: "END Popular"}).end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count)));
+                .end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count), {name: "END Popular"});
             // No need to do something with these
 
         } catch(err) {
@@ -115,8 +113,6 @@ class Mirror {
     static async p_temp() { // Work area
         try {
             // Incremental development building and testing components to path in README.md
-            new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
-                .pipe(new s().log((m) => ["C", m]))
         } catch(err) {
             console.error(err);
         }

@@ -4,7 +4,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorFS = require('./MirrorFS.js');
-const s = require('./StreamTools.js');
+const ParallelStream = require('./ParallelStream.js');
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const wrtc = require('wrtc');
 const CollectionSearchStream = require('./MirrorCollectionSearchStream');
@@ -52,40 +52,29 @@ class Mirror {
             DwebTransports.http().supportFunctions.push("createReadStream");
             // Total number of results will be ~ maxpages * limit
             let ss =
-                new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
-/*
-                .pipe(new s({name:"Collection"}).log((m)=>[m.identifier]))
-
-                .pipe(new s({name: 'Create MirrorCollections'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
+                ParallelStream.fromEdibleArray(Object.keys(config.collections), {name: "Munching"})
+                .log((m)=>[m], {name:"Collection"})
+                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, parallel, silentwait: true}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
-                .pipe(new s({name: '1 flatten arrays of AI'}).flatten())
+                .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
-                //.pipe(new s().slice(0,1))   //Restrict to first Archive Item
-                .pipe(new s({name:"SearchResult"}).log((m)=>[m.identifier]))
-                //.pipe(new MirrorItemFromStream({highWaterMark: 3}))
-                //.pipe(new MirrorMapStream((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
-                .pipe(new s({name: "AI fetch", parallel: 5}).map((o) => new ArchiveItem({itemid: o.identifier}).fetch()))  // .then(o=>o._list))) // Parallel metadata reads
-*/
-                .pipe(new s({name: "Fork"}).fork(2)).streams;
-                ss[0].pipe(new s({name: "ForkedA"}).log(m => [m]))
-                    .pipe(new s({name: "END A"}).end());
-                ss[1].pipe(new s({name: "ForkedB"}).log(m => [m]))
-                    .pipe(new s({name: "END B"}).end())
-                /*
-                   new s({name: "ForkedB"}).log(ai => ai.identifier)
-                    // a stream of arrays of ArchiveFiles
-                    new s({name: "flatten"}).flatten())
-                    // a stream of ArchiveFiles's with metadata fetched
-                    .pipe(new s({name: "filter"}).filter(af => config.filter(af)))
-                    .pipe(new s({name: `slice first ${config.limittotalfiles} files`}).slice(0,config.limittotalfiles))
-                    .pipe(new s({name: "FileResult"}).log((m)=>[ "%s/%s", m.itemid, m.metadata.name]))
+                //.slice(0,1)  //Restrict to first Archive Item
+                .log((m)=>[m.identifier], {name:"SearchResult"})
+                .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", parallel: 5}) // Parallel metadata reads
+                // a stream of ArchiveFiles's with metadata fetched
+                .fork(2, {name: "Fork"}).streams;
+                ss[0].log(m => [m.itemid], {name: "ForkedA"})
+                    .end();
+                ss[1].map(ai => ai._list, {name: "List"})
+                    .flatten({name: "flatten files"})
+                    .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
+                    .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
+                    .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
                     .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))    // Parallel retrieve to file system
-                    .pipe(new s({name: "MirrorFS"}).log((o)=>o ? ['%s/%s size=%d expect size=%s',
-                        o.archivefile.itemid, o.archivefile.metadata.name, o.size, o.archivefile.metadata.size] : ["undefined"]))
-                */
-
+                    .log((o)=>o ? ['%s/%s size=%d expect size=%s', o.archivefile.itemid, o.archivefile.metadata.name, o.size, o.archivefile.metadata.size] : ["undefined"], {name: "MirrorFS"})
+                    .end();
         } catch(err) {
             console.error(err);
         }
