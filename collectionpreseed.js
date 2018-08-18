@@ -18,15 +18,11 @@ const s = require('./StreamTools.js');
 
 
 var config = {
-    //hashstore: { file: "level_db" },
-    //ui: {},
-    //fs: {},
-    //directory: "/Users/mitra/temp/mirrored",
-    limititemspersearchpage: 5, // Optimum is probably around 100
-    limitpagespercollection: 5, // So max #items is limititemspersearchpage * limitpagespercollection
-    //limittotalfiles: 250,
-    //limitfilesize: 1000000,
-    collections: {  //TODO-MIRROR not yet paying attention to this - issue#18
+    search: {
+        //itemsperpage: 5;  // Unused - varied for each type of search
+        //pagespersearch: 5; // Unused - varied for each type of search
+        }, // Optimum is probably around 100
+    collections: {
         "image": {},
         "movies": {},
         "texts": {},

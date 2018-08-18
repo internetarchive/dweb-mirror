@@ -7,21 +7,25 @@ const s = require('./StreamTools.js');
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const wrtc = require('wrtc');
 const CollectionSearchStream = require('./MirrorCollectionSearchStream');
+const MirrorConfig = require('./MirrorConfig');
 
-
-var config = {
+let config = new MirrorConfig({
     //hashstore: { file: "level_db" },
     //ui: {},
     //fs: {},
     directory: "/Users/mitra/temp/mirrored",
-    limititemspersearchpage: 5, // Optimum is probably around 100
-    limitpagespercollection: 5, // So max #items is limititemspersearchpage * limitpagespercollection
-    limittotalfiles: 250,
-    limitfilesize: 1000000,
-    collections: {  //TODO-MIRROR not yet paying attention to this - issue#18
+    limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
+    search: {
+        itemsperpage: 2, // Optimum is probably around 100,
+        pagespersearch: 2
+    },
+    file: {
+        maxfilesize: 1000000
+    },
+    collections: {
         "prelinger": {}
     }
-};
+});
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is
 
@@ -29,12 +33,14 @@ var config = {
 class Mirror {
 
     static async init() {
-        await HashStore.init(config.hashstore);
+        //await HashStore.init(config.hashstore);
     }
     static async test() {
-        await HashStore.test();
+        //await HashStore.test();
     }
     static async p_dev_mirror() {
+        let parallel = 5;
+
         try {
             global.verbose = true;
             // Incremental development building and testing components to path in README.md
@@ -50,7 +56,7 @@ class Mirror {
 
                 .pipe(new s({name: 'Create MirrorCollections'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new CollectionSearchStream({limit: config.limititemspersearchpage, maxpages: config.limitpagespercollection, parallel, silentwait: true}))
+                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, parallel, silentwait: true}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
                 .pipe(new s({name: '1 split arrays of AI'}).split())
                 // Stream of Search results (mixed)
@@ -58,13 +64,13 @@ class Mirror {
                 .pipe(new s().log((m)=>["SearchResult:", m.identifier]))
                 //.pipe(new MirrorItemFromStream({highWaterMark: 3}))
                 //.pipe(new MirrorMapStream((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
-                .pipe(new s({parallel: 5}).map((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list))) // Parallel metadata reads
+                .pipe(new s({name: "AI fetch", parallel: 5}).map((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list))) // Parallel metadata reads
                 // a stream of arrays of ArchiveFiles
                 .pipe(new s().split())
                 // a stream of ArchiveFiles's with metadata fetched
-                .pipe(new s().filter(af => af.metadata.size < config.limitfilesize))
-                .pipe(new s().slice(0,config.limittotalfiles))
                 .pipe(new s().log((m)=>["FileResult:", `${m.itemid}/${m.metadata.name}`]))
+                .pipe(new s({name: "filter"}).filter(af => config.filter(af)))
+                .pipe(new s({name: `slice first ${config.limittotalfiles} files`}).slice(0,config.limittotalfiles))
                 .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))    // Parallel retrieve to file system
                 .pipe(new s().log((o)=>["MirrorFS Result:", `${o.archivefile.itemid}/${o.archivefile.metadata.name} size=${o.size} expect size=${o.archivefile.metadata.size}`]))
 

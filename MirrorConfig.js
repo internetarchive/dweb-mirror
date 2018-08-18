@@ -1,0 +1,36 @@
+const ArchiveFile  = require("@internetarchive/dweb-archive/ArchiveFile");
+
+class MirrorConfig {
+    /*
+    A set of tools to manage and work on configuration data structures and to map to storage or UI
+
+    Note the API for this is in flux as build the first few use cases
+
+    Fields
+    config: {
+        // Miscellaneous used in mirroring - may be changed to a canonical version
+            directory: "/Users/mitra/temp/mirrored",
+            limittotalfiles: 250,
+        file: { // Configuration (especially filtering) relating to any file
+            maxfilesize: 1000000,
+        }
+        search: {
+            itemsperpage: // Optimum is probably around 100
+            pagespersearch: // Number of pages to search, so total max results is pagespersearch * itemsperpage
+        }
+        collections: { // Specific parameters relating to each collection, also used as a list of collections to operate on
+            <collectionid>: {},
+        }
+    }
+    */
+    constructor(init) {
+        Object.keys(init).forEach(f => { this[f] = init[f]; delete init[f] })
+    }
+    filter(o) {
+        if ((o instanceof ArchiveFile) && (
+            (this.file.maxfilesize && this.file.maxfilesize < o.metadata.size)
+        )) return false;
+        return true;
+    }
+}
+exports = module.exports = MirrorConfig;

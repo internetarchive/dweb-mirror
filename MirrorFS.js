@@ -21,6 +21,7 @@ class MirrorFS extends ParallelStream {
         const defaultoptions = {
             parallel: {limit: 10, retryms: 100},
             name: "MirrorFS",
+            silentwait: true, // Expecting this to be waiting a bunch
         };
         super(Object.assign(defaultoptions, options));
         this.directory = options.directory;

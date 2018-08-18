@@ -235,7 +235,7 @@ class s {
         try {
             _pushbackablewrite(); // Will .end stream when done
         } catch (err) {
-            // Would be unexpected to see error here, more likely _p_crawl will catch it asynchronously
+            // Would be unexpected to see error here, more likely _parallel will catch it asynchronously
             console.error(err);
             through.destroy(new Error(`Failure in ${name}.s_fromEdibleArray: ${err.message}`))
         }
