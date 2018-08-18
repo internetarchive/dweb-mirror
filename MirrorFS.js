@@ -19,7 +19,7 @@ class MirrorFS extends ParallelStream {
 
     constructor(options={}) {
         const defaultoptions = {
-            parallel: {limit: 10, retryms: 100},
+            paralleloptions: {limit: 10, retryms: 100},
             name: "MirrorFS",
             silentwait: true, // Expecting this to be waiting a bunch
         };
@@ -99,12 +99,12 @@ class MirrorFS extends ParallelStream {
         }
     }
     _final(cb) {
-        if (this.parallel.count) {
-            console.log("MirrorFS: Waiting on", this.parallel.count,"of max",this.parallel.max,"threads to close");
+        if (this.paralleloptions.count) {
+            console.log("MirrorFS: Waiting on", this.paralleloptions.count,"of max",this.paralleloptions.max,"threads to close");
             setTimeout(()=>this._final(cb), 1000);
             return;
         }
-        console.log("MirrorFS: Closed parallel streams was max=", this.parallel.max);
+        console.log("MirrorFS: Closed parallel streams was max=", this.paralleloptions.max);
         cb();
     }
 

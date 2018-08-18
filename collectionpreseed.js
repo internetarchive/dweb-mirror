@@ -52,7 +52,7 @@ class Mirror {
                 }, false);
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");
-            let parallel = 5;
+            let paralleloptions = {limit: 5, silentwait: false};
 
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
@@ -63,7 +63,7 @@ class Mirror {
                 .log((m) => ["Level1 queueing", m]) //will display on MirrorCollectionSearchStream when processed
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 1'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 1", limit: 100, maxpages: 1, parallel, silentwait: false}))
+                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 1", limit: 100, maxpages: 1, paralleloptions}))
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '1 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
@@ -73,7 +73,7 @@ class Mirror {
                 .log((m) => ["Level2 queueing", m]) //will display on MirrorCollectionSearchStream when processed
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 2'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 1, parallel, silentwait: false}))
+                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 1, paralleloptions}))
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '2 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '2 filter by collection'})
@@ -84,7 +84,7 @@ class Mirror {
                 .log((m) => ["Level3 queueing:", m])//will display on MirrorCollectionSearchStream when processed
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 3'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, parallel, silentwait: false}))
+                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, paralleloptions}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
                 .end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count), {name: "END 3level"});
 
@@ -94,14 +94,14 @@ class Mirror {
             });
 
             ParallelStream.fromEdibleArray([popularCollections], {name: "EatPopularCollections"})
-                .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, parallel, silentwait: false}))
+                .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, paralleloptions}))
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '1 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
                 .map((xx) => xx.identifier, {name: '1 identifier'})
                 .uniq(null, {name: "Popular uniq"}) // Use own uniq as going more items deep, but not recursing into subcollections
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular'} )  // Initialize collection - doesnt get metadata or search results
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, parallel, silentwait: false}))
+                .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, paralleloptions}))
                 .end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count), {name: "END Popular"});
             // No need to do something with these
 

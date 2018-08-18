@@ -40,7 +40,7 @@ class Mirror {
         //await HashStore.test();
     }
     static async p_dev_mirror() {
-        let parallel = 5;
+        let paralleloptions = {limit: 5, silentwait: true};
 
         try {
             // Incremental development building and testing components to path in README.md
@@ -56,13 +56,13 @@ class Mirror {
                 .log((m)=>[m], {name:"Collection"})
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, parallel, silentwait: true}))
+                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, paralleloptions}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
                 //.slice(0,1)  //Restrict to first Archive Item
                 .log((m)=>[m.identifier], {name:"SearchResult"})
-                .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", parallel: 5}) // Parallel metadata reads
+                .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(2, {name: "Fork"}).streams;
                 ss[0].log(m => [m.itemid], {name: "ForkedA"})
@@ -72,8 +72,7 @@ class Mirror {
                     .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
                     .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
                     .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-                    .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))    // Parallel retrieve to file system
-                    .log((o)=>o ? ['%s/%s size=%d expect size=%s', o.archivefile.itemid, o.archivefile.metadata.name, o.size, o.archivefile.metadata.size] : ["undefined"], {name: "MirrorFS"})
+                    .pipe(new MirrorFS({directory: config.directory, paralleloptions }))    // Parallel retrieve to file system
                     .end();
         } catch(err) {
             console.error(err);
