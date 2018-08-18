@@ -51,7 +51,9 @@ class Mirror {
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");
             // Total number of results will be ~ maxpages * limit
-            new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
+            let ss =
+                new s({name: "EatConfig"}).fromEdibleArray(Object.keys(config.collections))
+/*
                 .pipe(new s({name:"Collection"}).log((m)=>[m.identifier]))
 
                 .pipe(new s({name: 'Create MirrorCollections'}).map((name) => new MirrorCollection({itemid: name}) ))  // Initialize collection - doesnt get metadata or search results
@@ -64,16 +66,25 @@ class Mirror {
                 .pipe(new s({name:"SearchResult"}).log((m)=>[m.identifier]))
                 //.pipe(new MirrorItemFromStream({highWaterMark: 3}))
                 //.pipe(new MirrorMapStream((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
-                .pipe(new s({name: "AI fetch", parallel: 5}).map((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list))) // Parallel metadata reads
-                // a stream of arrays of ArchiveFiles
-                .pipe(new s({name: "flatten"}).flatten())
-                // a stream of ArchiveFiles's with metadata fetched
-                .pipe(new s({name: "filter"}).filter(af => config.filter(af)))
-                .pipe(new s({name: `slice first ${config.limittotalfiles} files`}).slice(0,config.limittotalfiles))
-                .pipe(new s({name: "FileResult"}).log((m)=>[ "%s/%s", m.itemid, m.metadata.name]))
-                .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))    // Parallel retrieve to file system
-                .pipe(new s({name: "MirrorFS"}).log((o)=>o ? ['%s/%s size=%d expect size=%s',
-                    o.archivefile.itemid, o.archivefile.metadata.name, o.size, o.archivefile.metadata.size] : ["undefined"]))
+                .pipe(new s({name: "AI fetch", parallel: 5}).map((o) => new ArchiveItem({itemid: o.identifier}).fetch()))  // .then(o=>o._list))) // Parallel metadata reads
+*/
+                .pipe(new s({name: "Fork"}).fork(2)).streams;
+                ss[0].pipe(new s({name: "ForkedA"}).log(m => [m]))
+                    .pipe(new s({name: "END A"}).end());
+                ss[1].pipe(new s({name: "ForkedB"}).log(m => [m]))
+                    .pipe(new s({name: "END B"}).end())
+                /*
+                   new s({name: "ForkedB"}).log(ai => ai.identifier)
+                    // a stream of arrays of ArchiveFiles
+                    new s({name: "flatten"}).flatten())
+                    // a stream of ArchiveFiles's with metadata fetched
+                    .pipe(new s({name: "filter"}).filter(af => config.filter(af)))
+                    .pipe(new s({name: `slice first ${config.limittotalfiles} files`}).slice(0,config.limittotalfiles))
+                    .pipe(new s({name: "FileResult"}).log((m)=>[ "%s/%s", m.itemid, m.metadata.name]))
+                    .pipe(new MirrorFS({directory: config.directory, parallel: 5 }))    // Parallel retrieve to file system
+                    .pipe(new s({name: "MirrorFS"}).log((o)=>o ? ['%s/%s size=%d expect size=%s',
+                        o.archivefile.itemid, o.archivefile.metadata.name, o.size, o.archivefile.metadata.size] : ["undefined"]))
+                */
 
         } catch(err) {
             console.error(err);

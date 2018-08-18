@@ -198,6 +198,44 @@ class _MirrorUniqStream extends ParallelStream {
 }
 
 
+class _MirrorForkStream extends stream.Writable {
+    /*
+    input stream any objects
+    output stream any objects (unmodified)
+    with copy to each of the forked stream(s)
+    */
+    constructor(nstreams, options={}) {
+        const defaultopts = {
+            objectMode: true, // Default to object mode rather than stream of bytes
+            highWaterMark: 3,
+        };  // Default to pushback after 3, will probably raise this
+        let opts = Object.assign(defaultopts, options)
+        super(opts); // None currently
+        this.name = options.name || "fork";
+        this.streams = Array.from(Array(nstreams)).map(unused=>new stream.PassThrough(opts));
+    }
+    _write(o, encoding, cb) {
+        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
+        try {
+            let firstpushback = this.streams.map(s => s.write(o) ? false : s).find(s => !!s); // Writes to all streams, catches first that has pushback
+            if (firstpushback) {
+                console.warn(`Pushback at $(name) from $(firstpushback.name)`);
+                firstpushback.once("drain", cb); // Just wait on first pushback to be ready, should be ok as if 2nd hasn't cleared it will pushback on next write
+            } else {
+                cb();
+            }
+        } catch(err) { // Unlikely to have an error since should catch in pushbackable fork
+            this.streams.map(s => s.destroy(new Error(`Failure in ${name}._write: ${err.message}`)));
+            cb(err);
+        }
+    }
+    _final(cb) {
+        this.streams.map(s=>s.end());
+        cb();
+    }
+
+}
+
 class s {
     constructor(options={}) {
         this.options=options;
@@ -220,6 +258,15 @@ class s {
     }
     uniq(cb) {
         return new _MirrorUniqStream(cb, this.options);
+    }
+
+    /*
+    Usage of fork is slightly odd .. ..
+    let ss = new s() .. .pipe ... .pipe(new s().fork(2)).streams;
+    ss[0].pipe ...; ss[1].pipe....
+     */
+    fork(streams) {
+        return new _MirrorForkStream(streams, this.options);
     }
     end(cbstart, cbperitem, cbfinal) {
         return new _MirrorEndStream(cbstart, cbperitem, cbfinal, this.options);
