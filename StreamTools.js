@@ -97,7 +97,7 @@ class _MirrorMapStream extends ParallelStream {
     }
 }
 
-class _MirrorSplitStream extends ParallelStream {
+class _MirrorFlattenStream extends ParallelStream {
     /*
     input stream - of arrays
     output stream - expand arrays into a single stream
@@ -205,9 +205,9 @@ class s {
     map(cb) {
         return new _MirrorMapStream(cb, this.options);
     }
-    split() {
+    flatten() {
         // TODO could add options as to whether should handle single objs as well as arrays and whether to ignore undefined
-        return new _MirrorSplitStream(this.options);
+        return new _MirrorFlattenStream(this.options);
     }
     slice(begin, end) {
         return new _MirrorSliceStream(begin, end, this.options);

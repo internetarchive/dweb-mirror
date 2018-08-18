@@ -58,7 +58,7 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, parallel, silentwait: true}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
-                .pipe(new s({name: '1 split arrays of AI'}).split())
+                .pipe(new s({name: '1 flatten arrays of AI'}).flatten())
                 // Stream of Search results (mixed)
                 //.pipe(new s().slice(0,1))   //Restrict to first Archive Item
                 .pipe(new s({name:"SearchResult"}).log((m)=>[m.identifier]))
@@ -66,7 +66,7 @@ class Mirror {
                 //.pipe(new MirrorMapStream((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list)))
                 .pipe(new s({name: "AI fetch", parallel: 5}).map((o) => new ArchiveItem({itemid: o.identifier}).fetch().then(o=>o._list))) // Parallel metadata reads
                 // a stream of arrays of ArchiveFiles
-                .pipe(new s().split())
+                .pipe(new s({name: "flatten"}).flatten())
                 // a stream of ArchiveFiles's with metadata fetched
                 .pipe(new s({name: "filter"}).filter(af => config.filter(af)))
                 .pipe(new s({name: `slice first ${config.limittotalfiles} files`}).slice(0,config.limittotalfiles))
@@ -80,7 +80,6 @@ class Mirror {
         }
     }
 }
-
 
 Mirror.init()
     //.then(() => Mirror.test())

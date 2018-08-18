@@ -67,7 +67,7 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 1", limit: 100, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: '1 split arrays of AI'}).split())
+                .pipe(new s({name: '1 flatten arrays of AI'}).flatten())
                 .pipe(new s({name: '1 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
                 .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
                 .pipe(new s({uniq}).uniq({name:"1 uniq"}))
@@ -77,7 +77,7 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: '2 split arrays of AI'}).split())
+                .pipe(new s({name: '2 flatten arrays of AI'}).flatten())
                 .pipe(new s({name: '2 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
                 .pipe(new s({name: '2 identifier'}).map((xx) => xx.identifier))
                 .pipe(new s({uniq}).uniq({name:"2 uniq"}))
@@ -98,7 +98,7 @@ class Mirror {
             new s({name: "EatPopularCollections"}).fromEdibleArray([popularCollections])
                 .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, parallel, silentwait: false}))
                 // Stream of arrays of Archive Items (mixed)
-                .pipe(new s({name: '1 split arrays of AI'}).split())
+                .pipe(new s({name: '1 flatten arrays of AI'}).flatten())
                 .pipe(new s({name: '1 filter by collection'}).filter((zz) => zz.mediatype === "collection"))
                 .pipe(new s({name: '1 identifier'}).map((xx) => xx.identifier))
                 .pipe(new s().uniq()) // Use own uniq as going more items deep, but not recursing into subcollections
