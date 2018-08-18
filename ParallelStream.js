@@ -49,6 +49,8 @@ class ParallelStream extends stream.Transform {
     }
 
     _transform(data, encoding, cb) {    // A search result got written to this stream
+        let psxx =  ParallelStream.xxx++;
+        let donecb = false;
         if (typeof encoding === 'function') { // Allow for skipping encoding parameter (which is unused anyway)
             cb = encoding;
             encoding = null;
@@ -65,6 +67,8 @@ class ParallelStream extends stream.Transform {
             if (this.parallel.count > this.parallel.max) this.parallel.max = this.parallel.count;
             this._parallel(data, encoding, (err, data) => {
                 if (!this.parallel.limit) {
+                    //console.log("XXX@PS68", this.name, psxx)
+                    donecb = true;
                     cb(err, data);
                 } else {
                     this.push(data);
@@ -72,13 +76,19 @@ class ParallelStream extends stream.Transform {
                 this.parallel.count--;
             });
             if (this.parallel.limit) {
+                //console.log("XXX@PS76", this.name, psxx)
+                donecb = true;
                 cb(null);   // Return quickly and allow push to pass it on
             }
         } catch(err) { // Shouldnt catch errors - they should only happen inside _parallel and be caught there, triggering cb(err)
-            console.log(name, "._transform caught error that _parallel missed", err.message);
+            console.error(name, "._transform caught error that _parallel missed", err.message, psxx);
             this.parallel.count--;
-            cb(err);
+            //console.log("XXX@PS82", this.name, psxx)
+            if (!donecb)
+                cb(err);
         }
     }
 }
+ParallelStream.xxx = 1
+
 exports = module.exports = ParallelStream;
