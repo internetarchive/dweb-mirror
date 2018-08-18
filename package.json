@@ -9,7 +9,7 @@
   },
   "name": "dweb-mirror",
   "dependencies": {
-    "@internetarchive/dweb-archive": "latest",
+    "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
     "@internetarchive/dweb-objects": "latest",
     "@internetarchive/dweb-transports": "latest",
     "level": "^4.0.0",
