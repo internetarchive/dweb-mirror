@@ -59,7 +59,7 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
 
-            ParallelStream.fromEdibleArray(Object.keys(config.collections), {name: "EatConfig"})
+            ParallelStream.from(Object.keys(config.collections), {name: "EatConfig"})
                 .uniq(null, {uniq, name:"0 uniq"}))
 
                 .log((m) => ["Level1 queueing", m]) //will display on MirrorCollectionSearchStream when processed
@@ -88,14 +88,14 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, paralleloptions}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
-                .end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count), {name: "END 3level"});
+                .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally: ()=>this.debug("Finished with:",self.count), name: "END 3level"});
 
             let popularCollections = new MirrorSearch({
                 query: 'mediatype:collection AND NOT _exists_:access-restricted',
                 sort: '-downloads',
             });
 
-            ParallelStream.fromEdibleArray([popularCollections], {name: "EatPopularCollections"})
+            ParallelStream.from([popularCollections], {name: "EatPopularCollections"})
                 .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, paralleloptions}))
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '1 flatten arrays of AI'})
@@ -104,7 +104,7 @@ class Mirror {
                 .uniq(null, {name: "Popular uniq"}) // Use own uniq as going more items deep, but not recursing into subcollections
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular'} )  // Initialize collection - doesnt get metadata or search results
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, paralleloptions}))
-                .end((self)=>self.count = 0, (data, self)=>self.count++, (self)=>console.log("Finished with:",self.count), {name: "END Popular"});
+                .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally:()=>this.debug("Finished with: %d",self.count), name: "END Popular"});
             // No need to do something with these
 
         } catch(err) {

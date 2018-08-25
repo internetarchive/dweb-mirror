@@ -54,7 +54,7 @@ class Mirror {
             DwebTransports.http().supportFunctions.push("createReadStream");
             // Total number of results will be ~ maxpages * limit
             let ss =
-                ParallelStream.fromEdibleArray(Object.keys(config.collections), {name: "Munching"})
+                ParallelStream.from(Object.keys(config.collections), {name: "Munching"})
                 .log((m)=>[m], {name:"Collection"})
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
@@ -68,14 +68,14 @@ class Mirror {
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(2, {name: "Fork"}).streams;
                 ss[0].log(m => [m.itemid], {name: "ForkedA"})
-                    .end();
+                    .finish();
                 ss[1].map(ai => ai._list, {name: "List"})
                     .flatten({name: "flatten files"})
                     .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
                     .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
                     .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
                     .pipe(new MirrorFS({directory: config.directory, paralleloptions }))    // Parallel retrieve to file system
-                    .end();
+                    .finish();
         } catch(err) {
             console.error(err);
         }

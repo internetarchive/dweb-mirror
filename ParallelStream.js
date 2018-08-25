@@ -1,7 +1,6 @@
-process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
 
-const stream = require('readable-stream');
+
+const stream = require('readable-stream');  //https://nodejs.org/api/stream.html
 const debug = require('debug');
 
 class ParallelStream extends stream.Transform {
@@ -10,11 +9,13 @@ class ParallelStream extends stream.Transform {
 
     The key differences are ...
     subclasses should implement _parallel(data, encoding, cb) which has exactly same syntax as _transform in TransformStreams
-    Of they can implement _transform (and not work in parallel)
+    Or they can implement _transform (and not work in parallel)
 
     constructor(options)    Includes {
         parallellimit: max number of threads to run simultaneously}
         transform:  optional function(data, encoding, cb) to use instead of implementing _parallel
+        parallel:   function that implements _parallel(data, encoding, cb)
+    log(f(a)=>string | array):    Pipe to another stream that returns a string, or array suitable for debug (e.g. ["foo %s = %d in %o",str,num,obj]
      */
 
     constructor(options={}) {
@@ -29,6 +30,7 @@ class ParallelStream extends stream.Transform {
         if (options.parallel) { this._parallel = options.parallel; }
         this.name = options.name || "ParallelStream";
         this.debug = debug(`dweb-mirror:${options.name.replace(' ','_')}`); // Debugger for this log stream
+        if (typeof options.init === "function") options.init.call(this);
     }
 
     _final(cb) {
@@ -108,60 +110,175 @@ class ParallelStream extends stream.Transform {
         );
     }
 
+    map(mapfunction, options) {
+        // Usage example  writable.map(m => m*2, {name: "foo" }
+        return this.pipe(
+            new ParallelStream(Object.assign({
+                parallel(o, encoding, cb) {
+                    let p = mapfunction(o);
+                    if (p instanceof Promise) {
+                        p.then((data) => cb(null, data))
+                            .catch((err) => cb(err));
+                    } else {
+                        cb(null, p);
+                    }
+                 },
+                 name: "map"
+                }, options))
+        );
     }
 
-    map(cb, options) {
-        return this.pipe(new _MirrorMapStream(cb, options));
-    }
     flatten(options) {
-        return this.pipe(new _MirrorFlattenStream(options));
+        /*
+        input stream - of arrays
+        output stream - expand arrays into a single stream
+
+        TODO could add options as to whether should handle single objs as well as arrays and whether to ignore undefined
+         */
+        // Usage example  writable.map(m => m*2, {name: "foo" }
+        return this.pipe(
+            new ParallelStream(Object.assign({
+                parallel(oo, encoding, cb) {
+                    if (Array.isArray(oo)) {
+                        oo.forEach(o => this.push(o));
+                    } else if ((typeof oo) !== "undefined") {
+                        this.push(oo);
+                    }
+                    cb();
+                },
+                name: "flatten"
+            }, options))
+        );
     }
-    end(cbstart, cbperitem, cbfinal, options) {
-        return this.pipe(new _MirrorEndStream(cbstart, cbperitem, cbfinal, options));
+
+    filter(filterfunction, options) {
+        /*
+        filterfunction(x) => boolean
+        input stream: objects
+        output stream: objects where filterfunction returns true
+         */
+        // Usage example  writable.map(m => m*2, {name: "foo" }
+        return this.pipe(
+            new ParallelStream(Object.assign({
+                parallel(o, encoding, cb) {
+                    if (filterfunction(o)) {
+                        this.push(o)
+                    }
+                    cb();
+                },
+                name: "filter"
+            }, options))
+        );
     }
-    filter(cb, options) {
-        return this.pipe(new _MirrorFilterStream(cb, options));
-    }
+
     slice(begin, end, options) {
-        return this.pipe(new _MirrorSliceStream(begin, end, options));
+        /*
+        begin: first item to pass,
+        end: one after last item
+        input stream: objects
+        output stream: objects[begin...end-1]
+         */
+        let ps = new ParallelStream(Object.assign({
+            parallel(o, encoding, cb) { // Note 'this' is ps inside the function
+                if ((begin <= this.count) && ((typeof end  === "undefined")|| this.count < end)) {
+                    this.push(o);
+                }
+                this.count++; //Note count is how many processed, not how many pushed
+                cb();
+            },
+            name: "slice"
+        }, options));
+        ps.count = 0;
+        return this.pipe(ps);
     }
+
     /*
     Usage of fork is slightly odd .. ..
     let ss =  .... .fork(2).streams;
     ss[0].log ...; ss[1].filter.... etc
      */
     fork(nstreams, options) {
-        return this.pipe(new _MirrorForkStream(nstreams, options));
+        const defaultoptions = {
+            objectMode: true,
+            highWaterMark: 3,
+            name: "fork"
+        }
+        let ws = new stream.Writable(Object.assign({
+            write(o, encoding, cb) {
+                if (typeof encoding === 'function') {
+                    cb = encoding;
+                    encoding = null;
+                } // Allow missing encoding
+                try {
+                    let firstpushback = this.streams.map(s => s.write(o) ? false : s).find(s => !!s); // Writes to all streams, catches first that has pushback
+                    if (firstpushback) {
+                        this.debug("Pushback from %s", firstpushback.name);
+                        firstpushback.once("drain", cb); // Just wait on first pushback to be ready, should be ok as if 2nd hasn't cleared it will pushback on next write
+                    } else {
+                        cb();
+                    }
+                } catch (err) { // Unlikely to have an error since should catch in pushbackable fork
+                    this.streams.map(s => s.destroy(new Error(`Failure in ${this.name}._write: ${err.message}`)));
+                    cb(err);
+                }
+            },
+            final(cb) {
+                this.streams.map(s => s.end());
+                cb();
+            }
+        }, defaultoptions, options));
+        ws.streams = Array.from(Array(nstreams)).map(unused=>new ParallelStream(Object.assign(defaultoptions, options)));
+        return this.pipe(ws)
     }
-    uniq(cb, options) {
-        return new _MirrorUniqStream(cb, options);
+    uniq(uniqfunction, options={}) {
+        /*
+        uniqfunction(o): a string that can be used to compare uniqueness (for example an id)
+        options { uniq: optiona array to use for checking uniqueness (allows testing against existing list)
+        }
+        input stream: objects
+        output stream: subset of objects
+         */
+        let uf = (typeof uniqfunction === "function") ? uniqfunction : function(a) {return a};
+        let uniqarr = Array.isArray(options.uniq) ? options.uniq : [];
+        let ps = new ParallelStream(Object.assign({
+            parallel(o, encoding, cb) { // Note 'this' is ps inside the function
+                let id = uf(o);
+                if (! uniqarr.includes(id) ) {
+                    uniqarr.push(id);
+                    this.push(o);   // Only push if uniq
+                } else {
+                    debug("Duplicate with id=%s", id);
+                }
+                cb();
+            },
+            name: "uniq"
+        }, options));
+        return this.pipe(ps);
     }
 
-    static fromEdibleArray(ediblearr, options) { // Static
+    static from(arr, options={}) { // Static
         /*
             Consume array, feeding it to a new stream
          */
         // noinspection JSUnresolvedFunction
-        let name = options.name || "EdibleArray";
-        let through = new ParallelStream(Object.assign({objectMode: true, highWaterMark: 3}, options));
+        let ediblearr = Array.from(arr); // Shallow copy.
+        let through = new ParallelStream(Object.assign({objectMode: true, highWaterMark: 3, name: "EdibleArray"},options));
         try {
             _pushbackablewrite(); // Will .end stream when done
         } catch (err) {
             // Would be unexpected to see error here, more likely _parallel will catch it asynchronously
             console.error(err);
-            through.destroy(new Error(`Failure in ${name}.s_fromEdibleArray: ${err.message}`))
+            through.destroy(new Error(`Failure in ${through.name}.s_fromEdibleArray: ${err.message}`))
         }
-        console.log(name, "s_fromEdibleArray ending");
         return through;
 
         function _pushbackablewrite() { // Asynchronous, retriggerable
             // Note consumes eatable array from parent
-            console.log(`Continuing ${name}`);
             try {
                 let i;
-                while (i = ediblearr.shift()) {
+                while (typeof(i = ediblearr.shift()) !== "undefined") {
                     if (!through.write(i)) { // It still got written, but there is pushback
-                        console.warn(`Pushback at ${name}.${i} from stream=========================`);
+                        this.debug("Pushback from %s, %d items left", through.name, ediblearr.length);
                         through.once("drain", _pushbackablewrite);
                         return; // Without finishing
                     }
@@ -170,221 +287,25 @@ class ParallelStream extends stream.Transform {
                 through.end();    // Only end on final loop
             } catch(err) {
                 console.error(err);
-                through.destroy(new Error(`Failure in ${name}._pushbackablewrite: ${err.message}`))
+                through.destroy(new Error(`Failure in ${through.name}._pushbackablewrite: ${err.message}`))
             }
         }
     }
-
-class _MirrorEndStream extends ParallelStream {
-
-    constructor(cbstart, cbperitem, cbfinal, options={}) {
-        /* cb is function to turn item into something console.log can handle */
-        options.highWaterMark = options.highWaterMark || 99999; // Dont let this debugging cause backpressure itself
-        options.objectMode = true;
-        options.name = options.name || "Endstream";
-        super(options);
-        this.cbperitem = cbperitem;
-        this.cbfinal = cbfinal;
-        if (cbstart) cbstart(this);
-    }
-    // noinspection JSUnusedGlobalSymbols
-    _parallel(data, encoding, cb) {    // A search result got written to this stream
-        try {
-            if (this.cbperitem) { this.cbperitem(data, this); } // Note doesnt push
-        } catch(err) {
-            cb(err);
-            return;
-        }
-        cb(); // Note no data sent on
-    }
-    _final(cb) {
-        if (this.paralleloptions.limit) {
-            console.log(this.name, "Probably Shouldnt be running an End stream in parallel")
-            if (this.paralleloptions.count) {
-                console.log("EndStream: Waiting on", this.paralleloptions.count, "of max", this.paralleloptions.max, "threads to close");
-                setTimeout(() => this._final(cb), 1000);
-                return;
-            }
-            //console.log(this.name, "_final Closing parallel. Was max=", this.paralleloptions.max);
-        } else {
-            //console.log(this.name, "_final Closing");
-        }
-        // OK cleared any parallel stuff that shouldnt be there!
-        if (this.cbfinal) {
-            this.cbfinal(this)
-        }
-        cb();
-    }
-
-}
-class _MirrorMapStream extends ParallelStream {
-    /*
-    input stream - any objects
-    output stream - transformed depending
-     */
-    constructor(cb, options={}) {
-        super(options);
-        this.mapfunction = cb;
-    }
-
-    _parallel(o, encoding, cb) {    // A search result got written to this stream
-        try {
-            // cb(null, this.mapfunction(o));   //TODO automate detection of promise
-            let p = this.mapfunction(o);
-            if (p instanceof Promise) {
-                p.then((data) => cb(null, data))
-                    .catch((err) => cb(err));
-            } else {
-                cb(null, p);
-            }
-        } catch(err) {
-            console.error("_MirrorMapStream._parallel caught error", err.message);
-            cb(err);
-        }
+    finish(options={}) {
+        let ps = new ParallelStream(Object.assign({
+            name: "end",
+            parallel(data, encoding, cb) {
+                if (options.foreach) { options.foreach.call(this, data); }; cb() }, // Note doesnt push
+            flush(cb) {
+                if (this.paralleloptions.limit && this.paralleloptions.count) {
+                    setTimeout(() => this.flush.call(this, cb), 1000);
+                } else {
+                    if (options.finally) options.finally.call(this);
+                    cb()
+            } },
+        }, options));
+        // Init will be run by Parallel constructor
+        this.pipe(ps);
     }
 }
-
-class _MirrorFlattenStream extends ParallelStream {
-    /*
-    input stream - of arrays
-    output stream - expand arrays into a single stream
-
-    TODO could add options as to whether should handle single objs as well as arrays and whether to ignore undefined
-     */
-    _parallel(oo, encoding, cb) {    // A search result got written to this stream
-        try {
-            if (Array.isArray(oo)) {
-                oo.forEach(o => this.push(o));
-            } else if ((typeof oo) !== "undefined") {
-                this.push(oo);
-            }
-            cb();
-        } catch(err) {
-            cb(err);
-        }
-    }
-}
-class _MirrorSliceStream extends ParallelStream {
-    /*
-    input stream - of objects (or anything really)
-    output stream - equivalent of .splice
-     */
-
-
-    constructor(begin=0, end=undefined, options={}) {
-        super(options);
-        this.beginx = begin;
-        this.endx = end; // Not included, undefined to continue
-        this.count = 0; // How many already processed
-    }
-
-    _parallel(o, encoding, cb) {
-        try {
-            if ((this.beginx <= this.count) && ((typeof this.endx  === "undefined")|| this.count < this.endx)) {
-                this.push(o);
-            }
-            this.count++; //Note count is how many processed, not how many pushed
-            cb();
-        } catch(err) {
-            cb(err);
-        }
-    }
-}
-
-class _MirrorFilterStream extends ParallelStream {
-    /*
-    input stream
-    output stream filtered by cb
-     */
-    constructor(cb, options={}) {
-        super(options); // None currently
-        this.cb = cb;
-    }
-
-
-    _parallel(o, encoding, cb) {    // A search result got written to this stream
-        try {
-            if (this.cb(o)) {
-                this.push(o);   // Only push if matches filter
-            }
-            cb();
-        } catch(err) {
-            cb(err);
-        }
-    }
-}
-class _MirrorUniqStream extends ParallelStream {
-    /*
-    input stream
-    output stream with non uniq ids removed
-     */
-    constructor(cb, options={}) {
-        options.name = options.name || "uniq";
-        super(options); // None currently
-        this.uniq = Array.isArray(options.uniq) ? options.uniq : [] ; // Can pass an existing array, which will be filtered out
-        this.uniqid = (typeof cb === "function" ? cb : function(a){return a} );
-    }
-
-    _parallel(o, encoding, cb) {    // A search result got written to this stream
-        try {
-            let id = this.uniqid(o);
-            if (! this.uniq.includes(id) ) {
-                //console.log("Not Duplicate with id=", id);
-                this.uniq.push(id);
-                this.push(o);   // Only push if uniq
-            } else {
-                console.log("Duplicate with id=", id);
-            }
-            cb();
-        } catch(err) {
-            cb(err);
-        }
-    }
-}
-
-
-class _MirrorForkStream extends stream.Writable {
-    /*
-    input stream any objects
-    output stream any objects (unmodified)
-    with copy to each of the forked stream(s)
-    */
-    constructor(nstreams, options={}) {
-        const defaultopts = {
-            objectMode: true, // Default to object mode rather than stream of bytes
-            highWaterMark: 3,
-        };  // Default to pushback after 3, will probably raise this
-        let opts = Object.assign(defaultopts, options)
-        super(opts); // None currently
-        this.name = options.name || "fork";
-        this.streams = Array.from(Array(nstreams)).map(unused=>new ParallelStream(opts));
-    }
-    _write(o, encoding, cb) {
-        if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow missing encoding
-        try {
-            let firstpushback = this.streams.map(s => s.write(o) ? false : s).find(s => !!s); // Writes to all streams, catches first that has pushback
-            if (firstpushback) {
-                console.warn(`Pushback at $(name) from $(firstpushback.name)`);
-                firstpushback.once("drain", cb); // Just wait on first pushback to be ready, should be ok as if 2nd hasn't cleared it will pushback on next write
-            } else {
-                cb();
-            }
-        } catch(err) { // Unlikely to have an error since should catch in pushbackable fork
-            this.streams.map(s => s.destroy(new Error(`Failure in ${name}._write: ${err.message}`)));
-            cb(err);
-        }
-    }
-    _final(cb) {
-        this.streams.map(s=>s.end());
-        cb();
-    }
-
-}
-
-ParallelStream.xxx = 1
-
-
-
-
-
 exports = module.exports = ParallelStream;
