@@ -34,20 +34,18 @@ class MirrorCollectionSearchStream extends ParallelStream {
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } //Allow missing enc
         let col = data;
         if (typeof col.page === "undefined") col.page = 0;
-        console.log(this.name, col.itemid, "page", col.page )
+        this.debug("Searching %s page %d", col.itemid, col.page );
         if ((typeof col.limit === "undefined") && (typeof this.limit !== "undefined")) col.limit = this.limit;
         if (col.page < this.maxpages && ((typeof(col.numFound) === "undefined") || ((col.start + this.limit) < col.numFound))) {
             col.page++;
             // Should fetch next page of search, and metadata on first time.
             col.fetch()
                 .then(() => {
-                    // console.log(this.name, col.itemid, "found:", col.items.length, "starting at", col.start );
                     this.push(col.items); // Array of ArchiveItems // col.items will get rewritten by next search, but with a new array so this passed on array is ok
                     this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })
         } else {
             cb(); // Acknowledge stream on innermost recursion
-            console.log(this.name, col.itemid, "complete");
         }
     }
 }

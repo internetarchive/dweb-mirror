@@ -34,13 +34,13 @@ class ParallelStream extends stream.Transform {
     _final(cb) {
         if (this.paralleloptions.limit) {
             if (this.paralleloptions.count) {
-                console.log(this.name, "Waiting on", this.paralleloptions.count,"of max",this.paralleloptions.max,"threads to close");
+                this.debug("waiting on %d of max %d threads to close", this.paralleloptions.count,this.paralleloptions.max);
                 setTimeout(()=>this._final(cb), 1000);
                 return;
             }
-            console.log(this.name, "_final Closing parallel. Was max=", this.paralleloptions.max);
+            if (this.paralleloptions.max) this.debug("Closing parallel. Was max= %d", this.paralleloptions.max);
         } else {
-            console.log(this.name, "_final Closing");
+            this.debug("Closing");
         }
         cb();
     }
@@ -55,13 +55,12 @@ class ParallelStream extends stream.Transform {
     }
 
     _transform(data, encoding, cb) {    // A search result got written to this stream
-        let psxx =  ParallelStream.xxx++;
         let donecb = false;
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } // Allow for missing parameter
         let name = this.name;
         if (this.paralleloptions.limit && (this.paralleloptions.count >= this.paralleloptions.limit)) {
             if (!this.paralleloptions.silentwait)
-                console.log(name, ": waiting ", this.paralleloptions.retryms, "ms for parallel availability using", this.paralleloptions.count,"of", this.paralleloptions.limit);
+                this.debug("waiting %d ms for parallel availability using %d of %d", this.paralleloptions.retryms, this.paralleloptions.count, this.paralleloptions.limit);
             setTimeout(()=>this._transform(data, encoding, cb), this.paralleloptions.retryms);   // Delay 100ms and try again
             return;
         }
@@ -70,7 +69,6 @@ class ParallelStream extends stream.Transform {
             if (this.paralleloptions.count > this.paralleloptions.max) this.paralleloptions.max = this.paralleloptions.count;
             this._parallel(data, encoding, (err, data) => {
                 if (!this.paralleloptions.limit) {
-                    //console.log("XXX@PS68", this.name, psxx)
                     donecb = true;
                     cb(err, data);
                 } else {
@@ -80,14 +78,12 @@ class ParallelStream extends stream.Transform {
                 this.paralleloptions.count--;
             });
             if (this.paralleloptions.limit) {
-                //console.log("XXX@PS76", this.name, psxx)
                 donecb = true;
                 cb(null);   // Return quickly and allow push to pass it on
             }
         } catch(err) { // Shouldnt catch errors - they should only happen inside _parallel and be caught there, triggering cb(err)
-            console.error(name, "._transform caught error that _parallel missed", err.message, psxx);
+            console.error(name, "._transform caught error from _parallel", err.message);
             this.paralleloptions.count--;
-            //console.log("XXX@PS82", this.name, psxx)
             if (!donecb)
                 cb(err);
         }
@@ -96,21 +92,22 @@ class ParallelStream extends stream.Transform {
 
     //TODO Building on pattern in https://nodejs.org/api/stream.html#stream_implementing_a_transform_stream
 
-    log(logfunction, options) { //logfunction(m => ["Foo=%s", m.foo])  return array suitable for debug's string processing
+    log(logfunction, options) {
+        //logfunction: f(a)=>string | array):    Pipe to another stream that returns a string, or array suitable for debug (e.g. ["foo %s = %d in %o",str,num,obj]
         return this.pipe(
             new ParallelStream(Object.assign({
                 parallel(data, encoding, cb) {
-                    this.debug(...logfunction(data));
+                    let a = logfunction(data);
+                    a = Array.isArray(a) ? a : [a];
+                    this.debug(...a);
                     cb(null, data) // Error in logfunction should through to catcher in _transform
                 },
                 highWaterMark: 99999,
                 name: "log"
             },options))
-        )
+        );
     }
 
-    logX(cb, options) {
-        return this.pipe(new _MirrorDebugStream(cb, options));
     }
 
     map(cb, options) {
@@ -177,26 +174,6 @@ class ParallelStream extends stream.Transform {
             }
         }
     }
-}
-
-class _MirrorDebugStream extends ParallelStream {
-
-    constructor(cb, options={}) {
-        /* cb is function to turn item into something console.log can handle */
-        super(Object.assign({ highWaterMark: 99999, name: "log"}, options));
-        this.logfunction = cb;
-    }
-    // noinspection JSUnusedGlobalSymbols
-    _parallel(data, encoding, cb) {    // A search result got written to this stream
-        try {
-            this.debug(...this.logfunction(data));
-        } catch(err) {
-            cb(err);
-            return;
-        }
-        cb(null, data);
-    }
-}
 
 class _MirrorEndStream extends ParallelStream {
 

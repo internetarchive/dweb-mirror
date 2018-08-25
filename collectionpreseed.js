@@ -8,6 +8,7 @@ const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const MirrorSearch = require('./MirrorSearch.js');
 const ParallelStream = require('./ParallelStream.js');
+const debug = require('debug');
 
 /* Collection crawl is a "eat your own dogfood" application to see whether this set of tools does what we need.
     Challenge - crawl the collections in the archive, dont mirror but trigger the metadata search so that the server preloads IPFS
@@ -34,6 +35,7 @@ class Mirror {
 
     static async init() {
         //await HashStore.init(config.hashstore);
+        Mirror.debug = debug('dweb-mirror:collectionpreseed')
     }
     /*
     static async test() {
@@ -124,4 +126,4 @@ Mirror.init()
     //.then(() => Mirror.test())
     .then(() => Mirror.p_dev_mirror())
     //.then(() => Mirror.p_temp())
-    .then(() => console.log("tested waiting for output"));
+    .then(() => Mirror.debug("tested waiting for output"));

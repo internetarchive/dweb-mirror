@@ -9,6 +9,7 @@ const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const wrtc = require('wrtc');
 const CollectionSearchStream = require('./MirrorCollectionSearchStream');
 const MirrorConfig = require('./MirrorConfig');
+const debug = require('debug');
 
 let config = new MirrorConfig({
     //hashstore: { file: "level_db" },
@@ -34,6 +35,7 @@ let config = new MirrorConfig({
 class Mirror {
 
     static async init() {
+        Mirror.debug = debug('dweb-mirror:mirroring')
         //await HashStore.init(config.hashstore);
     }
     static async test() {
@@ -83,4 +85,4 @@ class Mirror {
 Mirror.init()
     //.then(() => Mirror.test())
     .then(() => Mirror.p_dev_mirror())
-    .then(() => console.log("tested waiting for output"));
+    .then(() => Mirror.debug("tested waiting for output"));
