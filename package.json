@@ -29,5 +29,5 @@
   "scripts": {
     "build": "echo 'TODO: build is Not defined yet'"
   },
-  "version": "0.0.3"
+  "version": "0.0.4"
 }

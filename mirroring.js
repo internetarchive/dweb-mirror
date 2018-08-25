@@ -3,7 +3,8 @@ global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
-const MirrorFS = require('./MirrorFS.js');
+const SaveFiles = require('./SaveFiles.js');
+const SaveItems = require('./SaveItems.js');
 const ParallelStream = require('./ParallelStream.js');
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const wrtc = require('wrtc');
@@ -62,19 +63,19 @@ class Mirror {
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
-                //.slice(0,1)  //Restrict to first Archive Item
+                .slice(0,1)  //Restrict to first Archive Item
                 .log((m)=>[m.identifier], {name:"SearchResult"})
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(2, {name: "Fork"}).streams;
-                ss[0].log(m => [m.itemid], {name: "ForkedA"})
+                ss[0].pipe(new SaveItems({directory: config.directory, paralleloptions }))    // Parallel saves of metadata
                     .finish();
                 ss[1].map(ai => ai._list, {name: "List"})
                     .flatten({name: "flatten files"})
                     .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
                     .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
                     .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-                    .pipe(new MirrorFS({directory: config.directory, paralleloptions }))    // Parallel retrieve to file system
+                    .pipe(new SaveFiles({directory: config.directory, paralleloptions }))    // Parallel retrieve to file system
                     .finish();
         } catch(err) {
             console.error(err);
