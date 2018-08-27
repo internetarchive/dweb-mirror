@@ -27,7 +27,7 @@ class ParallelStream extends stream.Transform {
         delete options.paralleloptions;
         super(Object.assign(defaultopts, options));
         this.paralleloptions = paralleloptions;
-        if (options.parallel) { this._parallel = options.parallel; }
+        if (options.parallel) { this._parallel = options.parallel; }   // Optional function to replace _parallel implemented here
         this.name = options.name || "ParallelStream";
         this.debug = debug(`dweb-mirror:${options.name.replace(' ','_')}`); // Debugger for this log stream
         if (typeof options.init === "function") options.init.call(this);

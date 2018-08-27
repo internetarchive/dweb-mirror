@@ -8,6 +8,8 @@ class SaveItems extends MirrorFS {
     /*
     input: Stream of ArchiveItems
     output: Stream of ArchiveItems
+
+    TODO write reviews and write metadata for collections
      */
 
     constructor(options = {}) {

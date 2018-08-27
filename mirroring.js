@@ -23,7 +23,10 @@ let config = new MirrorConfig({
         pagespersearch: 2
     },
     file: {
-        maxfilesize: 1000000
+        maxfilesize: 100000000
+    },
+    item: {
+        minimumForUi: true
     },
     collections: {
         "prelinger": {}
@@ -63,14 +66,15 @@ class Mirror {
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
-                .slice(0,1)  //Restrict to first Archive Item
+                .slice(0,1)  //Restrict to first Archive Item (just for testing)
                 .log((m)=>[m.identifier], {name:"SearchResult"})
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(2, {name: "Fork"}).streams;
                 ss[0].pipe(new SaveItems({directory: config.directory, paralleloptions }))    // Parallel saves of metadata
                     .finish();
-                ss[1].map(ai => ai._list, {name: "List"})
+                ss[1]
+                    .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
                     .flatten({name: "flatten files"})
                     .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
                     .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
