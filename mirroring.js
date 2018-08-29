@@ -16,6 +16,7 @@ let config = new MirrorConfig({
     //hashstore: { file: "level_db" },
     //ui: {},
     //fs: {},
+    skipfetchfile: true, // Enable to stop it actually fetching the file - useful when testing
     directory: "/Users/mitra/temp/mirrored",
     limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
     search: {
@@ -79,7 +80,7 @@ class Mirror {
                     .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
                     .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
                     .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-                    .pipe(new SaveFiles({directory: config.directory, paralleloptions }))    // Parallel retrieve to file system
+                    .pipe(new SaveFiles({directory: config.directory, paralleloptions, skipfetchfile: config.skipfetchfile }))    // Parallel retrieve to file system
                     .finish();
         } catch(err) {
             console.error(err);

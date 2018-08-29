@@ -1,4 +1,4 @@
-const MirrorSearch = require('./MirrorSearch');  //TODO-MIRROR move to repo
+const MirrorSearch = require('./MirrorSearch');
 
 class MirrorCollection extends MirrorSearch {
     /*

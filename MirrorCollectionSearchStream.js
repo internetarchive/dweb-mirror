@@ -28,8 +28,8 @@ class MirrorCollectionSearchStream extends ParallelStream {
 
     _parallel(data, encoding, cb) {
         /* Crawl a collection, pass output as array of ArchiveItems as sequence of calls to cb
-
-            The ArchiveItem will have numFound, start, page  set after each fetch
+            data: MirrorCollection (subclass of MirrorSearch & ArchiveItem)
+                The ArchiveItem will have numFound, start, page  set after each fetch
          */
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } //Allow missing enc
         let col = data;
@@ -38,7 +38,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
         if ((typeof col.limit === "undefined") && (typeof this.limit !== "undefined")) col.limit = this.limit;
         if (col.page < this.maxpages && ((typeof(col.numFound) === "undefined") || ((col.start + this.limit) < col.numFound))) {
             col.page++;
-            // Should fetch next page of search, and metadata on first time.
+            // Should fetch next page of search, and metadata on first time, note fetch_query is not passed append=true so will replace items
             col.fetch()
                 .then(() => {
                     this.push(col.items); // Array of ArchiveItems // col.items will get rewritten by next search, but with a new array so this passed on array is ok

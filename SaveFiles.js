@@ -12,6 +12,11 @@ class SaveFiles extends MirrorFS {
     /*
     input: Stream of ArchiveFile
     output: {archivefile, size} where size is -1 if nothing saved (because sha1 matched.
+
+    options {
+        directory: Parent of Items
+        skipfetchfile: true for debugging - dont actually fetch the file
+        }
      */
 
     constructor(options = {}) {
@@ -21,6 +26,7 @@ class SaveFiles extends MirrorFS {
         };
         super(Object.assign(defaultoptions, options));
         this.directory = options.directory;
+        this.skipfetchfile = options.skipfetchfile;
     }
 
     _filepath(o) {
@@ -109,7 +115,11 @@ class SaveFiles extends MirrorFS {
             } else {
                 sha.check(filepath, archivefile.metadata.sha1, (err) => {
                     if (err) {
-                        this._save(archivefile, cb);
+                        if (this.skipfetchfile) {
+                            this.debug("skipfetchfile: %s", filepath);
+                        } else {
+                            this._save(archivefile, cb);
+                        }
                     } else { // sha1 matched, skip
                         this.debug("Skipping", filepath, "as sha1 matches");
                         cb(null, {archivefile, size: -1});

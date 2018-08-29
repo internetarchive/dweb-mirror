@@ -84,7 +84,6 @@ class MirrorFS extends ParallelStream {
             setTimeout(() => this._final(cb), 1000);
             return;
         }
-        //console.log("MirrorFS: Closed parallel streams was max=", this.paralleloptions.max);
         cb();
     }
 
