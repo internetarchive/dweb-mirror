@@ -30,7 +30,8 @@ let config = new MirrorConfig({
         minimumForUi: true
     },
     collections: {
-        "prelinger": {}
+        //"prelinger": {},
+        "fav-mitra": {},
     }
 });
 
