@@ -9,31 +9,9 @@ const ParallelStream = require('./ParallelStream.js');
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const wrtc = require('wrtc');
 const CollectionSearchStream = require('./MirrorCollectionSearchStream');
-const MirrorConfig = require('./MirrorConfig');
 const debug = require('debug');
+const config = require('config');
 
-let config = new MirrorConfig({
-    //hashstore: { file: "level_db" },
-    //ui: {},
-    //fs: {},
-    skipfetchfile: true, // Enable to stop it actually fetching the file - useful when testing
-    directory: "/Users/mitra/temp/mirrored",
-    limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
-    search: {
-        itemsperpage: 2, // Optimum is probably around 100,
-        pagespersearch: 2
-    },
-    file: {
-        maxfilesize: 100000000
-    },
-    item: {
-        minimumForUi: true
-    },
-    collections: {
-        //"prelinger": {},
-        "fav-mitra": {},
-    }
-});
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is
 
