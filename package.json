@@ -12,7 +12,9 @@
     "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
     "@internetarchive/dweb-objects": "latest",
     "@internetarchive/dweb-transports": "latest",
+    "express": "latest",
     "level": "^4.0.0",
+    "morgan": "^1.9.0",
     "readable-stream": "latest",
     "sha": "^2.0.1",
     "wrtc": "latest"

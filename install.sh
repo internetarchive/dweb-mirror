@@ -1,6 +1,8 @@
 #!/bin/bash
 
 #
+npm install # Get all the node_modules etc
+
 if ! (ipfs --version)
 then
     echo "Need to install IPFS from "https://dist.ipfs.io/#go-ipfs"
