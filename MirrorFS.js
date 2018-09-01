@@ -17,7 +17,7 @@ class MirrorFS extends ParallelStream {
     }
 
 
-    _mkdir(dirname, cb) {
+    static _mkdir(dirname, cb) {
         /* Recursively make a directory
         dirname: String representing file path
         cb(err):     Call back, with error if unable to complete
