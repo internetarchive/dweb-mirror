@@ -42,7 +42,7 @@ class Mirror {
                 .log((m)=>[m], {name:"Collection"})
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, paralleloptions}))
+                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, paralleloptions, directory: config.directory}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)

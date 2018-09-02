@@ -11,6 +11,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
     limit       col.limit || opt.limit || 100   How many items to fetch each time. 100 is probably about optimal
     maxpages    opt.maxpages || 5               Max number of search pages, so max items is maxpages*limit
     name        opt.name || "CollectionStream"  Name used in debugging
+    directory   root directory in which items stored
 
     Inherited from ParallelStream:
     parallel    0                               Max number of threads to run in paralell
@@ -24,6 +25,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
         super(options);
         this.limit = options.limit || 100; // limit:      //TODO-@IA check
         this.maxpages = options.maxpages || 5; //
+	this.directory = options.directory || undefined;
     }
 
     _parallel(data, encoding, cb) {
@@ -45,6 +47,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
                     this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })
         } else {
+	    data.save({directory: this.directory});  //Save meta and members, No cb since wont wait on writing to start searching next collection. 
             cb(); // Acknowledge stream on innermost recursion
         }
     }
