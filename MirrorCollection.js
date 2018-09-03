@@ -1,10 +1,15 @@
+//Standard repos
+const fs = require('fs');   // See https://nodejs.org/api/fs.html
+const path = require('path');
+// Other files from this repo
+const MirrorFS = require('./MirrorFS');
 const MirrorSearch = require('./MirrorSearch');
 
 class MirrorCollection extends MirrorSearch {
     /*
     A class to manage an Internet Archive 'Collection' by a special kind of query
+    This handles all three kinds of collections since ArchiveItem does: (info in item; list in collection; query in collection)
 
-    TODO - handle other kinds of collections - https://github.com/internetarchive/dweb-mirror/issues/30
      */
 
     constructor(options) {

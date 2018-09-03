@@ -1,16 +1,21 @@
 process.env.DEBUG="dweb-transports dweb-objects dweb-mirror:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+// Standard repos
+const wrtc = require('wrtc');
+const debug = require('debug');
+
+// Other IA repos
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
+const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
+
+// Other files in this repo
+const config = require('./config');
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
+const CollectionSearchStream = require('./MirrorCollectionSearchStream');
+const ParallelStream = require('./ParallelStream.js');
 const SaveFiles = require('./SaveFiles.js');
 const SaveItems = require('./SaveItems.js');
-const ParallelStream = require('./ParallelStream.js');
-const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
-const wrtc = require('wrtc');
-const CollectionSearchStream = require('./MirrorCollectionSearchStream');
-const debug = require('debug');
-const config = require('config');
 
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is

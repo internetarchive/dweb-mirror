@@ -31,7 +31,7 @@ class SaveItems extends MirrorFS {
         // Save the metadata for the item
         if (typeof encoding === 'function') { cb = encoding; encoding = null; }
         let filepath = this._filepath(archiveitem); // TODO needs metadata filepath
-        this._mkdir(path.dirname(filepath), (err) => {
+        MirrorFS._mkdir(path.dirname(filepath), (err) => {
             if (err) {
                 this.debug("Unable to _mkdir so cant save meta: %s", err.message);
                 cb(err); // Pass it up

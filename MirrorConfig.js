@@ -34,7 +34,7 @@ class MirrorConfig {
         if (o instanceof ArchiveItem) {
             if (this.item["minimumForUi"]) {
                 if (!o.playlist) o.setPlaylist();
-                //TODO need to add other required files for the UI to this, probably in the ArchiveItem class
+                //TODO-ISSUE#33 need to add other required files for the UI to this, probably in the ArchiveItem class
                 return Object.values(o.playlist).map(v => v.sources[0].urls); // First source from each (urls is a single ArchiveFile in this case)
             } else {
                 return o._list;

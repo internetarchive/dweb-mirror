@@ -1,4 +1,4 @@
-process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
+//process.env.NODE_DEBUG="fs";    // Uncomment to test fs
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const ParallelStream = require('./ParallelStream');
 const path = require('path');
@@ -26,7 +26,7 @@ class MirrorFS extends ParallelStream {
             if (err && !(err.code === "EEXIST")) {
                 if (err.code === "ENOENT") { // missing parent dir
                     let parentdir = path.dirname(dirname);
-                    this._mkdir(parentdir, err => {
+                    MirrorFS._mkdir(parentdir, err => {
                         if (err) cb(err); // Dont know how to tackle error from _mkdir, note that EEXIST wouldbe odd since ENOENT implies it doesnt exist
                         fs.mkdir(dirname, cb);
                     })
@@ -50,15 +50,14 @@ class MirrorFS extends ParallelStream {
                         // noinspection JSUnusedLocalSymbols
                         fs.stat(this.directory, (err, stats) => {
                             if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${this.directory} is missing - please create by hand`);
-                            //TODO-MIRROR-LATER check directory writable from the stats
                             this.debug("MirrorFS creating directory: %s", path.dirname(filepath));
-                            this._mkdir(path.dirname(filepath), err => {
+                            MirrorFS._mkdir(path.dirname(filepath), err => {
                                 if (err) {
-                                    console.error("Failed to mkdir for", filepath);
+                                    console.error("Failed to mkdir for", filepath, err.message);
                                     cb(err);
                                 }
                                 fs.open(filepath, 'w', (err, fd) => {
-                                    if (err) {
+                                    if (err) { // This shouldnt happen, we just checked the directory.
                                         console.error("Failed to open", filepath, "after mkdir");
                                         throw err;
                                     }
@@ -67,6 +66,7 @@ class MirrorFS extends ParallelStream {
                             });
                         });
                     } else {
+                        this.debug("Failed to open %s for writing:", filepath, err.message);
                         cb(err); // Not specifically handling it - so throw it up
                     }
                 } else {

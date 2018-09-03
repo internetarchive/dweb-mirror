@@ -117,6 +117,7 @@ class SaveFiles extends MirrorFS {
                     if (err) {
                         if (this.skipfetchfile) {
                             this.debug("skipfetchfile: %s", filepath);
+                            cb(null,{archivefile, size: -1});
                         } else {
                             this._save(archivefile, cb);
                         }
