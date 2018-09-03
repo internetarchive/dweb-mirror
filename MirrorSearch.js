@@ -1,15 +1,20 @@
-const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
+const ArchiveItemExtended = require('./ArchiveItemExtended');
 
-class MirrorSearch extends ArchiveItem {
+class MirrorSearch extends ArchiveItemExtended {
     constructor(options) {
         /*
+        Inherited:
         itemid:     the item to fetch - required if "item" not specified
         item:       if already fetched, usually not
+
+        Local - stored and deleted
+        query:      Search query (will be specific to collection in MirrorCollection subclass
+        sort:  ("-downloads") Sort order (
+        other options   Stored on this.options
         */
-        super(options); // Note not passing item
-        delete options.item;    // Handled by super
-        delete options.itemid;  // Handled by super
+        super(options); // Use and delete item and itemid
         this.query = options.query; // Used by ArchiveItem.fetch
+        delete options.query;
         this.sort = options.sort || "-downloads";   // Used by ArchiveItem.fetch
         delete options.sort;
         this.options = options;

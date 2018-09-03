@@ -2,7 +2,6 @@
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 // Other files from this repo
-const MirrorFS = require('./MirrorFS');
 const MirrorSearch = require('./MirrorSearch');
 
 class MirrorCollection extends MirrorSearch {
@@ -25,47 +24,32 @@ class MirrorCollection extends MirrorSearch {
         super(options);
     }
 
-    _dirpath({directory=undefined}) {
-        console.log("XXX", directory, this.item.metadata.identifier);
-        return path.join(directory, this.item.metadata.identifier);
-    }
 
 
     save({directory=undefined}={}, cb) {
         /*
-            Save _meta and _members as JSON 
+            Save _meta and _members as JSON
         */
-        let dirpath = this._dirpath({directory});
-        let itemid = this.item.metadata.identifier;
-        MirrorFS._mkdir(dirpath, (err) => {
+        super.save({directory}, (err) => { // Save meta
             if (err) {
-                console.error("Unable to _mkdir %s so cant save meta or members for collection: %s", dirpath, err.message);
-                if (cb) { cb(err) } else { throw(err) } ; // Pass it up
+                if (cb) { cb(err); } else { throw(err); } ; // Pass it up (will already have output error to console)
             } else {
-                let filepath = path.join(dirpath, itemid + "_meta.json");
+                // Now write the members
+                let itemid = this.item.metadata.identifier;
+                let filepath = path.join(this._dirpath(directory), itemid + "_members.json");
                 fs.writeFile(filepath,
-                    JSON.stringify(this.item.metadata),
+                    JSON.stringify(this.items),
                     (err) => {
                         if (err) {
                             console.error("Unable to write to %s: %s", filepath, err.message);
                             if (cb) { cb(err) } else { throw(err) } ; // Pass it up
                         } else {
-                            // Now write the members
-                            let filepath = path.join(dirpath, itemid + "_members.json");
-                            fs.writeFile(filepath,
-                                         JSON.stringify(this.items),
-                                         (err) => {
-                                            if (err) {
-                                                console.error("Unable to write to %s: %s", filepath, err.message);
-                                                if (cb) { cb(err) } else { throw(err) } ; // Pass it up
-                                            } else {
-                                                if (cb) cb(this);
-                                            } } );
+                            if (cb) cb(null, this);
                         } } );
-              
-            } } );
-    }
 
+            }
+        })
+    }
 }
 
 exports = module.exports = MirrorCollection;
