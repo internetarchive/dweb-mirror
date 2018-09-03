@@ -115,12 +115,14 @@ class ParallelStream extends stream.Transform {
         return this.pipe(
             new ParallelStream(Object.assign({
                 parallel(o, encoding, cb) {
-                    let p = mapfunction(o);
+                    let p = mapfunction(o, options.async ? cb : undefined);
                     if (p instanceof Promise) {
                         p.then((data) => cb(null, data))
                             .catch((err) => cb(err));
                     } else {
-                        cb(null, p);
+                        if (!options.async) {   // If options.async then assume mapfunction called cb
+                            cb(null, p);
+                        }
                     }
                  },
                  name: "map"
