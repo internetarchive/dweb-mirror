@@ -12,6 +12,7 @@
     "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
     "@internetarchive/dweb-objects": "latest",
     "@internetarchive/dweb-transports": "latest",
+    "canonical-json": "0.0.4",
     "express": "latest",
     "ipfs-api": "^24.0.1",
     "level": "^4.0.0",

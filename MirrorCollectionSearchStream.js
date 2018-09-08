@@ -32,6 +32,8 @@ class MirrorCollectionSearchStream extends ParallelStream {
         /* Crawl a collection, pass output as array of ArchiveItems as sequence of calls to cb
             data: MirrorCollection (subclass of MirrorSearch & ArchiveItem)
                 The ArchiveItem will have numFound, start, page  set after each fetch
+
+            Note this cant easily go in a map to a function on Collection as it recurses
          */
         if (typeof encoding === 'function') { cb = encoding; encoding = null; } //Allow missing enc
         let col = data;
@@ -47,7 +49,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
                     this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })
         } else {
-	    data.save({directory: this.directory});  //Save meta and members, No cb since wont wait on writing to start searching next collection. 
+	        data.save({directory: this.directory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
             cb(); // Acknowledge stream on innermost recursion
         }
     }

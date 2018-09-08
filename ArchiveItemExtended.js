@@ -7,6 +7,7 @@ TODO write reviews
 //Standard repos
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
+const stringify = require('canonical-json');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 // Other files from this repo
@@ -41,7 +42,7 @@ class ArchiveItemExtended extends ArchiveItem {
             } else {
                 let filepath = path.join(dirpath, itemid + "_meta.json");
                 fs.writeFile(filepath,
-                    JSON.stringify(this.item.metadata),
+                    stringify(this.item.metadata),
                     (err) => {
                         if (err) {
                             console.error("Unable to write to %s: %s", filepath, err.message);

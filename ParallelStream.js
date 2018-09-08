@@ -94,7 +94,7 @@ class ParallelStream extends stream.Transform {
 
     //TODO Building on pattern in https://nodejs.org/api/stream.html#stream_implementing_a_transform_stream
 
-    log(logfunction, options) {
+    log(logfunction, options={}) {
         //logfunction: f(a)=>string | array):    Pipe to another stream that returns a string, or array suitable for debug (e.g. ["foo %s = %d in %o",str,num,obj]
         return this.pipe(
             new ParallelStream(Object.assign({
@@ -110,7 +110,7 @@ class ParallelStream extends stream.Transform {
         );
     }
 
-    map(mapfunction, options) {
+    map(mapfunction, options={}) {
         // Usage example  writable.map(m => m*2, {name: "foo" }
         return this.pipe(
             new ParallelStream(Object.assign({
@@ -130,7 +130,7 @@ class ParallelStream extends stream.Transform {
         );
     }
 
-    flatten(options) {
+    flatten(options={}) {
         /*
         input stream - of arrays
         output stream - expand arrays into a single stream
@@ -153,7 +153,7 @@ class ParallelStream extends stream.Transform {
         );
     }
 
-    filter(filterfunction, options) {
+    filter(filterfunction, options={}) {
         /*
         filterfunction(x) => boolean
         input stream: objects
@@ -173,7 +173,7 @@ class ParallelStream extends stream.Transform {
         );
     }
 
-    slice(begin, end, options) {
+    slice(begin, end, options={}) {
         /*
         begin: first item to pass,
         end: one after last item
@@ -199,7 +199,7 @@ class ParallelStream extends stream.Transform {
     let ss =  .... .fork(2).streams;
     ss[0].log ...; ss[1].filter.... etc
      */
-    fork(nstreams, options) {
+    fork(nstreams, options={}) {
         const defaultoptions = {
             objectMode: true,
             highWaterMark: 3,
