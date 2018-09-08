@@ -88,7 +88,8 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, paralleloptions}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
-                .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally: ()=>this.debug("Finished with:",self.count), name: "END 3level"});
+                .reduce((a,v)=>(a+1),0,function(res){this.debug("Finished with %d",res);},{name: "END 3level"});
+                //OBS .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally: ()=>this.debug("Finished with:",self.count), name: "END 3level"});
 
             let popularCollections = new MirrorSearch({
                 query: 'mediatype:collection AND NOT _exists_:access-restricted',
@@ -104,7 +105,8 @@ class Mirror {
                 .uniq(null, {name: "Popular uniq"}) // Use own uniq as going more items deep, but not recursing into subcollections
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular'} )  // Initialize collection - doesnt get metadata or search results
                 .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, paralleloptions}))
-                .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally:()=>this.debug("Finished with: %d",self.count), name: "END Popular"});
+                .reduce((a,v)=>(a+1),0,function(res){this.debug("Finished with %d",res);},{name: "END Popular"});
+                //OBS .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally:()=>this.debug("Finished with: %d",self.count), name: "END Popular"});
             // No need to do something with these
 
         } catch(err) {

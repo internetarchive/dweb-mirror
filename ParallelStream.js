@@ -293,7 +293,35 @@ class ParallelStream extends stream.Transform {
             }
         }
     }
-    finish(options={}) {
+    reduce(reducefunction, initialvalue, finalcb, options={}) {
+        if (typeof finalcb === "object") { options = finalcb; finalcb = undefined; }
+        let ps = new ParallelStream(Object.assign({
+            name: "reduce",
+            parallel(data, encoding, cb) {
+                if (!this.i && typeof this.acc === "undefined") { // No initialvalue so use first element
+                    this.acc = data;
+                    this.i++;   // Sets this.i for 1 for first call to reducefunction
+                } else {
+                    if (reducefunction) { this.acc = reducefunction.call(this, this.acc, data, this.i++);}
+                };
+                cb() // Note doesnt push
+            },
+            flush(cb) {
+                if (this.paralleloptions.limit && this.paralleloptions.count) {
+                    setTimeout(() => this.flush.call(this, cb), 1000);
+                } else {
+                    if (finalcb) finalcb.call(this, this.acc);
+                    cb()
+                } },
+        }, options));
+        ps.i = 0;
+        ps.acc = initialvalue;
+        // Init will be run by Parallel constructor
+        this.pipe(ps);
+
+    }
+
+    finish(options={}) {    // OBS - use reduce
         let ps = new ParallelStream(Object.assign({
             name: "end",
             parallel(data, encoding, cb) {
