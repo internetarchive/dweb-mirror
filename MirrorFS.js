@@ -1,6 +1,6 @@
 //process.env.NODE_DEBUG="fs";    // Uncomment to test fs
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const ParallelStream = require('./ParallelStream');
+const ParallelStream = require('parallel-streams');
 const path = require('path');
 
 class MirrorFS extends ParallelStream {

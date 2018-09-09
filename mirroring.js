@@ -13,7 +13,7 @@ const config = require('./config');
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const CollectionSearchStream = require('./MirrorCollectionSearchStream');
-const ParallelStream = require('./ParallelStream.js');
+const ParallelStream = require('parallel-streams');
 const SaveFiles = require('./SaveFiles.js');
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is

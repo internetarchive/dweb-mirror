@@ -7,7 +7,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const MirrorSearch = require('./MirrorSearch.js');
-const ParallelStream = require('./ParallelStream.js');
+const ParallelStream = require('parallel-streams');
 const debug = require('debug');
 
 /* Collection crawl is a "eat your own dogfood" application to see whether this set of tools does what we need.

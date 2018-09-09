@@ -1,4 +1,4 @@
-const ParallelStream = require('./ParallelStream');
+const ParallelStream = require('parallel-streams');
 
 class MirrorCollectionSearchStream extends ParallelStream {
     /*
