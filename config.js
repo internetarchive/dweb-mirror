@@ -23,6 +23,11 @@ const config = new MirrorConfig({
     collections: {
         "prelinger": {},
         //"fav-mitra": {},
+    },
+    apps: {
+        http: {
+            port: 4244,
+        }
     }
 });
 

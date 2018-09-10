@@ -96,5 +96,5 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
 app.use('/download/', express.static(config.directory));
 
 
-app.listen(4244); // Intentionally same port as Python gateway defaults to, api should converge
+app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
 
