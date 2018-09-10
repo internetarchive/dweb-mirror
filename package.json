@@ -10,8 +10,8 @@
   "name": "dweb-mirror",
   "dependencies": {
     "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#require",
-    "@internetarchive/dweb-objects": "latest",
-    "@internetarchive/dweb-transports": "latest",
+    "@internetarchive/dweb-objects": "^0.1.8",
+    "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git#mirror",
     "canonical-json": "0.0.4",
     "debug": "latest",
     "express": "latest",
@@ -20,7 +20,7 @@
     "morgan": "^1.9.0",
     "parallel-streams": "0.0.2",
     "sha": "^2.0.1",
-    "wrtc": "latest"
+    "wrtc": "^0.2.0"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "devDependencies": {},
