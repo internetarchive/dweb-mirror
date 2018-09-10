@@ -12,7 +12,6 @@ DONE file, need pass on
 /arc/archive.org/download/$ITEMID/$FILE|$ROOT/$ITEMID/$FILE<br/>Domain($URI)|Look locally then try all dweb locations
 /arc/*|Domain($URI)|Should resolve name, load and return or redirect
 
-TODO handle range
 
  */
 // External packages
@@ -32,8 +31,19 @@ const wrtc = require('wrtc');
 // Local files
 const config = require('./config'); // Global configuration, will add app specific requirements
 
+function sendrange(req, res, val) {
+    let range = req.range(Infinity);
+    if (range && range[0] && range.type === "bytes") {
+        debug("Range request = %O", range);
+        res.status(206).send(val.slice(range[0].start, range[0].end + 1));
+    } else {
+        res.status(200).send(val);
+    }
+}
+
+
 const app = express();
-debug('Starting HTTP server');
+debug('Starting HTTP server on %d', config.apps.http.port);
 DwebTransports.p_connect({
     transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     webtorrent: {tracker: { wrtc }},
@@ -42,11 +52,11 @@ DwebTransports.p_connect({
 app.use(morgan('combined')); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
 
 app.get('/info', function(req, res) {
-    console.log("XXX info matches")
-    res.status(200).send('hello world'); //TODO say something about configuration etc
+    res.status(200).json({"config": config}); //TODO this my change to include info on transports (IPFS, WebTransport etc)
 });
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
-    //TODO - move this to subclass of ArchiveItem once have merged code from other laptop
+    //TODO - move this to subclass of ArchiveItem
+    //TODO-CACHE need timing of how long use old metadata
     let filename = path.join(config.directory, req.params.itemid, `${req.params.itemid}_meta.json`);
     fs.readFile(filename, (err, metadataJson) => {
         if (err) {
@@ -89,11 +99,30 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     DwebTransports.p_rawfetch('dweb:' + req.path).then(data => {
         debug("Retrieved metadata for %s", data.metadata.identifier); // Combined data metadata/files/reviews
         res.json(data);
-        //TODO save these locally
+        //TODO save these locally and TODO-CACHE check timing
     });
 });
 
-app.use('/download/', express.static(config.directory));
+//app.use('/arc/archive.org/download/', express.static(config.directory)); // Simplistic, better ...
+
+app.use('/arc/archive.org/download/:itemid/:file', function(req, res, next) {
+    //TODO - move this to subclass of ArchiveItem or ArchiveFile
+        let filepath = path.join(config.directory, req.params.itemid, req.params.file);
+        res.sendFile(filepath, function(err) {
+            if (err) {
+                next(err);  // Drop through and TODO add a path to get from IA
+            } else {
+                debug("sent file %s", filepath);
+            }
+        }) //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
+    });
+
+//TODO get('/arc/archive.org/download/:itemid/:file => IA or IPFS etc and TODO save these locally and TODO-CACHE check timing
+
+app.get('/testing', function(req, res) {
+    sendrange(req, res, 'hello my world'); //TODO say something about configuration etc
+});
+
 
 
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
