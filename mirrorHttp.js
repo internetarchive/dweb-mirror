@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /* Serve the mirrored files via HTTP
 
 This is intended as a fairly generic server for a number of cases, with some configuration to allow for different situations,
