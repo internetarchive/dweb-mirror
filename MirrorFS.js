@@ -2,20 +2,12 @@
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const ParallelStream = require('parallel-streams');
 const path = require('path');
+const debug = require('debug')('dweb-mirror:MirrorFS');
 
-class MirrorFS extends ParallelStream {
+class MirrorFS {
     /*
-    Common subclass to SaveFiles and SaveItems
+    Utility subclass that knows about the file system.
      */
-
-    constructor(options = {}) {
-        const defaultoptions = {
-            name: "MirrorFS",
-        };
-        super(Object.assign(defaultoptions, options));
-        this.directory = options.directory;
-    }
-
 
     static _mkdir(dirname, cb) {
         /* Recursively make a directory
@@ -38,7 +30,7 @@ class MirrorFS extends ParallelStream {
         })
     }
 
-    _fileopen(filepath, cb) {  // cb(err, fd)
+    static _fileopen(directory, filepath, cb) {  // cb(err, fd)
         /*
         filepath path to file (rooted preferably)
         If fails to open for writing then will check for presence of a root directory, and recursively mkdir before trying again.
@@ -48,9 +40,9 @@ class MirrorFS extends ParallelStream {
                 if (err) {
                     if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
                         // noinspection JSUnusedLocalSymbols
-                        fs.stat(this.directory, (err, stats) => {
-                            if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${this.directory} is missing - please create by hand`);
-                            this.debug("MirrorFS creating directory: %s", path.dirname(filepath));
+                        fs.stat(directory, (err, stats) => {
+                            if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${directory} is missing - please create by hand`);
+                            debug("MirrorFS creating directory: %s", path.dirname(filepath));
                             MirrorFS._mkdir(path.dirname(filepath), err => {
                                 if (err) {
                                     console.error("Failed to mkdir for", filepath, err.message);
@@ -66,7 +58,7 @@ class MirrorFS extends ParallelStream {
                             });
                         });
                     } else {
-                        this.debug("Failed to open %s for writing:", filepath, err.message);
+                        debug("Failed to open %s for writing:", filepath, err.message);
                         cb(err); // Not specifically handling it - so throw it up
                     }
                 } else {
@@ -76,15 +68,6 @@ class MirrorFS extends ParallelStream {
         } catch (err) {
             cb(err);
         }
-    }
-
-    _final(cb) {
-        if (this.paralleloptions.count) {
-            this.debug("MirrorFS: Waiting on %d of max %d threads to close", this.paralleloptions.count, this.paralleloptions.max);
-            setTimeout(() => this._final(cb), 1000);
-            return;
-        }
-        cb();
     }
 
 
