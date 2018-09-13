@@ -1,4 +1,4 @@
-process.env.DEBUG="dweb-transports dweb-objects dweb-mirror:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 // Standard repos
 const wrtc = require('wrtc');
 const debug = require('debug');
