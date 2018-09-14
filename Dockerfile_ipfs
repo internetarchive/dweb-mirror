@@ -1,0 +1,28 @@
+# Following thru on notes in
+# https://github.com/ipfs/go-ipfs/blob/e02f04471126316d0e189ad79e2239b27d31c59f/README.md#docker-usage
+# https://github.com/protocol/collab-internet-archive/issues/44
+# https://github.com/protocol/collab-internet-archive/issues/49
+
+FROM ipfs/go-ipfs
+WORKDIR /app
+
+# Copy all the contents of this directory
+# TODO only copy things that are needed, or maybe from dist directory (which is currently empty)
+RUN ipfs init
+#RUN ipfs config --json Experimental.FilestoreEnabled true
+
+# tell the world we use port 4244, doesnt actually make docker do anything
+#EXPOSE 4244
+# TODO add command line override of port or get from an ENV variable
+#CMD ["node", "./mirrorHttp.js"]
+#Replace CMD above with this if want to test on the machine
+#ENTRYPOINT ["/bin/sh"]
+
+
+# TODO - add IPFS will need CORS configuring because of bug with localhost not being recognized
+# https://github.com/ipfs/js-ipfs-api#cors
+#https://github.com/ipfs/js-ipfs-api/issues/855#issuecomment-420458337
+#ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"http://example.com\"]"
+#ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials "[\"true\"]"
+#ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods "[\"PUT\", \"POST\", \"GET\"]"
+#ipfs config --json Experimental.FilestoreEnabled true

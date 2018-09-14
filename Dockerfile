@@ -44,3 +44,4 @@ CMD ["node", "./mirrorHttp.js"]
 #ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"http://example.com\"]"
 #ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials "[\"true\"]"
 #ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods "[\"PUT\", \"POST\", \"GET\"]"
+#ipfs config --json Experimental.FilestoreEnabled true
