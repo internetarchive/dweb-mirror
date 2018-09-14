@@ -1,6 +1,6 @@
-const ArchiveItemExtended = require('./ArchiveItemExtended');
+const ArchiveItem = require('./ArchiveItemPatched');
 
-class MirrorSearch extends ArchiveItemExtended {
+class MirrorSearch extends ArchiveItem {
     constructor(options) {
         /*
         Inherited:

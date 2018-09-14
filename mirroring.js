@@ -6,7 +6,7 @@ const debug = require('debug');
 // Other IA repos
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
-const ArchiveItemExtended = require('./ArchiveItemExtended');
+const ArchiveItem = require('./ArchiveItem');
 
 // Other files in this repo
 const config = require('./config');
@@ -49,9 +49,9 @@ class Mirror {
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
-                .slice(0,1)  //Restrict to first Archive Item (just for testing)
+                //.slice(0,1)  //Restrict to first Archive Item (just for testing)
                 .log((m)=>[m.identifier], {name:"SearchResult"})
-                .map((o) => new ArchiveItemExtended({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
+                .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(2, {name: "Fork"}).streams;
                 ss[0].map((ai, cb) => ai.save({directory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})

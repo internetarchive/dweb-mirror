@@ -6,17 +6,32 @@ This is intended as a fairly generic server for a number of cases, with some con
 See: https://github.com/mitra42/dweb-universal/blob/master/uri%20structure%20for%20http%20server.md
 
 From that doc ...
-/arc/archive.org/metadata/$ITEMID|$ROOT/$ITEMID/$ITEMID_meta.json<br/>Domain($URI)|Check disk mirror<br/>then gun (which should fallback)<br/>then http
+/arc/archive.org/metadata/:itemid|$ROOT/:itemid/:itemid_meta.json<br/>Domain($URI)|Check disk mirror<br/>then gun (which should fallback)<br/>then http
 DONE file, need pass on
 /gun/$PATH|transports.get("gun:/gun/$PATH")|GUN client > local peer > Remote peers
 /ipfs/$PATH|transports.get("ipfs:/ipfs/$PATH")|IPFS which should fallback to https://ipfs.io
-/arc/archive.org/download/$ITEMID/$FILE|$ROOT/$ITEMID/$FILE<br/>Domain($URI)|Look locally then try all dweb locations
+/arc/archive.org/download/:itemid/:filename|$ROOT/:itemid/:filename<br/>Domain($URI)|Look locally then try all dweb locations
 /arc/*|Domain($URI)|Should resolve name, load and return or redirect
 
 
+Summary of below:
+/info:  config as JSON
+/arc/archive.org/metadata/:itemid > DIR/:itemid/(_meta,_files,_reviews) > { files, files_count, metadata, reviews }  ...
+/arc/archive.org/metadata/:itemid > dweb:/arc/archive.org/metadata/:itemid > Transports
+/arc/archive.org/download/:itemid/:filename > dweb:/arc/archive.org/download/:itemid/:filename
+
+TODO - not handling /arc/archive.org/download/:itemid/:filename because not in Domain.js
+-   either put in downloa but as what
+-   or read from metadata
+-   or how to make domain name redirect to metadata
+TODO - special case for both metadata and download when already on dweb.me
+TODO - replace download's fetch & send with retrieving a stream and passing on to request
+TODO - figure out why Gun not responding
+TODO -
+
  */
 // External packages
-process.env.DEBUG="express:* dweb-mirror:mirrorHttp dweb-transports dweb-transports:* dweb-objects dweb-objects:*";    //TODO-MIRROR comment out when done testing FS
+process.env.DEBUG="express:* dweb-mirror:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";    //TODO-MIRROR comment out when done testing FS
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";    //TODO-MIRROR comment out when done testing FS
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const express = require('express'); //http://expressjs.com/
@@ -31,7 +46,7 @@ const wrtc = require('wrtc');
 
 // Local files
 const config = require('./config'); // Global configuration, will add app specific requirements
-
+const ArchiveFile = require('./ArchiveFilePatched');
 function sendrange(req, res, val) {
     let range = req.range(Infinity);
     if (range && range[0] && range.type === "bytes") {
@@ -55,6 +70,7 @@ app.use(morgan('combined')); //TODO write to a file then recycle that log file (
 app.get('/info', function(req, res) {
     res.status(200).json({"config": config}); //TODO this my change to include info on transports (IPFS, WebTransport etc)
 });
+
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     //TODO - move this to subclass of ArchiveItem
     //TODO-CACHE need timing of how long use old metadata
@@ -106,19 +122,31 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
 
 //app.use('/arc/archive.org/download/', express.static(config.directory)); // Simplistic, better ...
 
-app.use('/arc/archive.org/download/:itemid/:file', function(req, res, next) {
+app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
     //TODO - move this to subclass of ArchiveItem or ArchiveFile
-        let filepath = path.join(config.directory, req.params.itemid, req.params.file);
+        let filepath = path.join(config.directory, req.params.itemid, req.params.filename);
         res.sendFile(filepath, function(err) {
             if (err) {
-                next(err);  // Drop through and TODO add a path to get from IA
+                debug('No local copy of: %s/%s', req.params.itemid, req.params.filename);
+                next(); // Drop through to next attempt
             } else {
                 debug("sent file %s", filepath);
             }
         }) //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
     });
 
-//TODO get('/arc/archive.org/download/:itemid/:file => IA or IPFS etc and TODO save these locally and TODO-CACHE check timing
+app.get('/arc/archive.org/download/:itemid/:filename', function(req, res) {
+    debug("Falling back to transports for %s", req.path);
+    ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
+        console.log("XXX got af .. TODO now save and return it", af)
+        af.p_urls((err, urls) => {  // Should always return even if urls is []
+            DwebTransports.p_rawfetch(urls)
+                .then((data) => res.send(data));   //TODO need streaming version then TODO-CB rewrite w/o promise TODO-CACHE need to cache file (save)
+        });
+    });
+});
+
+//TODO get('/arc/archive.org/download/:itemid/:filename => IA or IPFS etc and TODO save these locally and TODO-CACHE check timing
 
 app.get('/testing', function(req, res) {
     sendrange(req, res, 'hello my world'); //TODO say something about configuration etc

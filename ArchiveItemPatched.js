@@ -14,26 +14,16 @@ const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 const MirrorFS = require('./MirrorFS');
 
 
-class ArchiveItemExtended extends ArchiveItem {
-    constructor(options) {
-        /*
-        itemid:     the item to fetch - required if "item" not specified
-        item:       if already fetched, usually not
-        */
-        super(options); // Note not passing item
-        delete options.item;
-        delete options.itemid;
-    }
-
-    _dirpath(directory) {
+ArchiveItem.prototype._dirpath = function(directory) {
         return path.join(directory, this.item.metadata.identifier);
-    }
-    save({directory = undefined} = {}, cb) {
+    };
+
+ArchiveItem.prototype.save = function({directory = undefined} = {}, cb) {
         /*
             Save _meta and _members as JSON
         */
         let itemid = this.item.metadata.identifier;
-        console.assert(directory, "ArchiveItemExtended needs a directory");
+        console.assert(directory, "ArchiveItem needs a directory in order to save");
         let dirpath = this._dirpath(directory);
         MirrorFS._mkdir(dirpath, (err) => {
             if (err) {
@@ -56,6 +46,4 @@ class ArchiveItemExtended extends ArchiveItem {
         });
     }
 
-}
-
-exports = module.exports = ArchiveItemExtended;
+exports = module.exports = ArchiveItem;

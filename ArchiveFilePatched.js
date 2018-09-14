@@ -8,9 +8,37 @@ const fs = require('fs');   // See https://nodejs.org/api/fs.html
 // Other Archive repos
 const DTerrors = require('@internetarchive/dweb-transports/Errors.js');
 const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile');
+const ArchiveItem = require('./ArchiveItemPatched');
 // Local files
 const MirrorFS = require('./MirrorFS');
 
+ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, cb) {
+    /*
+     Load ArchiveFile, async because may have to find metadata etc
+     Process is itemid > item + filename > fileMetadata
+     cb(err, archivefile): passed Archive File
+     resolves to: archivefile if no cb
+    */
+    if (itemid && filename && !metadata && !archiveitem) {
+        archiveitem = new ArchiveItem({itemid});
+    } // Drop through now have archiveitem
+    if (archiveitem && filename && !metadata) {
+        if (!archiveitem.item) {
+            return archiveitem.fetch_metadata()
+                .catch(err => {if (cb) { cb(err); } else { reject(err); }})
+                .then(() => this.p_new({itemid, archiveitem, metadata, filename}, cb)); // Resolves to AF
+                // Promise resolves to AF; dont catch errs here, cb(err) will have been called if exists else will reject()
+        }
+        archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
+        let af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
+        if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
+
+    }
+    if (metadata) {
+        af = new ArchiveFile({itemid, metadata});
+        if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
+    }
+}
 ArchiveFile.prototype.streamFrom = async function(cb) {
     /*
         cb(err, stream): Called with open stream.
