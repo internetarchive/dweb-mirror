@@ -60,7 +60,7 @@ class Mirror {
             let uniq = [];
 
             ParallelStream.from(Object.keys(config.collections), {name: "EatConfig"})
-                .uniq(null, {uniq, name:"0 uniq"}))
+                .uniq(null, {uniq, name:"0 uniq"})
 
                 .log((m) => ["Level1 queueing", m]) //will display on MirrorCollectionSearchStream when processed
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 1'} )  // Initialize collection - doesnt get metadata or search results
@@ -80,7 +80,7 @@ class Mirror {
                 .flatten({name: '2 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '2 filter by collection'})
                 .map((xx) => xx.identifier, {name: '2 identifier'})
-                .uniq(null, {uniq, name:"2 uniq"}))
+                .uniq(null, {uniq, name:"2 uniq"})
 
 
                 .log((m) => ["Level3 queueing:", m])//will display on MirrorCollectionSearchStream when processed
