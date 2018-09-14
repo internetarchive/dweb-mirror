@@ -70,14 +70,13 @@ app.get('/info', function(req, res) {
 });
 
 
-
-
+//TODO merge this into next one, passing cache parameter to fetch_metadata THEN store in cache
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     //TODO-CACHE need timing of how long use old metadata
     let ai = new ArchiveItem({itemid: req.params.itemid});
     ai.read({directory: config.directory}, (err, metadata) => { // Note this hasn't been stored on AI
         if (err) {
-            debug('No local copy of: %s', filename);
+            debug("Cannot read metadata for %s: %s", req.params.itemid, err.message);
             next();
         } else {
             res.json(metadata);
@@ -86,11 +85,17 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
 });
 
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
+    //TODO-CACHE need timing of how long use old metadata
+    //TODO save these locally and TODO-CACHE check timing
     debug("Falling back to transports for %s", req.path);
-    DwebTransports.p_rawfetch('dweb:' + req.path).then(data => {
-        debug("Retrieved metadata for %s", data.metadata.identifier); // Combined data metadata/files/reviews
-        res.json(data);
-        //TODO save these locally and TODO-CACHE check timing
+    let ai = new ArchiveItem({itemid: req.params.itemid});
+    ai.fetch_metadata((err, ai) => {
+        if (err) {
+            next(err);  // Dont try again
+        } else {
+            debug("Retrieved metadata for %s", ai.item.metadata.identifier); // Combined data metadata/files/reviews
+            res.json(ai.item);
+        }
     });
 });
 

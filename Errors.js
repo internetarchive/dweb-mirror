@@ -32,7 +32,7 @@ class NoLocalCopy extends Error {
         super(message || "No local copy");
         this.name = "NoLocalCopy"
     }
-
 }
+errors.NoLocalCopy = NoLocalCopy;
 
 exports = module.exports = errors;
