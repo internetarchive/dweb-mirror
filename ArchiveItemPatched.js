@@ -12,6 +12,7 @@ const stringify = require('canonical-json');
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
+const errors = require('./Errors');
 
 
 ArchiveItem.prototype._dirpath = function(directory) {
@@ -42,6 +43,40 @@ ArchiveItem.prototype.save = function({directory = undefined} = {}, cb) {
                         }
                     });
 
+            }
+        });
+    }
+ArchiveItem.prototype.read = function({directory = undefined} = {}, cb) {
+        let filename = path.join(directory, this.itemid, `${this.itemid}_meta.json`);
+        fs.readFile(filename, (err, metadataJson) => {
+            if (err) {
+                cb(new errors.NoLocalCopy());
+            } else {
+                let filename = path.join(directory, this.itemid, `${this.itemid}_files.json`);
+                fs.readFile(filename, (err, filesJson) => {
+                    let files = JSON.parse(filesJson);
+                    let filesCount = files.length;
+                    if (err) {
+                        cb(new errors.NoLocalCopy());
+                    } else {
+                        let filename = path.join(directory, this.itemid, `${this.itemid}_reviews.json`);
+                        fs.readFile(filename, (err, reviewsJson) => {
+                            if (err) {
+                                cb(new errors.NoLocalCopy());
+                            } else {
+                                cb(null, {
+                                        //Omitted from standard dweb.archive.org/metadata/foo call as irrelevant and/or unavailable:
+                                        //  Unavailable but would be good: collection_titles
+                                        // Unavailable and not needed: created, d1, d2, dir, item_size, server, uniq, workable_servers
+                                        files: files,
+                                        files_count: filesCount,
+                                        metadata: JSON.parse(metadataJson),
+                                        reviews: JSON.parse(reviewsJson),
+                                    });
+                            }
+                        });
+                    }
+                });
             }
         });
     }

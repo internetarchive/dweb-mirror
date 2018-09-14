@@ -20,10 +20,6 @@ Summary of below:
 /arc/archive.org/metadata/:itemid > dweb:/arc/archive.org/metadata/:itemid > Transports
 /arc/archive.org/download/:itemid/:filename > dweb:/arc/archive.org/download/:itemid/:filename
 
-TODO - not handling /arc/archive.org/download/:itemid/:filename because not in Domain.js
--   either put in downloa but as what
--   or read from metadata
--   or how to make domain name redirect to metadata
 TODO - special case for both metadata and download when already on dweb.me
 TODO - replace download's fetch & send with retrieving a stream and passing on to request
 TODO - figure out why Gun not responding
@@ -47,6 +43,8 @@ const wrtc = require('wrtc');
 // Local files
 const config = require('./config'); // Global configuration, will add app specific requirements
 const ArchiveFile = require('./ArchiveFilePatched');
+const ArchiveItem = require('./ArchiveItemPatched');
+
 function sendrange(req, res, val) {
     let range = req.range(Infinity);
     if (range && range[0] && range.type === "bytes") {
@@ -68,45 +66,21 @@ DwebTransports.p_connect({
 app.use(morgan('combined')); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
 
 app.get('/info', function(req, res) {
-    res.status(200).json({"config": config}); //TODO this my change to include info on transports (IPFS, WebTransport etc)
+    res.status(200).json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
 });
 
+
+
+
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
-    //TODO - move this to subclass of ArchiveItem
     //TODO-CACHE need timing of how long use old metadata
-    let filename = path.join(config.directory, req.params.itemid, `${req.params.itemid}_meta.json`);
-    fs.readFile(filename, (err, metadataJson) => {
+    let ai = new ArchiveItem({itemid: req.params.itemid});
+    ai.read({directory: config.directory}, (err, metadata) => { // Note this hasn't been stored on AI
         if (err) {
             debug('No local copy of: %s', filename);
             next();
         } else {
-            let filename = path.join(config.directory, req.params.itemid, `${req.params.itemid}_files.json`);
-            fs.readFile(filename, (err, filesJson) => {
-                let files = JSON.parse(filesJson);
-                let filesCount = files.length;
-                if (err) {
-                    debug('No local copy of: %s', filename);
-                    next();
-                } else {
-                    let filename = path.join(config.directory, req.params.itemid, `${req.params.itemid}_reviews.json`);
-                    fs.readFile(filename, (err, reviewsJson) => {
-                        if (err) {
-                            debug('No local copy of: %s', filename);
-                            next();
-                        } else {
-                            res.json({
-                                //Omitted from standard dweb.archive.org/metadata/foo call as irrelevant and/or unavailable:
-                                //  Unavailable but would be good: collection_titles
-                                // Unavailable and not needed: created, d1, d2, dir, item_size, server, uniq, workable_servers
-                                files: files,
-                                files_count: filesCount,
-                                metadata: JSON.parse(metadataJson),
-                                reviews: JSON.parse(reviewsJson),
-                            });
-                        }
-                    });
-                }
-            });
+            res.json(metadata);
         }
     });
 });
@@ -138,7 +112,6 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
 app.get('/arc/archive.org/download/:itemid/:filename', function(req, res) {
     debug("Falling back to transports for %s", req.path);
     ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
-        console.log("XXX got af .. TODO now save and return it", af)
         af.p_urls((err, urls) => {  // Should always return even if urls is []
             DwebTransports.p_rawfetch(urls)
                 .then((data) => res.send(data));   //TODO need streaming version then TODO-CB rewrite w/o promise TODO-CACHE need to cache file (save)

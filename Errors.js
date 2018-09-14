@@ -24,8 +24,15 @@ class MissingDirectoryError extends Error {
         super(message || "Directory is missing");
         this.name = "MissingDirectoryError"
     }
-
 }
 errors.MissingDirectoryError = MissingDirectoryError;
+
+class NoLocalCopy extends Error {
+    constructor(message) {
+        super(message || "No local copy");
+        this.name = "NoLocalCopy"
+    }
+
+}
 
 exports = module.exports = errors;
