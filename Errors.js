@@ -35,4 +35,11 @@ class NoLocalCopy extends Error {
 }
 errors.NoLocalCopy = NoLocalCopy;
 
+class FileNotFoundError extends Error {
+    constructor(message) {
+        super(message || "File not found");
+        this.name = "FileNotFound"
+    }
+}
+errors.FileNotFoundError = FileNotFoundError;
 exports = module.exports = errors;

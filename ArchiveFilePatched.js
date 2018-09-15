@@ -31,8 +31,12 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         }
         archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
         let af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
-        if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
-
+        if (af) {
+            if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
+        } else {
+            let err = new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`);
+            if (cb) { cb(err); return; } else { return new Promise((resolve, reject) => reject(err)); }
+        }
     }
     if (metadata) {
         af = new ArchiveFile({itemid, metadata});
