@@ -69,7 +69,7 @@ app.get('/info', function(req, res) {
     res.status(200).json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
 });
 
-// metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored. 
+// metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     //TODO-CACHE need timing of how long use old metadata
     let ai = new ArchiveItem({itemid: req.params.itemid});
@@ -103,7 +103,7 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res) {
     ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
         af.p_urls((err, urls) => {  // Should always return even if urls is []
             DwebTransports.p_rawfetch(urls)
-                .then((data) => res.send(data));   //TODO need streaming version then TODO-CB rewrite w/o promise TODO-CACHE need to cache file (save)
+                .then((data) => res.send(data));   //TODO need streaming version THEN merge with file version THEN TODO-CB rewrite w/o promise THEN TODO-CACHE need to cache file (save)
         });
     });
 });
