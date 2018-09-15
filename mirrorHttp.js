@@ -97,7 +97,7 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
             }
         }) //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
     });
-
+/*
 app.get('/arc/archive.org/download/:itemid/:filename', function(req, res) {
     debug("Falling back to transports for %s", req.path);
     ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
@@ -107,6 +107,38 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res) {
         });
     });
 });
+*/
+app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
+    debug("Falling back to transports to stream %s", req.path);
+    ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
+        if (err) {
+            debug("ArchiveFile.p_new({itemid:%s, filename:%s}) failed: %s", req.params.itemid, req.params.filename, err.message);
+            res.status(404).send(err.message);
+        } else {
+            let range = req.range(Infinity);
+            let opts = {};
+            if (range && range[0] && range.type === "bytes") {
+                opts = {start: range[0].start, end: range[0].end};
+                debug("Range request = %O", range);
+                res.status(206);
+            } else {
+                res.status(200);
+            }
+            af.p_urls((err, urls) => {  // Should always return even if urls is []
+                DwebTransports.p_f_createReadStream(urls)
+                    .then((f) => {
+                        let s = f(opts); // Stream
+                        s.pipe(res);
+                    })
+                //TODO find out why Gun doesnt retrieve metadata
+                //TODO find out why metadata not stored in this process, nor is cached version used
+                //TODO make stream store in file as well.
+                //TODO merge with file version THEN TODO-CB rewrite w/o promise THEN TODO-CACHE need to cache file (save)
+            });
+        }
+    });
+});
+
 
 //TODO get('/arc/archive.org/download/:itemid/:filename => IA or IPFS etc and TODO save these locally and TODO-CACHE check timing
 
