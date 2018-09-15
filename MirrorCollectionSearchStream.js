@@ -48,8 +48,10 @@ class MirrorCollectionSearchStream extends ParallelStream {
                     this.push(col.items); // Array of ArchiveItems // col.items will get rewritten by next search, but with a new array so this passed on array is ok
                     this._parallel(col, encoding, cb) // Loop by recursion in cb (could cause stack overflow if maxpages is large, but it shouldnt be)
                 })
-        } else {
-	        data.save({directory: this.directory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
+        } else { //TODO-XXX dont save if no directory specified.
+            if (this.directory) {   // We don't specify a directory, or save in collectionpreseed for example
+                data.save({directory: this.directory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
+            }
             cb(); // Acknowledge stream on innermost recursion
         }
     }

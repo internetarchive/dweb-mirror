@@ -23,8 +23,8 @@ ArchiveItem.prototype.save = function({directory = undefined} = {}, cb) {
         /*
             Save _meta and _members as JSON
         */
-        let itemid = this.item.metadata.identifier;
         console.assert(directory, "ArchiveItem needs a directory in order to save");
+        let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
         let dirpath = this._dirpath(directory);
         MirrorFS._mkdir(dirpath, (err) => {
             if (err) {

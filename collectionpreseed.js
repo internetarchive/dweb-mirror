@@ -1,4 +1,6 @@
 //global.window = {}; // Target for things like window.onpopstate in Nav.js
+process.env.DEBUG="express:* dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";
+const debug = require('debug');
 const wrtc = require('wrtc');
 
 global.DwebTransports = require('@internetarchive/dweb-transports');
@@ -8,7 +10,6 @@ const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const MirrorSearch = require('./MirrorSearch.js');
 const ParallelStream = require('parallel-streams');
-const debug = require('debug');
 
 /* Collection crawl is a "eat your own dogfood" application to see whether this set of tools does what we need.
     Challenge - crawl the collections in the archive, dont mirror but trigger the metadata search so that the server preloads IPFS
@@ -54,7 +55,7 @@ class Mirror {
                 }, false);
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");
-            let paralleloptions = {limit: 5, silentwait: false};
+            let paralleloptions = {limit: 5, silentwait: true};
 
                 // Stream of ArchiveItems - which should all be collections
             let uniq = [];
@@ -82,7 +83,6 @@ class Mirror {
                 .map((xx) => xx.identifier, {name: '2 identifier'})
                 .uniq(null, {uniq, name:"2 uniq"})
 
-
                 .log((m) => ["Level3 queueing:", m])//will display on MirrorCollectionSearchStream when processed
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 3'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
@@ -90,7 +90,6 @@ class Mirror {
                 //IGNORED Stream of arrays of Archive Items (mixed)
                 .reduce((a,v)=>(a+1),0,function(res){this.debug("Finished with %d",res);},{name: "END 3level"});
                 //OBS .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally: ()=>this.debug("Finished with:",self.count), name: "END 3level"});
-
             let popularCollections = new MirrorSearch({
                 query: 'mediatype:collection AND NOT _exists_:access-restricted',
                 sort: '-downloads',

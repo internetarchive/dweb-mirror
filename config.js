@@ -7,15 +7,16 @@ const config = new MirrorConfig({
     //fs: {},
 
     // All these are from mirroring.js
-    skipfetchfile: true, // Enable to stop it actually fetching the file - useful when testing
+    skipfetchfile: false, // Enable to stop it actually fetching the file - useful when testing
     directory: "/Users/mitra/temp/mirrored",    // Used by mirroring and mirrorHTTP
     limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
     search: {
-        itemsperpage: 2, // Optimum is probably around 100,
-        pagespersearch: 2
+        itemsperpage: 20, // Optimum is probably around 100,
+        pagespersearch: 1, // If want > 100 files per collection then increase this number
     },
     file: {
-        maxfilesize: 100000000
+        //maxfilesize: 100000000
+        maxfilesize: 200000, // Testing - only small files, will catch breath_takers_2/breath_takers_2.gif
     },
     item: {
         minimumForUi: true
