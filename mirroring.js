@@ -6,7 +6,7 @@ const debug = require('debug');
 // Other IA repos
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
-const ArchiveItem = require('./ArchiveItem');
+const ArchiveItem = require('./ArchiveItemPatched');
 
 // Other files in this repo
 const config = require('./config');
@@ -54,7 +54,7 @@ class Mirror {
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(2, {name: "Fork"}).streams;
-                ss[0].map((ai, cb) => ai.save({directory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
+                ss[0].map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
                     //pipe(new SaveItems({directory: config.directory, paralleloptions }))    // Parallel saves of metadata
                     .reduce();
                 ss[1]

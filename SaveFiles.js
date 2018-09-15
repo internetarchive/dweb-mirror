@@ -34,7 +34,7 @@ class SaveFiles extends ParallelStream {
         */
         function cb2(err, size) { cb(err, {archivefile, size}); }
         try {
-            archivefile.checkShaAndSave({directory: this.directory, skipfetchfile: this.skipfetchfile}, cb2);
+            archivefile.checkShaAndSave({cacheDirectory: this.directory, skipfetchfile: this.skipfetchfile}, cb2);
         } catch(err) {
             console.error("MirrorFS._parallel caught error", err.message);
             cb(err);

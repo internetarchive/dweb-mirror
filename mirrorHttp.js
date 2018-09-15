@@ -27,8 +27,8 @@ TODO -
 
  */
 // External packages
-process.env.DEBUG="express:* dweb-mirror:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";    //TODO-MIRROR comment out when done testing FS
-//process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";    //TODO-MIRROR comment out when done testing FS
+process.env.DEBUG="express:* dweb-mirror:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";
+//process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const express = require('express'); //http://expressjs.com/
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
@@ -69,27 +69,11 @@ app.get('/info', function(req, res) {
     res.status(200).json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
 });
 
-
-//TODO merge this into next one, passing cache parameter to fetch_metadata THEN store in cache
+// metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored. 
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     //TODO-CACHE need timing of how long use old metadata
     let ai = new ArchiveItem({itemid: req.params.itemid});
-    ai.read({directory: config.directory}, (err, metadata) => { // Note this hasn't been stored on AI
-        if (err) {
-            debug("Cannot read metadata for %s: %s", req.params.itemid, err.message);
-            next();
-        } else {
-            res.json(metadata);
-        }
-    });
-});
-
-app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
-    //TODO-CACHE need timing of how long use old metadata
-    //TODO save these locally and TODO-CACHE check timing
-    debug("Falling back to transports for %s", req.path);
-    let ai = new ArchiveItem({itemid: req.params.itemid});
-    ai.fetch_metadata((err, ai) => {
+    ai.loadMetadata({cacheDirectory: config.directory}, (err, ai) => {
         if (err) {
             next(err);  // Dont try again
         } else {

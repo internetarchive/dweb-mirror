@@ -19,13 +19,13 @@ ArchiveItem.prototype._dirpath = function(directory) {
         return path.join(directory, this.item.metadata.identifier);
     };
 
-ArchiveItem.prototype.save = function({directory = undefined} = {}, cb) {
+ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         /*
             Save _meta and _members as JSON
         */
-        console.assert(directory, "ArchiveItem needs a directory in order to save");
+        console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
         let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-        let dirpath = this._dirpath(directory);
+        let dirpath = this._dirpath(cacheDirectory);
         MirrorFS._mkdir(dirpath, (err) => {
             if (err) {
                 console.error("Unable to _mkdir %s so cant save meta or members for collection: %s", dirpath, err.message);
@@ -46,20 +46,20 @@ ArchiveItem.prototype.save = function({directory = undefined} = {}, cb) {
             }
         });
     }
-ArchiveItem.prototype.read = function({directory = undefined} = {}, cb) {
-        let filename = path.join(directory, this.itemid, `${this.itemid}_meta.json`);
+ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
+        let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
         fs.readFile(filename, (err, metadataJson) => {
             if (err) {
                 cb(new errors.NoLocalCopy());
             } else {
-                let filename = path.join(directory, this.itemid, `${this.itemid}_files.json`);
+                let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_files.json`);
                 fs.readFile(filename, (err, filesJson) => {
                     let files = JSON.parse(filesJson);
                     let filesCount = files.length;
                     if (err) {
                         cb(new errors.NoLocalCopy());
                     } else {
-                        let filename = path.join(directory, this.itemid, `${this.itemid}_reviews.json`);
+                        let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
                         fs.readFile(filename, (err, reviewsJson) => {
                             if (err) {
                                 cb(new errors.NoLocalCopy());
@@ -80,5 +80,36 @@ ArchiveItem.prototype.read = function({directory = undefined} = {}, cb) {
             }
         });
     }
+
+ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb) {
+    /*
+    More flexible version of loading metadata
+    Alternatives:
+    !cacheDirectory:    load from net
+    cached:             return from cache
+    !cached:            Load from net, save to cache
+
+    cb(err, this)
+     */
+    if (cacheDirectory) {
+        this.read({cacheDirectory}, (err, metadata) => {
+            if (err) {
+                this.fetch_metadata((err, ai) => {
+                    if (err) {
+                        cb(err); // Failed to read & failed to fetch
+                    } else {
+                        ai.save({cacheDirectory}, cb);  // Save data fetched
+                    }
+                });    // resolves to this
+            } else {    // Local read succeeded.
+                this.item = metadata;
+                cb(null, this);
+            }
+        })
+    } else {
+        this.fetch_metadata(cb);
+    }
+}
+
 
 exports = module.exports = ArchiveItem;

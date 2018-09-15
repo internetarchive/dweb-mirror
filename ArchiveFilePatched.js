@@ -60,18 +60,18 @@ ArchiveFile.prototype.streamFrom = async function(cb) {
     });
 };
 
-ArchiveFile.prototype.checkShaAndSave = function({directory = undefined, skipfetchfile=false} = {}, cb) {
+ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, skipfetchfile=false} = {}, cb) {
     if (!this.metadata.sha1) { // Handle files like _meta.xml which dont have a sha
-        this.save({directory}, cb);
+        this.save({cacheDirectory}, cb);
     } else {
-        let filepath = path.join(directory, this.itemid, this.metadata.name);  //TODO move sha checking to inside ArchiveFilePatched THEN OBS _filepath
+        let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);  //TODO move sha checking to inside ArchiveFilePatched THEN OBS _filepath
         sha.check(filepath, this.metadata.sha1, (err) => {
             if (err) {
                 if (skipfetchfile) {
                     debug("skipfetchfile set (testing) would fetch: %s", filepath);
                     cb(null, -1);
                 } else {
-                    this.save({directory}, cb);
+                    this.save({cacheDirectory}, cb);
                 }
             } else { // sha1 matched, skip
                 debug("Skipping", filepath, "as sha1 matches");
@@ -81,12 +81,12 @@ ArchiveFile.prototype.checkShaAndSave = function({directory = undefined, skipfet
     }
 };
 
-ArchiveFile.prototype.save = function({directory = undefined} = {}, cb) {
+ArchiveFile.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
     Save a archivefile to the appropriate filepath
     cb(err, {archivefile, size}) // To call on close
      */
-    let filepath = path.join(directory, this.itemid, this.metadata.name);
+    let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
     // noinspection JSIgnoredPromiseFromCall
     this.streamFrom((err, s) => { //Returns a promise, but not waiting for it
         if (err) {
@@ -94,7 +94,7 @@ ArchiveFile.prototype.save = function({directory = undefined} = {}, cb) {
             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
             // Dont try and write it
         } else {
-            MirrorFS._fileopen(directory, filepath, (err, fd) => {
+            MirrorFS._fileopen(cacheDirectory, filepath, (err, fd) => {
                 if (err) {
                     debug("Unable to write to %s: %s", filepath, err.message);
                     cb(err);
