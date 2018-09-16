@@ -30,10 +30,12 @@ class MirrorFS {
         })
     }
 
-    static _fileopen(directory, filepath, cb) {  // cb(err, fd)
+    static _fileopenwrite(directory, filepath, cb) {  // cb(err, fd)
         /*
+        directory top level directory of cache - must exist
         filepath path to file (rooted preferably)
         If fails to open for writing then will check for presence of a root directory, and recursively mkdir before trying again.
+        cb(err, fd)     Open file descriptor
          */
         try {
             fs.open(filepath, 'w', (err, fd) => {

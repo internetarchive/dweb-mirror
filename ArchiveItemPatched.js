@@ -16,7 +16,7 @@ const errors = require('./Errors');
 
 
 ArchiveItem.prototype._dirpath = function(directory) {
-        return path.join(directory, this.item.metadata.identifier);
+        return path.join(directory, this.itemid);
     };
 
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {

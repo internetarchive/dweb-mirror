@@ -27,13 +27,14 @@ TODO -
 
  */
 // External packages
-process.env.DEBUG="express:* dweb-mirror:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";
+process.env.DEBUG="express:* dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const express = require('express'); //http://expressjs.com/
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const morgan = require('morgan'); //https://www.npmjs.com/package/morgan
 const path = require('path');
+const ParallelStream = require('parallel-streams');
 
 // IA packages
 global.DwebTransports = require('@internetarchive/dweb-transports');
@@ -97,17 +98,7 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
             }
         }) //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
     });
-/*
-app.get('/arc/archive.org/download/:itemid/:filename', function(req, res) {
-    debug("Falling back to transports for %s", req.path);
-    ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
-        af.p_urls((err, urls) => {  // Should always return even if urls is []
-            DwebTransports.p_rawfetch(urls)
-                .then((data) => res.send(data));   //TODO need streaming version THEN merge with file version THEN TODO-CB rewrite w/o promise THEN TODO-CACHE need to cache file (save)
-        });
-    });
-});
-*/
+
 app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
     debug("Falling back to transports to stream %s", req.path);
     ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
@@ -128,9 +119,9 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
                 DwebTransports.p_f_createReadStream(urls)
                     .then((f) => {
                         let s = f(opts); // Stream
-                        s.pipe(res);
+                        s.pipe(ParallelStream.log(m=>m.length,{name: "crsdata", objectMode: false}))
+                        .pipe(res);
                     })
-                //TODO retest mirroring.js with new fork
                 //TODO fork to cache
                 //TODO find out why Gun doesnt retrieve metadata
                 //TODO find out why metadata not stored in this process, nor is cached version used

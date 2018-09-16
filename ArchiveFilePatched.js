@@ -43,22 +43,22 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
     }
 }
-ArchiveFile.prototype.streamFrom = async function(cb) {
+ArchiveFile.prototype.readableFromNet = function(cb) {
     /*
-        cb(err, stream): Called with open stream.
+        cb(err, stream): Called with open readable stream from the net.
         Returns promise if no cb
      */
     this.p_urls()
     .then(urls => DwebTransports.p_f_createReadStream(urls))
     .then(f => {
-            s = f({start: 0});
+            let s = f({start: 0});
             if (cb) { cb(null, s); } else { return(s); }; // Callback or resolve stream
     })
     .catch(err => {
         if (err instanceof DTerrors.TransportError) {
-            console.warn("SaveFiles._streamFrom caught", err.message);
+            console.warn("readableFromNet caught", err.message);
         } else {
-            console.error("SaveFiles._streamFrom caught", err);
+            console.error("readableFromNet caught", err);
         }
         if (cb) { cb(err); } else { reject(err)}
     });
@@ -85,43 +85,53 @@ ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, sk
     }
 };
 
+ArchiveFile.prototype.writableToFile = function({cacheDirectory = undefined} = {}, cb) {
+    /*
+    Save a archivefile to the appropriate filepath
+    cb(err, s) // Pass stream to callback
+     */
+    let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+    MirrorFS._fileopenwrite(cacheDirectory, filepath, (err, fd) => {
+        if (err) {
+            debug("Unable to write to %s: %s", filepath, err.message);
+            cb(err);
+        } else {
+            // fd is the file descriptor of the newly opened file;
+            let writable = fs.createWriteStream(null, {fd: fd});
+            cb(null, writable);
+            // Note at this point file is neither finished, nor closed, its a stream open for writing.
+            //fs.close(fd); Should be auto closed when stream to it finishes
+        }
+    });
+};
+
 ArchiveFile.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
     Save a archivefile to the appropriate filepath
     cb(err, {archivefile, size}) // To call on close
      */
-    let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
     // noinspection JSIgnoredPromiseFromCall
-    this.streamFrom((err, s) => { //Returns a promise, but not waiting for it
+    this.readableFromNet((err, s) => { //Returns a promise, but not waiting for it
         if (err) {
             console.warn("MirrorFS._transform ignoring error on", this.itemid, err.message);
             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
             // Dont try and write it
         } else {
-            MirrorFS._fileopen(cacheDirectory, filepath, (err, fd) => {
-                if (err) {
-                    debug("Unable to write to %s: %s", filepath, err.message);
-                    cb(err);
-                } else {
-                    // fd is the file descriptor of the newly opened file;
-                    let writable = fs.createWriteStream(null, {fd: fd});
-                    writable.on('close', () => {
-                        debug("Written %d to %s", writable.bytesWritten, filepath);
-                        // noinspection EqualityComparisonWithCoercionJS
-                        if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
-                            console.error(`File ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
-                        } else {
-                            debug(`Closed ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten}`);
-                        }
-                        cb(null, writable.bytesWritten);
-                    });
-                    // Note at this point file is neither finished, nor closed, its open for writing.
-                    //fs.close(fd); Should be auto closed when stream to it finishes
-                    try {
-                        s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                    } catch(err) {
-                        console.log("XXX @ ArchiveFilePatched - catching error with s.pipe",s);
+            this.writableToFile({cacheDirectory}, (err, writable) => {
+                writable.on('close', () => {
+                    debug("Written %d to file", writable.bytesWritten);
+                    // noinspection EqualityComparisonWithCoercionJS
+                    if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
+                        console.error(`File ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
+                    } else {
+                        debug(`Closed ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten}`);
                     }
+                    cb(null, writable.bytesWritten);
+                });
+                try {
+                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                } catch(err) {
+                    console.log("XXX @ ArchiveFilePatched - catching error with s.pipe",s);
                 }
             });
         }
