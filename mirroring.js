@@ -53,18 +53,17 @@ class Mirror {
                 .log((m)=>[m.identifier], {name:"SearchResult"})
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
-                .fork(2, {name: "Fork"}).streams;
-                ss[0].map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
+                .fork(s=>s
+                    .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
                     //pipe(new SaveItems({directory: config.directory, paralleloptions }))    // Parallel saves of metadata
-                    .reduce();
-                ss[1]
-                    .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
-                    .flatten({name: "flatten files"})
-                    .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
-                    .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
-                    .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-                    .pipe(new SaveFiles({directory: config.directory, paralleloptions, skipfetchfile: config.skipfetchfile }))    // Parallel retrieve to file system
-                    .reduce();
+                    .reduce(), {name: "Fork"})
+                .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
+                .flatten({name: "flatten files"})
+                .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
+                .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
+                .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
+                .pipe(new SaveFiles({directory: config.directory, paralleloptions, skipfetchfile: config.skipfetchfile }))    // Parallel retrieve to file system
+                .reduce();
         } catch(err) {
             console.error(err);
         }

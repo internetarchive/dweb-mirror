@@ -130,6 +130,8 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
                         let s = f(opts); // Stream
                         s.pipe(res);
                     })
+                //TODO retest mirroring.js with new fork
+                //TODO fork to cache
                 //TODO find out why Gun doesnt retrieve metadata
                 //TODO find out why metadata not stored in this process, nor is cached version used
                 //TODO make stream store in file as well.
