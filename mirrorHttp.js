@@ -27,7 +27,7 @@ TODO -
 
  */
 // External packages
-process.env.DEBUG="express:* dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";
+process.env.DEBUG="express:* dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const express = require('express'); //http://expressjs.com/
@@ -60,8 +60,11 @@ function sendrange(req, res, val) {
 const app = express();
 debug('Starting HTTP server on %d', config.apps.http.port);
 DwebTransports.p_connect({
-    transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
+    //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
+    transports: ["HTTP"],
     webtorrent: {tracker: { wrtc }},
+}).then(() => {
+    DwebTransports.http().supportFunctions.push("createReadStream");
 }); // Async, handling may fail while this is happening
 
 app.use(morgan('combined')); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
@@ -115,19 +118,19 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
             } else {
                 res.status(200);
             }
-            af.p_urls((err, urls) => {  // Should always return even if urls is []
-                DwebTransports.p_f_createReadStream(urls)
-                    .then((f) => {
-                        let s = f(opts); // Stream
-                        s.pipe(ParallelStream.log(m=>m.length,{name: "crsdata", objectMode: false}))
+            opts.cacheDirectory = config.directory;
+            af.cachedStream(opts, (err, s) => {
+                if (err) { next(err); }
+                else {
+                    s.pipe(ParallelStream.log(m => m.length, {name: "crsdata", objectMode: false})) //Just debugging stream on way in
                         .pipe(res);
-                    })
-                //TODO fork to cache
-                //TODO find out why Gun doesnt retrieve metadata
+                }
+            });
+                //TODO fork to cache - test above change to readableFromNet then use cachedStream
+                //TODO find out why Gun doesnt retrieve metadata issue#43
                 //TODO find out why metadata not stored in this process, nor is cached version used
                 //TODO make stream store in file as well.
                 //TODO merge with file version THEN TODO-CB rewrite w/o promise THEN TODO-CACHE need to cache file (save)
-            });
         }
     });
 });

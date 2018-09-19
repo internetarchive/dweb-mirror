@@ -43,15 +43,16 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
     }
 }
-ArchiveFile.prototype.readableFromNet = function(cb) {
+ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     /*
         cb(err, stream): Called with open readable stream from the net.
         Returns promise if no cb
      */
+    if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts
     this.p_urls()
     .then(urls => DwebTransports.p_f_createReadStream(urls))
     .then(f => {
-            let s = f({start: 0});
+            let s = f(opts);
             if (cb) { cb(null, s); } else { return(s); }; // Callback or resolve stream
     })
     .catch(err => {
@@ -64,11 +65,13 @@ ArchiveFile.prototype.readableFromNet = function(cb) {
     });
 };
 
+// NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL
 ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, skipfetchfile=false} = {}, cb) {
+    //TODO - make sure sha.check works if no metadata (undefined or 0)
     if (!this.metadata.sha1) { // Handle files like _meta.xml which dont have a sha
         this.save({cacheDirectory}, cb);
     } else {
-        let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);  //TODO move sha checking to inside ArchiveFilePatched THEN OBS _filepath
+        let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
         sha.check(filepath, this.metadata.sha1, (err) => {
             if (err) {
                 if (skipfetchfile) {
@@ -82,6 +85,28 @@ ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, sk
                 cb(null, -1);
             }
         });
+    }
+};
+
+// NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL
+//TODO add opts {Start, end} as used by readableFromNet
+ArchiveFile.prototype.cachedStream = function({cacheDirectory = undefined, start=0, end=undefined} = {}, cb) {
+    // cb(err, stream)  will have a stream, also piped to a cache file
+    //TODO - make sure sha.check works if no metadata (undefined or 0)
+    try {
+        let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+        sha.check(filepath, this.metadata.sha1, (err) => {
+            if (err) {
+                this.saveNEW({cacheDirectory, start, end}, cb); // cb(err, stream)
+            } else { // sha1 matched, skip
+                debug("Returning cached", filepath, "as sha1 matches");
+                let s = fs.createReadStream(filepath); //TODO add opts { start: 90, end: 99 }
+                cb(null, s);
+            }
+        });
+    } catch(err) {
+        console.error("ArchiveFile.cachedStream:",err)
+        if (cb) { cb(err);} else { throw(err);} // Throw it up
     }
 };
 
@@ -105,13 +130,14 @@ ArchiveFile.prototype.writableToFile = function({cacheDirectory = undefined} = {
     });
 };
 
-ArchiveFile.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
+ArchiveFile.prototype.save = function({cacheDirectory = undefined, start=0, end=undefined} = {}, cb) {
     /*
-    Save a archivefile to the appropriate filepath
+    net > file + output
+    Save a archivefile to the appropriate filepath and return as stream
     cb(err, {archivefile, size}) // To call on close
      */
     // noinspection JSIgnoredPromiseFromCall
-    this.readableFromNet((err, s) => { //Returns a promise, but not waiting for it
+    this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
         if (err) {
             console.warn("MirrorFS._transform ignoring error on", this.itemid, err.message);
             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
@@ -131,7 +157,40 @@ ArchiveFile.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                 try {
                     s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                 } catch(err) {
-                    console.log("XXX @ ArchiveFilePatched - catching error with s.pipe",s);
+                    console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe",s);
+                }
+            });
+        }
+    });
+};
+ArchiveFile.prototype.saveNEW = function({cacheDirectory = undefined} = {}, cb) {
+    /*
+    Save a archivefile to the appropriate filepath
+    cb(err, s) // With stream so can work with while caching
+     */
+    // noinspection JSIgnoredPromiseFromCall
+    this.readableFromNet((err, s) => { //Returns a promise, but not waiting for it
+        if (err) {
+            console.warn("MirrorFS._transform ignoring error on", this.itemid, err.message);
+            cb(err); // Dont pass error on, will trigger a Promise rejection not handled message  //XXX save() ignored error)
+            // Dont try and write it
+        } else {
+            this.writableToFile({cacheDirectory}, (err, writable) => {
+                writable.on('close', () => {
+                    debug("Written %d to file", writable.bytesWritten);
+                    // noinspection EqualityComparisonWithCoercionJS
+                    if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
+                        console.error(`File ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
+                    } else {
+                        debug(`Closed ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten}`);
+                    }
+                    //cb(null, writable.bytesWritten); //XXX save() sends bytesWritten)
+                });
+                try {
+                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                    cb(null, s);        // CB with the stream   //XXX save() sends bytesWritten)
+                } catch(err) {
+                    console.log("XXX @ ArchiveFilePatched - catching error with saveNEW() in s.pipe",s);
                 }
             });
         }
