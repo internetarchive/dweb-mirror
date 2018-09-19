@@ -25,7 +25,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
         super(options);
         this.limit = options.limit || 100;
         this.maxpages = options.maxpages || 5; //
-	this.directory = options.directory || undefined;
+	    this.directory = options.directory || undefined;
     }
 
     // TODO obsolete this, its one line, can be merged into mirroring
@@ -34,17 +34,16 @@ class MirrorCollectionSearchStream extends ParallelStream {
             data: MirrorCollection (subclass of MirrorSearch & ArchiveItem)
                 The ArchiveItem will have numFound, start, page  set after each fetch
 
-            Note this cant easily go in a map to a function on Collection as it recurses
          */
+
         data.fetch_metadata((err, d) => {
-            let s = data.streamResults({limit: this.limit, maxpages: this.maxpages});
-            cb(null, s);
+            if (err) { cb(err);  }
+            else {
+                let s = d.streamResults({limit: this.limit, maxpages: this.maxpages});
+                cb(null, s);
+            }
         })
     }
-    _flush(cb) {
-        cb();
-    }
-
 }
 
 

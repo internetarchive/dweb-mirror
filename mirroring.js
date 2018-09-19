@@ -1,4 +1,4 @@
-process.env.DEBUG="dweb-transports dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-archive dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 // Standard repos
 const wrtc = require('wrtc');
 const debug = require('debug');
@@ -43,16 +43,19 @@ class Mirror {
                 ParallelStream.from(Object.keys(config.collections), {name: "Munching"})
                 .log((m)=>[m], {name:"Collection"})
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
-                // Stream of ArchiveItems - which should all be collections
-                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, paralleloptions, directory: config.directory}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
-                    /*
-                .map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true} ) // Collections with metadata fetched
-                // Note slightly odd syntax, we push s as soon as we start, but only signal cb (inside streamResults) when completed the search
-                .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, cacheDirectory: config.directory}))
+
+                // The pipe line works but neither of the following alternatives do despite doing same thing. They fail inside a call to fetch!
+                //FAILS if add a fetch_metadata before the pipe, though it makes the same call.
+                //.map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true} ) // Collections with metadata fetched
+                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, directory: config.directory}))
+                //FAILS if try and do fetch_metadata (line above) | streamResults
+                //.map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch})) //, cacheDirectory: config.directory}))
+                //AND FAILS if do it all in a .map
+                //.map((collection, cb) => collection.fetch_metadata((err, d) => { let s = d.streamResults({limit: config.search.itemsperpage,  maxpages: config.search.pagespersearch, directory: config.directory });cb(null, s); }))
                 // Stream of streams of Search results (minimal JSON) ready for fetching
-                */
-                .log((s)=>s.name, {name:"CSS"})
+
+                .log((s)=>s.name, {name:"CSS2"})
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
                 //.slice(0,1)  //Restrict to first Archive Item (just for testing)

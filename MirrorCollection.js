@@ -68,26 +68,16 @@ class MirrorCollection extends MirrorSearch {
                 This allows the streams to be streamed themselves into a .flatten and if streamResults is run in parallel the results will be unordered.
                 e.g.  collectionsStream.map(c => c.streamResults({}) TODO - need example
          */
-        if (!this.streaming) {
-            this.streaming = new ParallelStream({name: `Collection ${this.itemid}`, highWaterMark: 999});
-        }
-        if (typeof options === 'function') {
-            cb = options;
-            options = {};
-        } //Allow missing options
+        if (typeof options === 'function') { cb = options; options = {}; } //Allow missing options
+        this.streaming = new ParallelStream({name: `Collection ${this.itemid}`, highWaterMark: 999});
+
         if (typeof this.page === "undefined") this.page = 0;
         if (!this.limit) this.limit = options.limit;
         let maxpages = this.maxpages ? this.maxpages : options.maxpages;
         let self = this; // this may not be same in call from drain
-        let lastStream = undefined;
         streamOnePage();
         return this.streaming;   // return readable stream that can be piped prior to fetch's succeeding
 
-        function allStreamsEnd() {
-            debug("Streams for %s merged",self.itemid);
-            self.streaming.end(); // Inform streaming that all merged, it can then write to downstream as normal
-            if (cb) { cb(); }     // Inform caller that complete - note that callers cb should probably not be to pass on the stream to its downstream, as may never be called if pushback
-        }
         function streamOnePage() {
 
             try {
@@ -98,23 +88,39 @@ class MirrorCollection extends MirrorSearch {
                     self.fetch_query({append: true, reqThumbnails: false})
                         .then((docs) => {
                             debug("Collection %s page %s retrieved %d items", self.itemid, self.page, docs.length );
-                            let s = ParallelStream.from(docs, {name: `Collection_${self.itemid}_page_${self.page}`});
-                            lastStream = s;
-                            s.pipe(self.streaming, {end: false}); // This doesnt seem to make any difference, but without it there might be a bit of a race to do a second pipe before it ends.
-                            streamOnePage();
+                            let ediblearr = docs; // Copy it, in case it is needed by collection
+                            _pushbackablewrite();
+                            function _pushbackablewrite() { // Asynchronous, recursable
+                                // Note consumes eatable array from parent
+                                try {
+                                    let i;
+                                    while (typeof(i = ediblearr.shift()) !== "undefined") {
+                                        if (!self.streaming.write(i)) { // It still got written, but there is pushback
+                                            self.streaming.debug("Pushing back on array, %d items left", ediblearr.length);
+                                            self.streaming.once("drain", _pushbackablewrite);
+                                            return; // Without finishing
+                                        }
+                                    } //while
+                                    // Notice the return above will exit if sees backpressure
+                                    streamOnePage();    // Outer recursive loop on searching once pushed all first page
+                                } catch(err) {
+                                    console.error(err);
+                                    self.streaming.destroy(new Error(`Failure in ${through.name}._pushbackablewrite: ${err.message}`))
+                                }
+                            }
                         })
                         .catch((err) => { console.error(err);});
-                } else {
+                } else { // Completed loop and each page has fully written to streaming
                     if (options.cacheDirectory) {   // We don't specify a directory, or save in collectionpreseed for example
                         self.save({cacheDirectory: options.cacheDirectory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
                     }
-``                    //self.streaming.end(); // Tell stream its all done - causes problems cos s.pipe above might be writing slowly (e.g. with pushback)
-                    lastStream.on("end",allStreamsEnd);
-                    //cb(); // Acknowledge stream on innermost recursion when done,
+                    debug("Searches of %s done", self.itemid);
+                    self.streaming.end(); // Signal nothing else coming
+                    if (cb) { cb(); }
                 }
             } catch(err) {
                 console.error("Error in streamOnePage", err);
-                throw err;
+                if (cb) { cb(err); } else { throw err; }
             }
         }
     }
