@@ -90,6 +90,7 @@ ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb)
     !cached:            Load from net, save to cache
 
     cb(err, this)
+    TODO fetch_query should probably use loadMetadata but tricky as fetch_query doesnt know the cacheDirectory
      */
     if (cacheDirectory) {
         this.read({cacheDirectory}, (err, metadata) => {

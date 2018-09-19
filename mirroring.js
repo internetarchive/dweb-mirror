@@ -46,10 +46,18 @@ class Mirror {
                 // Stream of ArchiveItems - which should all be collections
                 .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, paralleloptions, directory: config.directory}))
                 // Stream of arrays of Search results (minimal JSON) ready for fetching
+                    /*
+                .map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true} ) // Collections with metadata fetched
+                // Note slightly odd syntax, we push s as soon as we start, but only signal cb (inside streamResults) when completed the search
+                .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, cacheDirectory: config.directory}))
+                // Stream of streams of Search results (minimal JSON) ready for fetching
+                */
+                .log((s)=>s.name, {name:"CSS"})
                 .flatten({name: '1 flatten arrays of AI'})
                 // Stream of Search results (mixed)
                 //.slice(0,1)  //Restrict to first Archive Item (just for testing)
                 .log((m)=>[m.identifier], {name:"SearchResult"})
+/*
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(s=>s
@@ -62,6 +70,7 @@ class Mirror {
                 .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
                 .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
                 .map((af, cb) => af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, size)=> cb(err, {archivefile: af, size: size})), {name: "SaveFiles", async: true, paralleloptions})
+*/
                 .reduce();
         } catch(err) {
             console.error(err);
