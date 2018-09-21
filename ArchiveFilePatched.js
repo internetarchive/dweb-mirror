@@ -24,10 +24,11 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
     } // Drop through now have archiveitem
     if (archiveitem && filename && !metadata) {
         if (!archiveitem.item) {
-            return archiveitem.fetch_metadata()
-                .catch(err => {if (cb) { cb(err); } else { reject(err); }})
-                .then(() => this.p_new({itemid, archiveitem, metadata, filename}, cb)); // Resolves to AF
+            return archiveitem.fetch_metadata((err, ai) => {
+                if (err) return (cb) ? cb(err) : new Promise((resolve, reject) => reject(err))
+                return this.p_new({itemid, archiveitem, metadata, filename}, cb); // Resolves to AF
                 // Promise resolves to AF; dont catch errs here, cb(err) will have been called if exists else will reject()
+            });
         }
         archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
         let af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
