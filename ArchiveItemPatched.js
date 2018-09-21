@@ -20,32 +20,51 @@ ArchiveItem.prototype._dirpath = function(directory) {
     };
 
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
-        /*
-            Save _meta and _members as JSON
-        */
-        console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
-        let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-        let dirpath = this._dirpath(cacheDirectory);
-        MirrorFS._mkdir(dirpath, (err) => {
-            if (err) {
-                console.error("Unable to _mkdir %s so cant save meta or members for collection: %s", dirpath, err.message);
-                if (cb) { cb(err); } else { throw(err); }; // Pass it up
-            } else {
-                let filepath = path.join(dirpath, itemid + "_meta.json");
-                fs.writeFile(filepath,
-                    stringify(this.item.metadata),
-                    (err) => {
-                        if (err) {
-                            console.error("Unable to write to %s: %s", filepath, err.message);
-                            if (cb) { cb(err); } else { throw(err); }; // Pass it up
-                        } else {
-                            cb(null, this);
-                        }
-                    });
+    /*
+        Save _meta and _members as JSON
+    */
+    console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
+    let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    let dirpath = this._dirpath(cacheDirectory);
 
-            }
-        });
+    function _err(msg, err, cb) {
+        console.error(msg, err);
+        if (cb) {
+            cb(err);
+        } else {
+            throw(err)
+        }
     }
+
+    MirrorFS._mkdir(dirpath, (err) => {
+        if (err) {
+            _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
+        } else {
+            let filepath = path.join(dirpath, itemid + "_meta.json");
+            fs.writeFile(filepath, stringify(this.item.metadata), (err) => {
+                if (err) {
+                    _err(`Unable to write to ${itemid}`, err, cb);
+                } else {
+                    let filepath = path.join(dirpath, itemid + "_files.json");
+                    fs.writeFile(filepath, stringify(this.item.files), (err) => {
+                        if (err) {
+                            _err(`Unable to write to ${itemid}`, err, cb);
+                        } else {
+                            let filepath = path.join(dirpath, itemid + "_reviews.json");
+                            fs.writeFile(filepath, stringify(this.item.reviews), (err) => {
+                                if (err) {
+                                    _err(`Unable to write to ${itemid}`, err, cb);
+                                } else {
+                                    cb(null, this);
+                                }
+                            });
+                        }
+                    })
+                }
+            });
+        }
+    });
+}
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
         let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
         fs.readFile(filename, (err, metadataJson) => {
@@ -54,11 +73,11 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
             } else {
                 let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_files.json`);
                 fs.readFile(filename, (err, filesJson) => {
-                    let files = JSON.parse(filesJson);
-                    let filesCount = files.length;
                     if (err) {
-                        cb(new errors.NoLocalCopy());
+                        cb(new errors.NoLocalCopy()); // Will typically drop through and try net
                     } else {
+                        let files = JSON.parse(filesJson);
+                        let filesCount = files.length;
                         let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
                         fs.readFile(filename, (err, reviewsJson) => {
                             if (err) {

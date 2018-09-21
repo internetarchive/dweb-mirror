@@ -16,18 +16,16 @@ DONE file, need pass on
 
 Summary of below:
 /info:  config as JSON
-/arc/archive.org/metadata/:itemid > DIR/:itemid/(_meta,_files,_reviews) > { files, files_count, metadata, reviews }  ...
-/arc/archive.org/metadata/:itemid > dweb:/arc/archive.org/metadata/:itemid > Transports
-/arc/archive.org/download/:itemid/:filename > dweb:/arc/archive.org/download/:itemid/:filename
+/arc/archive.org/metadata/:itemid > DIR/:itemid/(_meta,_files,_reviews) || (dweb:/arc/archive.org/metadata/:itemid > Transports >cache) > { files, files_count, metadata, reviews }
+/arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
 
-TODO - special case for both metadata and download when already on dweb.me
-TODO - replace download's fetch & send with retrieving a stream and passing on to request
-TODO - figure out why Gun not responding
-TODO -
+TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
+TODO - figure out why Gun not responding See https://github.com/internetarchive/dweb-mirror/issues/44
 
  */
 // External packages
-process.env.DEBUG="express:* dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
+//Not debugging: express:*
+process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const express = require('express'); //http://expressjs.com/
@@ -61,7 +59,7 @@ const app = express();
 debug('Starting HTTP server on %d', config.apps.http.port);
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
-    transports: ["HTTP"],
+    transports: ["HTTP", "GUN"],
     webtorrent: {tracker: { wrtc }},
 }).then(() => {
     DwebTransports.http().supportFunctions.push("createReadStream");
@@ -89,8 +87,8 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
 
 //app.use('/arc/archive.org/download/', express.static(config.directory)); // Simplistic, better ...
 
+/*
 app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
-    //TODO - move this to subclass of ArchiveItem or ArchiveFile
         let filepath = path.join(config.directory, req.params.itemid, req.params.filename);
         res.sendFile(filepath, function(err) {
             if (err) {
@@ -99,9 +97,9 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
             } else {
                 debug("sent file %s", filepath);
             }
-        }) //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
+        })
     });
-
+*/
 app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
     debug("Falling back to transports to stream %s", req.path);
     ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
@@ -126,11 +124,8 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
                         .pipe(res);
                 }
             });
-                //TODO fork to cache - test above change to readableFromNet then use cachedStream
-                //TODO find out why Gun doesnt retrieve metadata issue#43
-                //TODO find out why metadata not stored in this process, nor is cached version used
-                //TODO make stream store in file as well.
-                //TODO merge with file version THEN TODO-CB rewrite w/o promise THEN TODO-CACHE need to cache file (save)
+                //TODO merge with file version THEN TODO-CB rewrite w/o promise
+                //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
         }
     });
 });

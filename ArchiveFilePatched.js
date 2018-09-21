@@ -89,7 +89,7 @@ ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, sk
 };
 
 // NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL
-//TODO add opts {Start, end} as used by readableFromNet
+//TODO add opts {Start, end} as used by readableFromNet //TODO-REFACTOR do we need both cachedStream and checkShaAndSave, maybe pass an option to get back either stream or bytesWritten
 ArchiveFile.prototype.cachedStream = function({cacheDirectory = undefined, start=0, end=undefined} = {}, cb) {
     // cb(err, stream)  will have a stream, also piped to a cache file
     //TODO - make sure sha.check works if no metadata (undefined or 0)
