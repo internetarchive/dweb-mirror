@@ -7,7 +7,7 @@ TODO write reviews
 //Standard repos
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
-const stringify = require('canonical-json');
+const stringify = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 // Other files from this repo

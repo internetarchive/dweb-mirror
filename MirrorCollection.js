@@ -3,7 +3,7 @@ const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 // Other files from this repo
 const MirrorSearch = require('./MirrorSearch');
-const stringify = require('canonical-json');
+const stringify = require('@stratumn/canonicaljson');
 
 class MirrorCollection extends MirrorSearch {
     /*
