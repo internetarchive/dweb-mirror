@@ -78,7 +78,9 @@ class MirrorSearch extends ArchiveItem {
                         })
                         .catch((err) => {
                             console.error("Caught in streamOnePage.fetch_query", self.itemid, err);
-                            self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
+                            self.streaming.end(); if (cb) { cb(); }
+                            //Comment above and uncomment below to make it stop at this point so you can take a look
+                            //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
                         });
                 } else { // Completed loop and each page has fully written to streaming
                     if (options.cacheDirectory) {   // We don't specify a directory, or save in collectionpreseed for example
