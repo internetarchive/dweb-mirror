@@ -77,7 +77,7 @@ class MirrorSearch extends ArchiveItem {
                             }
                         })
                         .catch((err) => {
-                            console.error("Caught in streamOnePage.fetch_query", err);
+                            console.error("Caught in streamOnePage.fetch_query", self.itemid, err);
                             self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
                         });
                 } else { // Completed loop and each page has fully written to streaming
@@ -89,7 +89,7 @@ class MirrorSearch extends ArchiveItem {
                     if (cb) { cb(); }
                 }
             } catch(err) {
-                console.error("Caught in streamOnePage outer level", err);
+                console.error("Caught in streamOnePage outer level",  self.itemid, err);
                 if (cb) { cb(err); } else { throw err; }
             }
         }
