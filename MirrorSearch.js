@@ -71,12 +71,15 @@ class MirrorSearch extends ArchiveItem {
                                     // Notice the return above will exit if sees backpressure
                                     streamOnePage();    // Outer recursive loop on searching once pushed all first page
                                 } catch(err) {
-                                    console.error("Caught in streamOnePage-1", err);
+                                    console.error("Caught in streamOnePage.pushbackablewrite", err);
                                     self.streaming.destroy(new Error(`Failure in ${through.name}._pushbackablewrite: ${err.message}`))
                                 }
                             }
                         })
-                        .catch((err) => { console.error("Caught in streamOnePage-2", err);});
+                        .catch((err) => {
+                            console.error("Caught in streamOnePage.fetch_query", err);
+                            self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
+                        });
                 } else { // Completed loop and each page has fully written to streaming
                     if (options.cacheDirectory) {   // We don't specify a directory, or save in collectionpreseed for example
                         self.save({cacheDirectory: options.cacheDirectory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
@@ -86,7 +89,7 @@ class MirrorSearch extends ArchiveItem {
                     if (cb) { cb(); }
                 }
             } catch(err) {
-                console.error("Caught in streamOnePage-3", err);
+                console.error("Caught in streamOnePage outer level", err);
                 if (cb) { cb(err); } else { throw err; }
             }
         }
