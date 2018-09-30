@@ -21,7 +21,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
 
     constructor(options) {
         options.retryms = options.retryms || 2000; // How long to wait if threads busy
-        options.name = options.name || "CollectionSearchStream";
+        options.name = options.name || "MirrorCollectionSearchStream";
         super(options);
         this.limit = options.limit || 100;
         this.maxpages = options.maxpages || 5; //

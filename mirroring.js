@@ -12,7 +12,7 @@ const ArchiveItem = require('./ArchiveItemPatched');
 const config = require('./config');
 const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
-const CollectionSearchStream = require('./MirrorCollectionSearchStream');
+const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const ParallelStream = require('parallel-streams');
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is
@@ -48,7 +48,7 @@ class Mirror {
                 // The pipe line works but neither of the following alternatives do despite doing same thing. They fail inside a call to fetch!
                 //FAILS if add a fetch_metadata before the pipe, though it makes the same call.
                 //.map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true} ) // Collections with metadata fetched
-                .pipe(new CollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, directory: config.directory}))
+                .pipe(new MirrorCollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, directory: config.directory}))
                 //FAILS if try and do fetch_metadata (line above) | streamResults
                 //.map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch})) //, cacheDirectory: config.directory}))
                 //AND FAILS if do it all in a .map
