@@ -21,7 +21,7 @@ Summary of below:
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO - figure out why Gun not responding See https://github.com/internetarchive/dweb-mirror/issues/44
-
+TODO - want archive.html servered at /arc/archive.org and other files at /archive/x
  */
 // External packages
 //Not debugging: express:*
@@ -85,21 +85,27 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     });
 });
 
+// Serving static (e.g. UI) files
 //app.use('/arc/archive.org/download/', express.static(config.directory)); // Simplistic, better ...
-
-/*
-app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
-        let filepath = path.join(config.directory, req.params.itemid, req.params.filename);
-        res.sendFile(filepath, function(err) {
-            if (err) {
-                debug('No local copy of: %s/%s', req.params.itemid, req.params.filename);
-                next(); // Drop through to next attempt
-            } else {
-                debug("sent file %s", filepath);
-            }
-        })
+function _sendFileNext(req, res, next, dir) {
+    /* send a file, dropping through to next if it fails,
+       dir: Directory path, not ending in /
+     */
+    let filepath = path.join(dir, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
+    res.sendFile(filepath, function (err) {
+        if (err) {
+            debug('No file in: %s', filepath);
+            next(); // Drop through to next attempt - will probably fail
+        } else {
+            debug("sent file %s", filepath);
+        }
     });
-*/
+}
+
+app.get('/arc/archive.org/images/*',  function(req, res, next) { _sendFileNext(req, res, next, config.archiveui.directory+"/images" ); } )
+app.get('/archive/*',  function(req, res, next) { _sendFileNext(req, res, next, config.archiveui.directory ); } )
+
+
 app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
     debug("Falling back to transports to stream %s", req.path);
     ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
@@ -129,6 +135,23 @@ app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) 
         }
     });
 });
+/*
+TODO  - this needs to do a redirect to the archive.html file, cant just respond as need "item=" in the parameter
+e.g. http://localhost:4244/arc/archive.org/details/commute?mirror=localhost:4244
+
+app.get('/arc/archive/details/*', function(req, res, next) {    //TODO this should really be in a cachable collection
+    debug("XXX@133 filename=%o:", req.params[0]);
+    let filepath = path.join(config.archiveui.directory, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
+    res.sendFile(filepath, function(err) {
+        if (err) {
+            debug('No file in: %s', filepath);
+            next(); // Drop through to next attempt - will probably fail
+        } else {
+            debug("sent file %s", filepath);
+        }
+    })
+});
+*/
 
 
 //TODO get('/arc/archive.org/download/:itemid/:filename => IA or IPFS etc and TODO save these locally and TODO-CACHE check timing
