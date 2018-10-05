@@ -28,7 +28,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
 	    this.directory = options.directory || undefined;
     }
 
-    // TODO obsolete this, its one line, can be merged into mirroring
+    // TODO obsolete this, its one line, can be merged into mirroring *but* for some reason doesnt work that way
     _parallel(data, encoding, cb) {
         /* Crawl a collection, pass output as array of ArchiveItems as sequence of calls to cb
             data: MirrorCollection (subclass of MirrorSearch & ArchiveItem)
