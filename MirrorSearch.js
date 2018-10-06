@@ -1,6 +1,6 @@
 const ArchiveItem = require('./ArchiveItemPatched');
 const ParallelStream = require('parallel-streams');
-const debug = require('debug')('dweb-mirror:MirrorCollection');
+const debug = require('debug')('dweb-mirror:MirrorSearch');
 
 class MirrorSearch extends ArchiveItem {
     constructor(options) {
