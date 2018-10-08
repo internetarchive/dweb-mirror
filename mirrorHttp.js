@@ -28,6 +28,7 @@ TODO - want archive.html servered at /arc/archive.org and other files at /archiv
 process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
+const url = require('url');
 const express = require('express'); //http://expressjs.com/
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const morgan = require('morgan'); //https://www.npmjs.com/package/morgan
@@ -44,22 +45,12 @@ const config = require('./config'); // Global configuration, will add app specif
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched');
 
-function sendrange(req, res, val) {
-    let range = req.range(Infinity);
-    if (range && range[0] && range.type === "bytes") {
-        debug("Range request = %O", range);
-        res.status(206).send(val.slice(range[0].start, range[0].end + 1));
-    } else {
-        res.status(200).send(val);
-    }
-}
-
 
 const app = express();
 debug('Starting HTTP server on %d', config.apps.http.port);
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
-    transports: ["HTTP", "GUN"],
+    transports: ["HTTP"],
     webtorrent: {tracker: { wrtc }},
 }).then(() => {
     DwebTransports.http().supportFunctions.push("createReadStream");
@@ -67,27 +58,34 @@ DwebTransports.p_connect({
 
 app.use(morgan('combined')); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
 
-app.get('/info', function(req, res) {
-    res.status(200).json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
-});
+app.use((req, res, next) => {
+    /* Turn the range headers on a req into an options parameter can use in streams */
+    let range = req.range(Infinity);
+    if (range && range[0] && range.type === "bytes"){ //TODO-XXX-DEBUGGING && (range[0].start !== 0 || range[0].end !== Infinity)) {
+        req.streamOpts = {start: range[0].start, end: range[0].end};
+        debug("Range request = %O", range);
+    }
+    next();
+})
 
-// metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
-app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
+
+function loadedAI({item=undefined, itemid=undefined}, cb) {
     //TODO-CACHE need timing of how long use old metadata
-    let ai = new ArchiveItem({itemid: req.params.itemid});
-    ai.loadMetadata({cacheDirectory: config.directory}, (err, ai) => {
+    new ArchiveItem({itemid, item}).loadMetadata({cacheDirectory: config.directory}, (err, ai) => {
         if (err) {
-            next(err);  // Dont try again
+            debug("loadedAI: Unable to retrieve metadata for %s", itemid);
+            cb(err);
         } else {
-            debug("Retrieved metadata for %s", ai.item.metadata.identifier); // Combined data metadata/files/reviews
-            res.json(ai.item);
+            debug("loadedAI: Retrieved metadata for %s", ai.item.metadata.identifier); // Combined data metadata/files/reviews
+            cb(null, ai);
         }
     });
-});
+}
 
 // Serving static (e.g. UI) files
 //app.use('/arc/archive.org/download/', express.static(config.directory)); // Simplistic, better ...
-function _sendFileNext(req, res, next, dir) {
+
+function _sendFileFromDir(req, res, next, dir) {
     /* send a file, dropping through to next if it fails,
        dir: Directory path, not ending in /
      */
@@ -102,59 +100,90 @@ function _sendFileNext(req, res, next, dir) {
     });
 }
 
-app.get('/arc/archive.org/images/*',  function(req, res, next) { _sendFileNext(req, res, next, config.archiveui.directory+"/images" ); } )
-app.get('/archive/*',  function(req, res, next) { _sendFileNext(req, res, next, config.archiveui.directory ); } )
-
-
-app.get('/arc/archive.org/download/:itemid/:filename', function(req, res, next) {
-    debug("Falling back to transports to stream %s", req.path);
-    ArchiveFile.p_new({itemid: req.params.itemid, filename: req.params.filename}, (err, af) => {
-        if (err) {
-            debug("ArchiveFile.p_new({itemid:%s, filename:%s}) failed: %s", req.params.itemid, req.params.filename, err.message);
-            res.status(404).send(err.message);
-        } else {
-            let range = req.range(Infinity);
-            let opts = {};
-            if (range && range[0] && range.type === "bytes") {
-                opts = {start: range[0].start, end: range[0].end};
-                debug("Range request = %O", range);
-                res.status(206);
-            } else {
-                res.status(200);
-            }
-            opts.cacheDirectory = config.directory;
-            af.cachedStream(opts, (err, s) => {
-                if (err) { next(err); }
-                else {
-                    s.pipe(ParallelStream.log(m => m.length, {name: "crsdata", objectMode: false})) //Just debugging stream on way in
-                        .pipe(res);
-                }
-            });
-                //TODO merge with file version THEN TODO-CB rewrite w/o promise
-                //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
-        }
+// There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
+function proxyUrl(req, res, next, urlbase, headers={}) {
+    // Proxy a request to somewhere under urlbase, which should NOT end with /
+    let url = [urlbase, req.params[0]].join('/');
+    DwebTransports.p_f_createReadStream(url)
+        .then(f => {
+            let s = f(); // TODO add range out of /arc/archive.org/download/:itemid/:filename
+            res.status(200); // Assume error if dont get here
+            res.set(headers);
+            s.pipe(res);
+        }).catch(err => {
+        debug("Unable to fetch %s err=%s", url, err.message);
+        next(err);
     });
-});
-/*
-TODO  - this needs to do a redirect to the archive.html file, cant just respond as need "item=" in the parameter
-e.g. http://localhost:4244/arc/archive.org/details/commute?mirror=localhost:4244
+}
 
-app.get('/arc/archive/details/*', function(req, res, next) {    //TODO this should really be in a cachable collection
-    debug("XXX@133 filename=%o:", req.params[0]);
-    let filepath = path.join(config.archiveui.directory, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
-    res.sendFile(filepath, function(err) {
+
+function sendrange(req, res, val) {
+    let range = req.range(Infinity);
+    if (range && range[0] && range.type === "bytes" && (range[0].start !== 0 || range[0].end !== Infinity)) {
+        debug("Range request = %O", range);
+        //TODO-RANGE copy Content-Range from download:itemid
+        res.status(206).send(val.slice(range[0].start, range[0].end + 1));
+    } else {
+        res.status(200).send(val);
+    }
+}
+
+
+function streamArchiveFile(req, res, next) {
+    let filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
+    let itemid = req.param('itemid');
+    debug('Sending ArchiveFile %s/%s', itemid, filename);
+    loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
+        ArchiveFile.p_new({itemid: itemid, archiveitem, filename}, (err, af) => {
+            if (err) {
+                debug("ArchiveFile.p_new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
+                res.status(404).send(err.message);
+            } else {
+                res.status(req.streamOpts ? 206 : 200);
+                res.set('Accept-ranges', 'bytes');
+                if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size)-1}/${af.metadata.size}`);
+                let opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory});
+                af.cachedStream(opts, (err, s) => {
+                    if (err) { next(err); }
+                    else {
+                        s
+                            .pipe(ParallelStream.log(m => `${itemid}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {name: "crsdata", objectMode: false})) //Just debugging stream on way in
+                            .pipe(res);
+                    }
+                });
+                //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
+            }
+        });
+    });
+};
+
+app.get('/arc/archive.org/details/:itemid', (req, res) => {
+    req.query.item = req.param('itemid'); // Move itemid into query
+    res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); // and redirect to the html file
+});
+app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
+app.get('/arc/archive.org/images/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
+
+// metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
+app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
+    loadedAI({itemid: req.params.itemid}, (err, ai) => {
         if (err) {
-            debug('No file in: %s', filepath);
-            next(); // Drop through to next attempt - will probably fail
+            next(err);
         } else {
-            debug("sent file %s", filepath);
+            res.json(ai.item);
         }
     })
 });
-*/
 
+app.get('/arc/archive.org/mds/*', function(req, res, next) { proxyUrl(req, res, next,"https://be-api.us.archive.org/mds", {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
+app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
+app.get('/arc/archive.org/services/img/*', (req, res, next) => proxyUrl(req, res, next, "https://archive.org/services/img") );
+app.get('/archive/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
+app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
-//TODO get('/arc/archive.org/download/:itemid/:filename => IA or IPFS etc and TODO save these locally and TODO-CACHE check timing
+app.get('/info', function(req, res) {
+    res.status(200).set('Accept-Ranges','bytes').json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
+});
 
 app.get('/testing', function(req, res) {
     sendrange(req, res, 'hello my world'); //TODO say something about configuration etc
