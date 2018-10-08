@@ -56,9 +56,17 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                                 if (err) {
                                     _err(`Unable to write to ${itemid}`, err, cb);
                                 } else {
-                                    cb(null, this);
+                                    // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
+                                    let filepath = path.join(dirpath, itemid + "_extra.json");
+                                    fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
+                                        if (err) {
+                                            _err(`Unable to write to ${itemid}`, err, cb);
+                                        } else {
+                                            cb(null, this);
+                                        }
+                                    });
                                 }
-                            });
+                            })
                         }
                     })
                 }
@@ -79,20 +87,30 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                     } else {
                         let files = canonicaljson.parse(filesJson);
                         let filesCount = files.length;
-                        let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
-                        fs.readFile(filename, (err, reviewsJson) => {
+
+                        let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_extra.json`);
+                        fs.readFile(filename, (err, extraJson) => {
                             if (err) {
                                 cb(new errors.NoLocalCopy());
                             } else {
-                                cb(null, {
-                                        //Omitted from standard dweb.archive.org/metadata/foo call as irrelevant and/or unavailable:
-                                        //  Unavailable but would be good: collection_titles
-                                        // Unavailable and not needed: created, d1, d2, dir, item_size, server, uniq, workable_servers
-                                        files: files,
-                                        files_count: filesCount,
+                                let extra = canonicaljson.parse(extraJson);
+                                let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
+                                fs.readFile(filename, (err, reviewsJson) => {
+                                    if (err) {
+                                        cb(new errors.NoLocalCopy());
+                                    } else {
+                                        cb(null, {
+                                                //Omitted from standard dweb.archive.org/metadata/foo call as irrelevant and/or unavailable:
+                                                //  Unavailable but would be good: collection_titles
+                                                // Unavailable and not needed: created, d1, d2, dir, item_size, server, uniq, workable_servers
+                                                files: files,
+                                                files_count: filesCount,
                                                 metadata: canonicaljson.parse(metadataJson),
                                                 reviews: canonicaljson.parse(reviewsJson),
-                                    });
+                                                collection_titles: extra.collection_titles,
+                                            });
+                                    }
+                                });
                             }
                         });
                     }
