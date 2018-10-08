@@ -60,20 +60,20 @@ class Mirror {
                 // Stream of Search results (mixed)
                 //.slice(0,1)  //Restrict to first Archive Item (just for testing)
                 .log((m)=>[m.identifier], {name:"SearchResult"})
-/*
+
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
                 // a stream of ArchiveFiles's with metadata fetched
                 .fork(s=>s
                     .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
                     //pipe(new SaveItems({directory: config.directory, paralleloptions }))    // Parallel saves of metadata
                     .reduce(), {name: "Fork"})
+
                 .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
                 .flatten({name: "flatten files"})
                 .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
                 .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
                 .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
                 .map((af, cb) => af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, size)=> cb(err, {archivefile: af, size: size})), {name: "SaveFiles", async: true, paralleloptions})
-*/
                 .reduce();
         } catch(err) {
             console.error(err);

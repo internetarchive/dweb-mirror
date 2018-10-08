@@ -16,6 +16,10 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
     /*
      Load ArchiveFile, async because may have to find metadata etc
      Process is itemid > item + filename > fileMetadata
+
+     archiveitem:   Instance of ArchiveItem with or without its item field loaded
+     metadata:      If defined is the result of a metadata API call for loading in .item of AF created
+     filename:      Name of an exsting file, (may be multipart e.g. foo/bar)
      cb(err, archivefile): passed Archive File
      resolves to: archivefile if no cb
     */
