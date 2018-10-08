@@ -7,7 +7,7 @@ TODO write reviews
 //Standard repos
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
-const stringify = require('@stratumn/canonicaljson');
+const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 // Other files from this repo
@@ -41,17 +41,18 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
             _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
         } else {
             let filepath = path.join(dirpath, itemid + "_meta.json");
-            fs.writeFile(filepath, stringify(this.item.metadata), (err) => {
+            fs.writeFile(filepath, canonicaljson.stringify(this.item.metadata), (err) => {
                 if (err) {
                     _err(`Unable to write to ${itemid}`, err, cb);
                 } else {
+
                     let filepath = path.join(dirpath, itemid + "_files.json");
-                    fs.writeFile(filepath, stringify(this.item.files), (err) => {
+                    fs.writeFile(filepath, canonicaljson.stringify(this.item.files), (err) => {
                         if (err) {
                             _err(`Unable to write to ${itemid}`, err, cb);
                         } else {
                             let filepath = path.join(dirpath, itemid + "_reviews.json");
-                            fs.writeFile(filepath, stringify(this.item.reviews), (err) => {
+                            fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
                                 if (err) {
                                     _err(`Unable to write to ${itemid}`, err, cb);
                                 } else {
@@ -76,7 +77,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                     if (err) {
                         cb(new errors.NoLocalCopy()); // Will typically drop through and try net
                     } else {
-                        let files = JSON.parse(filesJson);
+                        let files = canonicaljson.parse(filesJson);
                         let filesCount = files.length;
                         let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
                         fs.readFile(filename, (err, reviewsJson) => {
@@ -89,8 +90,8 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                                         // Unavailable and not needed: created, d1, d2, dir, item_size, server, uniq, workable_servers
                                         files: files,
                                         files_count: filesCount,
-                                        metadata: JSON.parse(metadataJson),
-                                        reviews: JSON.parse(reviewsJson),
+                                                metadata: canonicaljson.parse(metadataJson),
+                                                reviews: canonicaljson.parse(reviewsJson),
                                     });
                             }
                         });

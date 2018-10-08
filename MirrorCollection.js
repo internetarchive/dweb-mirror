@@ -3,7 +3,7 @@ const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 // Other files from this repo
 const MirrorSearch = require('./MirrorSearch');
-const stringify = require('@stratumn/canonicaljson');
+const canonicaljson = require('@stratumn/canonicaljson');
 
 class MirrorCollection extends MirrorSearch {
     /*
@@ -39,7 +39,7 @@ class MirrorCollection extends MirrorSearch {
                 let itemid = this.item.metadata.identifier;
                 let filepath = path.join(this._dirpath(cacheDirectory), itemid + "_members.json");
                 fs.writeFile(filepath,
-                    stringify(this.items),
+                    canonicaljson.stringify(this.items),
                     (err) => {
                         if (err) {
                             console.error("Unable to write to %s: %s", filepath, err.message);
