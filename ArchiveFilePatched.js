@@ -51,23 +51,9 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
 ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     /*
         cb(err, stream): Called with open readable stream from the net.
-        Returns promise if no cb
      */
     if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts
-    this.p_urls()
-    .then(urls => DwebTransports.p_f_createReadStream(urls))
-    .then(f => {
-            let s = f(opts);
-            if (cb) { cb(null, s); } else { return(s); }; // Callback or resolve stream
-    })
-    .catch(err => {
-        if (err instanceof DTerrors.TransportError) {
-            console.warn("readableFromNet caught", err.message);
-        } else {
-            console.error("readableFromNet caught", err);
-        }
-        if (cb) { cb(err); } else { reject(err)}
-    });
+    this.p_urls((err, urls) => err ? cb(err) : DwebTransports.createReadStream(urls, opts, cb))
 };
 
 // NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL

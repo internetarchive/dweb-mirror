@@ -104,16 +104,17 @@ function _sendFileFromDir(req, res, next, dir) {
 function proxyUrl(req, res, next, urlbase, headers={}) {
     // Proxy a request to somewhere under urlbase, which should NOT end with /
     let url = [urlbase, req.params[0]].join('/');
-    DwebTransports.p_f_createReadStream(url)
-        .then(f => {
-            let s = f(); // TODO add range out of /arc/archive.org/download/:itemid/:filename
+    DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
+        // TODO add range out of /arc/archive.org/download/:itemid/:filename
+        if (err) {
+            debug("Unable to fetch %s err=%s", url, err.message);
+            next(err);
+        } else {
             res.status(200); // Assume error if dont get here
             res.set(headers);
             s.pipe(res);
-        }).catch(err => {
-        debug("Unable to fetch %s err=%s", url, err.message);
-        next(err);
-    });
+        }
+    })
 }
 
 
