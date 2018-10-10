@@ -42,38 +42,33 @@ class Mirror {
             DwebTransports.http().supportFunctions.push("createReadStream");
             // Total number of results will be ~ maxpages * limit
             // noinspection JSUnresolvedVariable
-                ParallelStream.from(Object.keys(config.collections), {name: "Munching"})
-                .log((m)=>[m], {name:"Collection"})
-                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
-                // Stream of arrays of Search results (minimal JSON) ready for fetching
+            ParallelStream.from(Object.keys(config.collections), {name: "Munching"})
+            .log((m)=>[m], {name:"Collection"})
+            .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
+            // Stream of arrays of Search results (minimal JSON) ready for fetching
 
-                // The pipe line works but neither of the following alternatives do despite doing same thing. They fail inside a call to fetch!
-                //FAILS if add a fetch_metadata before the pipe, though it makes the same call.
-                //.map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true} ) // Collections with metadata fetched
-                .pipe(new MirrorCollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, directory: config.directory}))
-                //FAILS if try and do fetch_metadata (line above) | streamResults
-                //.map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch})) //, cacheDirectory: config.directory}))
-                //AND FAILS if do it all in a .map
-                //.map((collection, cb) => collection.fetch_metadata((err, d) => { let s = d.streamResults({limit: config.search.itemsperpage,  maxpages: config.search.pagespersearch, directory: config.directory });cb(null, s); }))
-                // Stream of streams of Search results (minimal JSON) ready for fetching
+            //TODO obsolete and remove MirrorCollectionSearchStream in favor of pair of .maps below
+            //.pipe(new MirrorCollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, directory: config.directory}))
+            .map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true, paralleloptions} ) // Collections with metadata fetched
+            .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch})) //, cacheDirectory: config.directory}))
 
-                .log((s)=>s.name, {name:"CSS2"})
-                .flatten({name: '1 flatten arrays of AI'})
-                // Stream of Search results (mixed)
-                //.slice(0,1)  //Restrict to first Archive Item (just for testing)
-                .log((m)=>[m.identifier], {name:"SearchResult"})
+            // Stream of streams of Search results (minimal JSON) ready for fetching
+            .log((s)=>s.name, {name:"Stream of Streams (Collection>SearchResults)"})
+            .flatten({name: 'Flatten Streams to SearchResults'})
+            // Stream of Search results (mixed)
+            .log((m)=>[m.identifier], {name:"SearchResults"})
 
-                .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
-                // a stream of ArchiveItem's with metadata fetched
-                .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
-                .map((ai, cb) => ai.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveThumbnail", async: true, paralleloptions})
-                .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
-                .flatten({name: "flatten files"})
-                .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
-                .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
-                .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-                .map((af, cb) => af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, size)=> cb(err, {archivefile: af, size: size})), {name: "SaveFiles", async: true, paralleloptions})
-                .reduce();
+            .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
+            // a stream of ArchiveItem's with metadata fetched
+            .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
+            .map((ai, cb) => ai.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveThumbnail", async: true, paralleloptions})
+            .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
+            .flatten({name: "flatten files"})
+            .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
+            .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
+            .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
+            .map((af, cb) => af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, size)=> cb(err, {archivefile: af, size: size})), {name: "SaveFiles", async: true, paralleloptions})
+            .reduce();
         } catch(err) {
             console.error(err);
         }

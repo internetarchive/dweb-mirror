@@ -220,7 +220,7 @@ ArchiveItem.prototype.minimumForUI = function() {
         || af.metadata.name.endsWith("_itemimage.jpg")
     );
     //TODO-THUMBNAILS Get services/img link if thumbnailFiles is empty
-    minimumFiles.concat(thumbnailFiles);
+    minimumFiles.push(...thumbnailFiles);
     switch (this.item.metadata.mediatype) {
         case "collection": //TODO-THUMBNAILS
             break;
@@ -231,7 +231,7 @@ ArchiveItem.prototype.minimumForUI = function() {
         case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
             if (!this.playlist) this.setPlaylist();
             // Almost same logic for video & audio
-            minimumFiles.concat(Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+            minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
             // Audio uses the thumbnail image, puts URLs direct in html, but that always includes http://dweb.me/thumbnail/itemid which should get canonicalized
             break;
         case "etree": // Concerts uploaded
@@ -239,7 +239,7 @@ ArchiveItem.prototype.minimumForUI = function() {
         case "movies": //TODO-THUMBNAILS test
             if (!this.playlist) this.setPlaylist();
             // Almost same logic for video & audio
-            minimumFiles.concat(Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+            minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
             minimumFiles.push(this.videoThumbnailFile());
             break;
         case "account":

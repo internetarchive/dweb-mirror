@@ -46,11 +46,11 @@ class MirrorConfig {
     }
     // noinspection JSUnusedGlobalSymbols
     filter(o) {
-        if ((o instanceof ArchiveFile) && (
         // noinspection JSUnresolvedVariable
+        return !((o instanceof ArchiveFile) && (
             (this.file.maxfilesize && this.file.maxfilesize < o.metadata.size)
-        )) return false;
-        return true;
+        ));
+
     }
 }
 exports = module.exports = MirrorConfig;

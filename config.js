@@ -18,8 +18,8 @@ const config = new MirrorConfig({
         pagespersearch: 2, // If want > 100 files per collection then increase this number
     },
     file: {
-        //maxfilesize: 100000000
-        maxfilesize: 200000, // Testing - only small files, will catch breath_takers_2/breath_takers_2.gif
+        maxfilesize: 100000000
+        //maxfilesize: 200000, // Testing - only small files, will catch breath_takers_2/breath_takers_2.gif
     },
     item: {
         minimumForUi: true
