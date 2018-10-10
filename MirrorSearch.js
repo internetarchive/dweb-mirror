@@ -15,8 +15,10 @@ class MirrorSearch extends ArchiveItem {
         other options   Stored on this.options
         */
         super(options); // Use and delete item and itemid
+        // noinspection JSUnusedGlobalSymbols
         this.query = options.query; // Used by ArchiveItem.fetch
         delete options.query;
+        // noinspection JSUnusedGlobalSymbols
         this.sort = options.sort || "-downloads";   // Used by ArchiveItem.fetch
         delete options.sort;
         this.options = options;
@@ -40,8 +42,8 @@ class MirrorSearch extends ArchiveItem {
 
         if (typeof this.page === "undefined") this.page = 0;
         if (!this.limit) this.limit = options.limit;
-        let maxpages = this.maxpages ? this.maxpages : options.maxpages;
-        let self = this; // this may not be same in call from drain
+        const maxpages = this.maxpages ? this.maxpages : options.maxpages;
+        const self = this; // this may not be same in call from drain
         streamOnePage();
         return this.streaming;   // return readable stream that can be piped prior to fetch's succeeding
 
@@ -55,15 +57,17 @@ class MirrorSearch extends ArchiveItem {
                     self.fetch_query({append: true, reqThumbnails: false}) //TransportError (or CodingError) if no urls to fetch
                         .then((docs) => {
                             debug("Collection %s page %s retrieved %d items", self.itemid, self.page, docs.length );
-                            let ediblearr = docs; // Copy it, in case it is needed by collection
+                            const ediblearr = docs; // Copy it, in case it is needed by collection
                             _pushbackablewrite();
                             function _pushbackablewrite() { // Asynchronous, recursable
                                 // Note consumes eatable array from parent
                                 try {
                                     let i;
                                     while (typeof(i = ediblearr.shift()) !== "undefined") {
+                                        // noinspection JSUnresolvedFunction
                                         if (!self.streaming.write(i)) { // It still got written, but there is pushback
                                             self.streaming.debug("Pushing back on array, %d items left", ediblearr.length);
+                                            // noinspection JSUnresolvedFunction
                                             self.streaming.once("drain", _pushbackablewrite);
                                             return; // Without finishing
                                         }
@@ -71,13 +75,15 @@ class MirrorSearch extends ArchiveItem {
                                     // Notice the return above will exit if sees backpressure
                                     streamOnePage();    // Outer recursive loop on searching once pushed all first page
                                 } catch(err) {
-                                    console.error("Caught in streamOnePage.pushbackablewrite", err);
-                                    self.streaming.destroy(new Error(`Failure in ${through.name}._pushbackablewrite: ${err.message}`))
+                                    console.error("Caught in streamOnePage", err);
+                                    // noinspection JSUnresolvedFunction
+                                    self.streaming.destroy(new Error(`Failure in MirrorSearch.streamOnePage: ${err.message}`))
                                 }
                             }
                         })
                         .catch((err) => {
                             console.error("Caught in streamOnePage.fetch_query", self.itemid, err);
+                            // noinspection JSUnresolvedFunction
                             self.streaming.end(); if (cb) { cb(); }
                             //Comment above and uncomment below to make it stop at this point so you can take a look
                             //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
@@ -87,6 +93,7 @@ class MirrorSearch extends ArchiveItem {
                         self.save({cacheDirectory: options.cacheDirectory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
                     }
                     debug("Searches of %s done", self.itemid);
+                    // noinspection JSUnresolvedFunction
                     self.streaming.end(); // Signal nothing else coming
                     if (cb) { cb(); }
                 }

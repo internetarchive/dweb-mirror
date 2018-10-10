@@ -1,6 +1,5 @@
 //process.env.NODE_DEBUG="fs";    // Uncomment to test fs
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const ParallelStream = require('parallel-streams');
 const path = require('path');
 const debug = require('debug')('dweb-mirror:MirrorFS');
 
@@ -17,7 +16,7 @@ class MirrorFS {
         fs.mkdir(dirname, err => {
             if (err && !(err.code === "EEXIST")) {
                 if (err.code === "ENOENT") { // missing parent dir
-                    let parentdir = path.dirname(dirname);
+                    const parentdir = path.dirname(dirname);
                     MirrorFS._mkdir(parentdir, err => {
                         if (err) cb(err); // Dont know how to tackle error from _mkdir, note that EEXIST wouldbe odd since ENOENT implies it doesnt exist
                         fs.mkdir(dirname, cb);
@@ -79,7 +78,7 @@ class MirrorFS {
                 cb(err);
             } else {
                 // fd is the file descriptor of the newly opened file;
-                let writable = fs.createWriteStream(null, {fd: fd});
+                const writable = fs.createWriteStream(null, {fd: fd});
                 cb(null, writable);
                 // Note at this point file is neither finished, nor closed, its a stream open for writing.
                 //fs.close(fd); Should be auto closed when stream to it finishes

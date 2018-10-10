@@ -33,17 +33,17 @@ class MirrorCollection extends MirrorSearch {
         */
         super.save({cacheDirectory}, (err) => { // Save meta
             if (err) {
-                if (cb) { cb(err); } else { throw(err); } ; // Pass it up (will already have output error to console)
+                if (cb) { cb(err); } else { throw(err); } // Pass it up (will already have output error to console)
             } else {
                 // Now write the members
-                let itemid = this.item.metadata.identifier;
-                let filepath = path.join(this._dirpath(cacheDirectory), itemid + "_members.json");
+                const itemid = this.item.metadata.identifier;
+                const filepath = path.join(this._dirpath(cacheDirectory), itemid + "_members.json");
                 fs.writeFile(filepath,
                     canonicaljson.stringify(this.items),
                     (err) => {
                         if (err) {
                             console.error("Unable to write to %s: %s", filepath, err.message);
-                            if (cb) { cb(err) } else { throw(err) } ; // Pass it up
+                            if (cb) { cb(err) } else { throw(err) } // Pass it up
                         } else {
                             if (cb) cb(null, this);
                         } } );

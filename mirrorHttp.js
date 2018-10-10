@@ -30,7 +30,6 @@ process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transpo
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const url = require('url');
 const express = require('express'); //http://expressjs.com/
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const morgan = require('morgan'); //https://www.npmjs.com/package/morgan
 const path = require('path');
 const ParallelStream = require('parallel-streams');
@@ -60,13 +59,13 @@ app.use(morgan('combined')); //TODO write to a file then recycle that log file (
 
 app.use((req, res, next) => {
     /* Turn the range headers on a req into an options parameter can use in streams */
-    let range = req.range(Infinity);
+    const range = req.range(Infinity);
     if (range && range[0] && range.type === "bytes"){ //TODO-XXX-DEBUGGING && (range[0].start !== 0 || range[0].end !== Infinity)) {
         req.streamOpts = {start: range[0].start, end: range[0].end};
         debug("Range request = %O", range);
     }
     next();
-})
+});
 
 
 function loadedAI({item=undefined, itemid=undefined}, cb) {
@@ -89,7 +88,7 @@ function _sendFileFromDir(req, res, next, dir) {
     /* send a file, dropping through to next if it fails,
        dir: Directory path, not ending in /
      */
-    let filepath = path.join(dir, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
+    const filepath = path.join(dir, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
     res.sendFile(filepath, function (err) {
         if (err) {
             debug('No file in: %s', filepath);
@@ -103,7 +102,7 @@ function _sendFileFromDir(req, res, next, dir) {
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
 function proxyUrl(req, res, next, urlbase, headers={}) {
     // Proxy a request to somewhere under urlbase, which should NOT end with /
-    let url = [urlbase, req.params[0]].join('/');
+    const url = [urlbase, req.params[0]].join('/');
     DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
         // TODO add range out of /arc/archive.org/download/:itemid/:filename
         if (err) {
@@ -119,7 +118,7 @@ function proxyUrl(req, res, next, urlbase, headers={}) {
 
 
 function sendrange(req, res, val) {
-    let range = req.range(Infinity);
+    const range = req.range(Infinity);
     if (range && range[0] && range.type === "bytes" && (range[0].start !== 0 || range[0].end !== Infinity)) {
         debug("Range request = %O", range);
         //TODO-RANGE copy Content-Range from download:itemid
@@ -131,8 +130,8 @@ function sendrange(req, res, val) {
 
 
 function streamArchiveFile(req, res, next) {
-    let filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
-    let itemid = req.param('itemid');
+    const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
+    const itemid = req.param('itemid');
     debug('Sending ArchiveFile %s/%s', itemid, filename);
     loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
         ArchiveFile.p_new({itemid: itemid, archiveitem, filename}, (err, af) => {
@@ -143,7 +142,7 @@ function streamArchiveFile(req, res, next) {
                 res.status(req.streamOpts ? 206 : 200);
                 res.set('Accept-ranges', 'bytes');
                 if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size)-1}/${af.metadata.size}`);
-                let opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory});
+                const opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory});
                 af.cachedStream(opts, (err, s) => {
                     if (err) { next(err); }
                     else {
@@ -156,12 +155,14 @@ function streamArchiveFile(req, res, next) {
             }
         });
     });
-};
+}
 
+// noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/details/:itemid', (req, res) => {
     req.query.item = req.param('itemid'); // Move itemid into query
     res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); // and redirect to the html file
 });
+// noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
 app.get('/arc/archive.org/images/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
@@ -192,5 +193,6 @@ app.get('/testing', function(req, res) {
 
 
 
+// noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
 

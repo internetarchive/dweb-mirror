@@ -5,6 +5,7 @@ errors = {};
 // Typically this is an error, that should have been caught higher up.
 class IntentionallyUnimplementedError extends Error {
     constructor(message) {
+        // noinspection JSCheckFunctionSignatures
         super(message || "Intentionally unimplemented");
         this.name = "IntentionallyUnimplementedError"
     }
@@ -13,6 +14,7 @@ errors.IntentionallyUnimplementedError = IntentionallyUnimplementedError;
 
 class ToBeImplementedError extends Error {
     constructor(message) {
+        // noinspection JSCheckFunctionSignatures
         super(message || "To be implemented");
         this.name = "ToBeImplementedError"
     }
@@ -21,6 +23,7 @@ errors.ToBeImplementedError = ToBeImplementedError;
 
 class MissingDirectoryError extends Error {
     constructor(message) {
+        // noinspection JSCheckFunctionSignatures
         super(message || "Directory is missing");
         this.name = "MissingDirectoryError"
     }
@@ -29,6 +32,7 @@ errors.MissingDirectoryError = MissingDirectoryError;
 
 class NoLocalCopy extends Error {
     constructor(message) {
+        // noinspection JSCheckFunctionSignatures
         super(message || "No local copy");
         this.name = "NoLocalCopy"
     }
@@ -37,6 +41,7 @@ errors.NoLocalCopy = NoLocalCopy;
 
 class FileNotFoundError extends Error {
     constructor(message) {
+        // noinspection JSCheckFunctionSignatures
         super(message || "File not found");
         this.name = "FileNotFound"
     }

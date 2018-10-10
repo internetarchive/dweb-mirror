@@ -17,7 +17,7 @@ const ParallelStream = require('parallel-streams');
 
 
 
-var config = {
+const config = {
     search: {
         //itemsperpage: 5;  // Unused - varied for each type of search
         //pagespersearch: 5; // Unused - varied for each type of search
@@ -55,11 +55,12 @@ class Mirror {
                 }, false);
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");
-            let paralleloptions = {limit: 5, silentwait: true};
+            const paralleloptions = {limit: 5, silentwait: true};
 
                 // Stream of ArchiveItems - which should all be collections
-            let uniq = [];
+            const uniq = [];
 
+            // noinspection JSUnusedLocalSymbols
             ParallelStream.from(Object.keys(config.collections), {name: "EatConfig"})
                 .uniq(null, {uniq, name:"0 uniq"})
 
@@ -90,11 +91,12 @@ class Mirror {
                 //IGNORED Stream of arrays of Archive Items (mixed)
                 .reduce((a,v)=>(a+1),0,function(res){this.debug("Finished with %d",res);},{name: "END 3level"});
                 //OBS .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally: ()=>this.debug("Finished with:",self.count), name: "END 3level"});
-            let popularCollections = new MirrorSearch({
+            const popularCollections = new MirrorSearch({
                 query: 'mediatype:collection AND NOT _exists_:access-restricted',
                 sort: '-downloads',
             });
 
+            // noinspection JSUnusedLocalSymbols
             ParallelStream.from([popularCollections], {name: "EatPopularCollections"})
                 .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, paralleloptions}))
                 // Stream of arrays of Archive Items (mixed)
@@ -113,6 +115,7 @@ class Mirror {
         }
     }
 
+    // noinspection JSUnusedGlobalSymbols
     static async p_temp() { // Work area
         try {
             // Incremental development building and testing components to path in README.md

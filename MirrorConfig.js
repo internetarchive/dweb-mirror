@@ -30,8 +30,10 @@ class MirrorConfig {
     constructor(init) {
         Object.keys(init).forEach(f => { this[f] = init[f]; delete init[f] }) // Copy each of init.xx to this.xx
     }
+    // noinspection JSUnusedGlobalSymbols
     filterlist(o) {
         if (o instanceof ArchiveItem) {
+            // noinspection JSUnresolvedVariable
             if (this.item["minimumForUi"]) {
                 return o.minimumForUI();
             } else {
@@ -42,8 +44,10 @@ class MirrorConfig {
             return []; // Undefined response
         }
     }
+    // noinspection JSUnusedGlobalSymbols
     filter(o) {
         if ((o instanceof ArchiveFile) && (
+        // noinspection JSUnresolvedVariable
             (this.file.maxfilesize && this.file.maxfilesize < o.metadata.size)
         )) return false;
         return true;

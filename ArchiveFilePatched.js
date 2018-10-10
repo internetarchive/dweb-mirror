@@ -28,41 +28,47 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
     } // Drop through now have archiveitem
     if (archiveitem && filename && !metadata) {
         if (!archiveitem.item) {
-            return archiveitem.fetch_metadata((err, ai) => {
-                if (err) return (cb) ? cb(err) : new Promise((resolve, reject) => reject(err))
-                return this.p_new({itemid, archiveitem, metadata, filename}, cb); // Resolves to AF
+            return archiveitem.fetch_metadata((err, ai) => {  //TODO-PROMISE-PATTERN replace wth better pattern
+                if (err) return (cb) ? cb(err) : new Promise((resolve, reject) => reject(err));
+                return this.p_new({itemid, ai, metadata, filename}, cb); // Resolves to AF
                 // Promise resolves to AF; dont catch errs here, cb(err) will have been called if exists else will reject()
             });
         }
         archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
-        let af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
+        const af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
         if (af) {
-            if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
+            if (cb) { cb(null, af); return; } else { // noinspection JSUnusedLocalSymbols
+                return new Promise((resolve, reject) => resolve(af)); }
         } else {
-            let err = new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`);
+            const err = new DTerrors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`);
             if (cb) { cb(err); return; } else { return new Promise((resolve, reject) => reject(err)); }
         }
     }
     if (metadata) {
-        af = new ArchiveFile({itemid, metadata});
-        if (cb) { cb(null, af); return; } else { return new Promise((resolve, reject) => resolve(af)); }
+        const af = new ArchiveFile({itemid, metadata});
+        if (cb) { cb(null, af);  } else {
+            // noinspection JSUnusedLocalSymbols
+            return new Promise((resolve, reject) => resolve(af)); }
     }
-}
+};
 ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     /*
         cb(err, stream): Called with open readable stream from the net.
      */
     if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts
+    // noinspection JSIgnoredPromiseFromCall
     this.p_urls((err, urls) => err ? cb(err) : DwebTransports.createReadStream(urls, opts, cb))
 };
 
 // NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL
 ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, skipfetchfile=false} = {}, cb) {
     //TODO - make sure sha.check works if no metadata (undefined or 0)
+    // noinspection JSUnresolvedVariable
     if (!this.metadata.sha1) { // Handle files like _meta.xml which dont have a sha
         this.save({cacheDirectory}, cb);
     } else {
-        let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+        const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+        // noinspection JSUnresolvedVariable
         sha.check(filepath, this.metadata.sha1, (err) => {
             if (err) {
                 if (skipfetchfile) {
@@ -85,18 +91,19 @@ ArchiveFile.prototype.cachedStream = function({cacheDirectory = undefined, start
     // cb(err, stream)  will have a stream, also piped to a cache file
     //TODO - make sure sha.check works if no metadata (undefined or 0)
     try {
-        let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+        const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+        // noinspection JSUnresolvedVariable
         sha.check(filepath, this.metadata.sha1, (err) => {
             if (err) {
                 this.saveNEW({cacheDirectory, start, end}, cb); // cb(err, stream)
             } else { // sha1 matched, skip
                 debug("Returning cached", filepath, "as sha1 matches");
-                let s = fs.createReadStream(filepath); //TODO add opts { start: 90, end: 99 }
+                const s = fs.createReadStream(filepath); //TODO add opts { start: 90, end: 99 }
                 cb(null, s);
             }
         });
     } catch(err) {
-        console.error("ArchiveFile.cachedStream:",err)
+        console.error("ArchiveFile.cachedStream:",err);
         if (cb) { cb(err);} else { throw(err);} // Throw it up
     }
 };
@@ -106,14 +113,14 @@ ArchiveFile.prototype.writableToFile = function({cacheDirectory = undefined} = {
     Save a archivefile to the appropriate filepath
     cb(err, s) // Pass stream to callback
      */
-    let filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+    const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
     MirrorFS._fileopenwrite(cacheDirectory, filepath, (err, fd) => {
         if (err) {
             debug("Unable to write to %s: %s", filepath, err.message);
             cb(err);
         } else {
             // fd is the file descriptor of the newly opened file;
-            let writable = fs.createWriteStream(null, {fd: fd});
+            const writable = fs.createWriteStream(null, {fd: fd});
             cb(null, writable);
             // Note at this point file is neither finished, nor closed, its a stream open for writing.
             //fs.close(fd); Should be auto closed when stream to it finishes

@@ -39,7 +39,7 @@ class MirrorCollectionSearchStream extends ParallelStream {
         data.fetch_metadata((err, d) => {
             if (err) { cb(err);  }
             else {
-                let s = d.streamResults({limit: this.limit, maxpages: this.maxpages});
+                const s = d.streamResults({limit: this.limit, maxpages: this.maxpages});
                 cb(null, s);
             }
         })

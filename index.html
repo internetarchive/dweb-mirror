@@ -34,7 +34,7 @@
                 });
                 await Dweb.Domain.p_rootSet();
                 console.log("==Login should have finished-== output after here implies async issue ===");
-                let el_root_ul = document.getElementById("treeroot_ul");
+                const el_root_ul = document.getElementById("treeroot_ul");
                 addsubdomain(el_root_ul, "/", Dweb.Domain.root);
                 END OF COPIED MATERIAL */
             } catch(err) { // Catch any uncaught errors here, log and alert.
@@ -127,6 +127,7 @@ The files are mirrored in a local file system for several reasons:<ul>
 
 <script type="text/javascript">
     // These have to be at global level so they can be found anywhere.
+    // noinspection ES6ConvertVarToLetConst
     var searchparams = new URL(window.location.href).searchParams;
     // noinspection JSIgnoredPromiseFromCall
     main();

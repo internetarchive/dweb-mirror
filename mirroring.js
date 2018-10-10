@@ -6,12 +6,12 @@ const debug = require('debug');
 // Other IA repos
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
+// noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched');
 
 // Other files in this repo
 const config = require('./config');
-const HashStore = require('./HashStore.js');
 const MirrorCollection = require('./MirrorCollection.js');
 const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const ParallelStream = require('parallel-streams');
@@ -25,11 +25,12 @@ class Mirror {
         Mirror.debug = debug('dweb-mirror:mirroring')
         //await HashStore.init(config.hashstore);
     }
+    // noinspection JSUnusedGlobalSymbols
     static async test() {
         //await HashStore.test();
     }
     static async p_dev_mirror() {
-        let paralleloptions = {limit: 5, silentwait: true};
+        const paralleloptions = {limit: 5, silentwait: true};
 
         try {
             // Incremental development building and testing components to path in README.md
@@ -40,7 +41,7 @@ class Mirror {
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");
             // Total number of results will be ~ maxpages * limit
-            let ss =
+            // noinspection JSUnresolvedVariable
                 ParallelStream.from(Object.keys(config.collections), {name: "Munching"})
                 .log((m)=>[m], {name:"Collection"})
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results

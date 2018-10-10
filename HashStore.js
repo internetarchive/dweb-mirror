@@ -30,7 +30,7 @@ class HashStore {
         }
     }
     static async get(table, key) {
-        let tab = this.db(table);
+        const tab = this.db(table);
         //return await tab.get(key); // Fails ...see https://github.com/Level/level/issues/97
         // Promisified get because of bug reported above.
         return new Promise((resolve, reject) => tab.get(key, function(err, val) {
@@ -55,8 +55,8 @@ class HashStore {
             .on('data', cb );
     }
     static async keys(table) {
-        let keys=[];
-        let db = this.db(table);    //synchronous
+        const keys=[];
+        const db = this.db(table);    //synchronous
         return await new Promise(function(resolve, reject) {
                 try {
                     db

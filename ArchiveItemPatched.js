@@ -25,8 +25,8 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         Save _meta and _members as JSON
     */
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
-    let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-    let dirpath = this._dirpath(cacheDirectory);
+    const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    const dirpath = this._dirpath(cacheDirectory);
 
     function _err(msg, err, cb) {
         console.error(msg, err);
@@ -41,24 +41,24 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         if (err) {
             _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
         } else {
-            let filepath = path.join(dirpath, itemid + "_meta.json");
+            const filepath = path.join(dirpath, itemid + "_meta.json");
             fs.writeFile(filepath, canonicaljson.stringify(this.item.metadata), (err) => {
                 if (err) {
                     _err(`Unable to write to ${itemid}`, err, cb);
                 } else {
 
-                    let filepath = path.join(dirpath, itemid + "_files.json");
+                    const filepath = path.join(dirpath, itemid + "_files.json");
                     fs.writeFile(filepath, canonicaljson.stringify(this.item.files), (err) => {
                         if (err) {
                             _err(`Unable to write to ${itemid}`, err, cb);
                         } else {
-                            let filepath = path.join(dirpath, itemid + "_reviews.json");
+                            const filepath = path.join(dirpath, itemid + "_reviews.json");
                             fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
                                 if (err) {
                                     _err(`Unable to write to ${itemid}`, err, cb);
                                 } else {
                                     // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
-                                    let filepath = path.join(dirpath, itemid + "_extra.json");
+                                    const filepath = path.join(dirpath, itemid + "_extra.json");
                                     fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
                                         if (err) {
                                             _err(`Unable to write to ${itemid}`, err, cb);
@@ -74,28 +74,28 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
             });
         }
     });
-}
+};
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
-        let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
+        const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
         fs.readFile(filename, (err, metadataJson) => {
             if (err) {
                 cb(new errors.NoLocalCopy());
             } else {
-                let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_files.json`);
+                const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_files.json`);
                 fs.readFile(filename, (err, filesJson) => {
                     if (err) {
                         cb(new errors.NoLocalCopy()); // Will typically drop through and try net
                     } else {
-                        let files = canonicaljson.parse(filesJson);
-                        let filesCount = files.length;
+                        const files = canonicaljson.parse(filesJson);
+                        const filesCount = files.length;
 
-                        let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_extra.json`);
+                        const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_extra.json`);
                         fs.readFile(filename, (err, extraJson) => {
                             if (err) {
                                 cb(new errors.NoLocalCopy());
                             } else {
-                                let extra = canonicaljson.parse(extraJson);
-                                let filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
+                                const extra = canonicaljson.parse(extraJson);
+                                const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
                                 fs.readFile(filename, (err, reviewsJson) => {
                                     if (err) {
                                         cb(new errors.NoLocalCopy());
@@ -118,7 +118,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                 });
             }
         });
-    }
+    };
 
 ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb) {
     /*
@@ -149,13 +149,13 @@ ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb)
     } else {
         this.fetch_metadata(cb);
     }
-}
+};
 
 ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false} = {}, cb) {
 
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
-    let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-    let dirpath = this._dirpath(cacheDirectory);
+    const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    const dirpath = this._dirpath(cacheDirectory);
 
     function _err(msg, err, cb) {
         console.error(msg, err);
@@ -170,26 +170,24 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         if (err) {
             _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
         } else {
-            let self = this; // this not available inside recursable or probably in writable('on)
-            let thumbnailFiles = this._list.filter(af =>
+            const self = this; // this not available inside recursable or probably in writable('on)
+            const thumbnailFiles = this._list.filter(af =>
                 af.metadata.name === "__ia_thumb.jpg"
                 || af.metadata.name.endsWith("_itemimage.jpg")
             );
             if (thumbnailFiles.length) {
-                console.log("XXX@AI.saveThumbnail:178 got files");
-                const recursable = function (err, size) {
-                    console.log("XXX@180 recursing");
+                // noinspection JSUnusedLocalSymbols
+                const recursable = function (err, sizeunused) {
                     if (err) {
-                        _err(`saveThumbnail: failed in checkShaAndSave for ${itemid},${af.metadata.name}`, err, cb)
+                        _err(`saveThumbnail: failed in checkShaAndSave for ${itemid}`, err, cb)
                     } else {
                         let af;
-                        while (typeof(af = thumbnailFiles.shift()) !== "undefined") {
-                            console.log("XXX@AI.saveThumbnail:182 getting", itemid, af.metadata.name);
+                        if (typeof(af = thumbnailFiles.shift()) !== "undefined") {
                             af.checkShaAndSave({cacheDirectory, skipfetchfile}, recursable); // Recurse
-                            return; // Exit immediately without cb which only occurs when "while" finishes
+                            // Exits, allowing recursable to recurse with next iteration
+                        } else {
+                            cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
                         }
-                        console.log("XXX189 self = ", self);
-                        cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
                     }
                 };
                 recursable(null, null);
@@ -198,11 +196,10 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     if (err) {
                         _err(`Cannot create stream to ${this.item.metadata.thumbnaillinks}`, err, cb);
                     } else {
-                        let filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
-                        this.writableToFile({cacheDirectory}, (err, writable) => {
+                        const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                        MirrorFS.writableStreamTo(cacheDirectory, filepath, (err, writable) => {
                             writable.on('close', () => {
                                 debug("Written %d to thumbnail file for %s", writable.bytesWritten, itemid);
-                                console.log("XXX203 self = ", self);
                                 cb(null, self);
                             });
                             readable.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
@@ -213,12 +210,12 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         }
     });
 };
-ArchiveItem.prototype.minimumForUI = function(opts={}, cb) {
+ArchiveItem.prototype.minimumForUI = function() {
     // This will be tuned for different mediatype etc}
     // Note mediatype will have been retrieved and may have been rewritten by processMetadataFjords from "education"
     console.assert(this._list, "minimumForUI assumes _list already set up");
-    let minimumFiles = [];
-    thumbnailFiles = this._list.filter( af =>
+    const minimumFiles = [];
+    const thumbnailFiles = this._list.filter( af =>
         af.metadata.name === "__ia_thumb.jpg"
         || af.metadata.name.endsWith("_itemimage.jpg")
     );
