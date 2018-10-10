@@ -125,12 +125,12 @@ ArchiveFile.prototype.save = function({cacheDirectory = undefined, start=0, end=
     /*
     net > file + output
     Save a archivefile to the appropriate filepath and return as stream
-    cb(err, {archivefile, size}) // To call on close
+    cb(err, size) // To call on close
      */
     // noinspection JSIgnoredPromiseFromCall
     this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
         if (err) {
-            console.warn("MirrorFS._transform ignoring error on", this.itemid, err.message);
+            console.warn("ArchiveFile.save ignoring error on", this.itemid, err.message);
             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
             // Dont try and write it
         } else {

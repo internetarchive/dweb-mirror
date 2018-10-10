@@ -72,6 +72,20 @@ class MirrorFS {
         }
     }
 
+    static writableStreamTo(directory, filepath, cb) {
+        this._fileopenwrite(directory, filepath, (err, fd) => {
+            if (err) {
+                debug("Unable to write to %s: %s", filepath, err.message);
+                cb(err);
+            } else {
+                // fd is the file descriptor of the newly opened file;
+                let writable = fs.createWriteStream(null, {fd: fd});
+                cb(null, writable);
+                // Note at this point file is neither finished, nor closed, its a stream open for writing.
+                //fs.close(fd); Should be auto closed when stream to it finishes
+            }
+        });
+    }
 
 }
 exports = module.exports = MirrorFS;

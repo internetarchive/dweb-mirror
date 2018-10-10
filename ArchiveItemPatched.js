@@ -7,6 +7,7 @@ TODO write reviews
 //Standard repos
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
+const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
@@ -150,5 +151,106 @@ ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb)
     }
 }
 
+ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false} = {}, cb) {
+
+    console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
+    let itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    let dirpath = this._dirpath(cacheDirectory);
+
+    function _err(msg, err, cb) {
+        console.error(msg, err);
+        if (cb) {
+            cb(err);
+        } else {
+            throw(err)
+        }
+    }
+
+    MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
+        if (err) {
+            _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
+        } else {
+            let self = this; // this not available inside recursable or probably in writable('on)
+            let thumbnailFiles = this._list.filter(af =>
+                af.metadata.name === "__ia_thumb.jpg"
+                || af.metadata.name.endsWith("_itemimage.jpg")
+            );
+            if (thumbnailFiles.length) {
+                console.log("XXX@AI.saveThumbnail:178 got files");
+                const recursable = function (err, size) {
+                    console.log("XXX@180 recursing");
+                    if (err) {
+                        _err(`saveThumbnail: failed in checkShaAndSave for ${itemid},${af.metadata.name}`, err, cb)
+                    } else {
+                        let af;
+                        while (typeof(af = thumbnailFiles.shift()) !== "undefined") {
+                            console.log("XXX@AI.saveThumbnail:182 getting", itemid, af.metadata.name);
+                            af.checkShaAndSave({cacheDirectory, skipfetchfile}, recursable); // Recurse
+                            return; // Exit immediately without cb which only occurs when "while" finishes
+                        }
+                        console.log("XXX189 self = ", self);
+                        cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+                    }
+                };
+                recursable(null, null);
+            } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
+                DwebTransports.createReadStream(this.item.metadata.thumbnaillinks, (err, readable) => {
+                    if (err) {
+                        _err(`Cannot create stream to ${this.item.metadata.thumbnaillinks}`, err, cb);
+                    } else {
+                        let filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                        this.writableToFile({cacheDirectory}, (err, writable) => {
+                            writable.on('close', () => {
+                                debug("Written %d to thumbnail file for %s", writable.bytesWritten, itemid);
+                                console.log("XXX203 self = ", self);
+                                cb(null, self);
+                            });
+                            readable.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                        });
+                    }
+                });
+            }
+        }
+    });
+};
+ArchiveItem.prototype.minimumForUI = function(opts={}, cb) {
+    // This will be tuned for different mediatype etc}
+    // Note mediatype will have been retrieved and may have been rewritten by processMetadataFjords from "education"
+    console.assert(this._list, "minimumForUI assumes _list already set up");
+    let minimumFiles = [];
+    thumbnailFiles = this._list.filter( af =>
+        af.metadata.name === "__ia_thumb.jpg"
+        || af.metadata.name.endsWith("_itemimage.jpg")
+    );
+    //TODO-THUMBNAILS Get services/img link if thumbnailFiles is empty
+    minimumFiles.concat(thumbnailFiles);
+    switch (this.item.metadata.mediatype) {
+        case "collection": //TODO-THUMBNAILS
+            break;
+        case "texts": //TODO-THUMBNAILS
+            break;
+        case "image": //TODO-THUMBNAILS
+            break;
+        case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
+            if (!this.playlist) this.setPlaylist();
+            // Almost same logic for video & audio
+            minimumFiles.concat(Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+            // Audio uses the thumbnail image, puts URLs direct in html, but that always includes http://dweb.me/thumbnail/itemid which should get canonicalized
+            break;
+        case "etree": // Concerts uploaded
+            break;
+        case "movies": //TODO-THUMBNAILS test
+            if (!this.playlist) this.setPlaylist();
+            // Almost same logic for video & audio
+            minimumFiles.concat(Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+            minimumFiles.push(this.videoThumbnailFile());
+            break;
+        case "account":
+            break;
+        default:
+            //TODO Not yet supporting software, zotero (0 items); data; web
+    }
+    return minimumFiles;
+};
 
 exports = module.exports = ArchiveItem;

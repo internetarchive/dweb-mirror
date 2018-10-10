@@ -7,7 +7,7 @@ const config = new MirrorConfig({
     //fs: {},
 
     // All these are from mirroring.js
-    skipfetchfile: true, // Enable to stop it actually fetching the file - useful when testing
+    skipfetchfile: false, // Enable to stop it actually fetching the file - useful when testing
     directory: "/Users/mitra/temp/mirrored",    // Used by mirroring and mirrorHTTP
     archiveui: {
         directory: "/Users/mitra/git/dweb-archive/dist", // TODO - move to process.cwd()+"/node_modules/dweb-archive/dist"

@@ -1,4 +1,4 @@
-process.env.DEBUG="dweb-transports dweb-archive dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archive dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
 // Standard repos
 const wrtc = require('wrtc');
 const debug = require('debug');
@@ -6,6 +6,7 @@ const debug = require('debug');
 // Other IA repos
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
+const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched');
 
 // Other files in this repo
@@ -62,12 +63,9 @@ class Mirror {
                 .log((m)=>[m.identifier], {name:"SearchResult"})
 
                 .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
-                // a stream of ArchiveFiles's with metadata fetched
-                .fork(s=>s
-                    .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
-                    //pipe(new SaveItems({directory: config.directory, paralleloptions }))    // Parallel saves of metadata
-                    .reduce(), {name: "Fork"})
-
+                // a stream of ArchiveItem's with metadata fetched
+                .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
+                .map((ai, cb) => ai.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveThumbnail", async: true, paralleloptions})
                 .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
                 .flatten({name: "flatten files"})
                 .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria

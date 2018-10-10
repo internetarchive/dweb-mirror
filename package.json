@@ -13,7 +13,7 @@
     "@internetarchive/dweb-objects": "^0.1.10",
     "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git#mirror",
     "@stratumn/canonicaljson": "^1.0.2",
-    "debug": "latest",
+    "debug": "^4.1.0",
     "express": "latest",
     "ipfs-api": "^24.0.2",
     "level": "^4.0.0",
