@@ -24,32 +24,24 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
      cb(err, archivefile): passed Archive File
      resolves to: archivefile if no cb
     */
-    if (itemid && filename && !metadata && !archiveitem) {
-        archiveitem = new ArchiveItem({itemid});
-    } // Drop through now have archiveitem
-    if (archiveitem && filename && !metadata) {
-        if (!archiveitem.item) {
-            return archiveitem.fetch_metadata((err, ai) => {  //TODO-PROMISE-PATTERN replace wth better pattern
-                if (err) return (cb) ? cb(err) : new Promise((resolve, reject) => reject(err));
-                return this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
-                // Promise resolves to AF; dont catch errs here, cb(err) will have been called if exists else will reject()
-            });
+    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}
+    function f(cb) {
+        if (itemid && filename && !metadata && !archiveitem) {
+            archiveitem = new ArchiveItem({itemid});
+        } // Drop through now have archiveitem
+        if (archiveitem && filename && !metadata) {
+            if (!archiveitem.item) {
+                return archiveitem.fetch_metadata((err, ai) => {  //TODO-PROMISE-PATTERN replace wth better pattern
+                    return err ? cb(err)  : this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
+                });
+            }
+            archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
+            const af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
+            return af ? cb(null, af) : cb(new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`));
         }
-        archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
-        const af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
-        if (af) {
-            if (cb) { cb(null, af); return; } else { // noinspection JSUnusedLocalSymbols
-                return new Promise((resolve, reject) => resolve(af)); }
-        } else {
-            const err = new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`);
-            if (cb) { cb(err); return; } else { return new Promise((resolve, reject) => reject(err)); } //TODO-PROMISE-PATTERN replace here
+        if (metadata) {
+            cb(null, new ArchiveFile({itemid, metadata}));
         }
-    }
-    if (metadata) {
-        const af = new ArchiveFile({itemid, metadata});
-        if (cb) { cb(null, af);  } else {
-            // noinspection JSUnusedLocalSymbols
-            return new Promise((resolve, reject) => resolve(af)); }
     }
 };
 ArchiveFile.prototype.readableFromNet = function(opts, cb) {

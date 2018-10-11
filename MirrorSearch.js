@@ -84,7 +84,8 @@ class MirrorSearch extends ArchiveItem {
                         .catch((err) => {
                             console.error("Caught in streamOnePage.fetch_query", self.itemid, err);
                             // noinspection JSUnresolvedFunction
-                            self.streaming.end(); if (cb) { cb(); }
+                            self.streaming.end();
+                            if (cb) { cb(); }
                             //Comment above and uncomment below to make it stop at this point so you can take a look
                             //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
                         });
