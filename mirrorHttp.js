@@ -20,8 +20,6 @@ Summary of below:
 /arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
-TODO - figure out why Gun not responding See https://github.com/internetarchive/dweb-mirror/issues/44
-TODO - want archive.html servered at /arc/archive.org and other files at /archive/x
  */
 // External packages
 //Not debugging: express:*
@@ -60,7 +58,7 @@ app.use(morgan('combined')); //TODO write to a file then recycle that log file (
 app.use((req, res, next) => {
     /* Turn the range headers on a req into an options parameter can use in streams */
     const range = req.range(Infinity);
-    if (range && range[0] && range.type === "bytes"){ //TODO-XXX-DEBUGGING && (range[0].start !== 0 || range[0].end !== Infinity)) {
+    if (range && range[0] && range.type === "bytes"){
         req.streamOpts = {start: range[0].start, end: range[0].end};
         debug("Range request = %O", range);
     }
@@ -104,7 +102,6 @@ function proxyUrl(req, res, next, urlbase, headers={}) {
     // Proxy a request to somewhere under urlbase, which should NOT end with /
     const url = [urlbase, req.params[0]].join('/');
     DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
-        // TODO add range out of /arc/archive.org/download/:itemid/:filename
         if (err) {
             debug("Unable to fetch %s err=%s", url, err.message);
             next(err);
