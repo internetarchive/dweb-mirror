@@ -49,7 +49,6 @@ Mirror|Stub|One class to rule them all
     * MirrorCollection - sets up search queries for a IA Collection, 
 * stream.Transform
     * ParallelStream - a transform stream that can run tasks in a configurable parallel manner
-        * MirrorCollectionSearchStream  MirrorCollection > Arrays of Search Results
     * _MirrorXxxStream - a set of StreamTools to allow array like functions on a stream    
 * s - StreamTools task that creates _MirrorXxxStream classes
 

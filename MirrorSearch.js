@@ -35,7 +35,9 @@ class MirrorSearch extends ArchiveItem {
                 It calls streamOnePage which does the search and pushes to the stream
                 Calls cb when done, or on error.
                 This allows the streams to be streamed themselves into a .flatten and if streamResults is run in parallel the results will be unordered.
-                (see MirrorCollectionSearchStream for example)
+                (see mirroring.js or collectionpreseed.js for example)
+
+            Note this should not be passed the async flag when passed to .map as it returns the stream synchronously and calls cb to indicate completion
          */
         if (typeof options === 'function') { cb = options; options = {}; } //Allow missing options
         this.streaming = new ParallelStream({name: `Collection ${this.itemid}`, highWaterMark: 999});

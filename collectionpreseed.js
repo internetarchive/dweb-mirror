@@ -7,7 +7,6 @@ global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 
 const MirrorCollection = require('./MirrorCollection.js');
-const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const MirrorSearch = require('./MirrorSearch.js');
 const ParallelStream = require('parallel-streams');
 
@@ -64,30 +63,35 @@ class Mirror {
             ParallelStream.from(Object.keys(config.collections), {name: "EatConfig"})
                 .uniq(null, {uniq, name:"0 uniq"})
 
-                .log((m) => ["Level1 queueing", m]) //will display on MirrorCollectionSearchStream when processed
+                .log((m) => ["Level1 queueing", m])
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 1'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 1", limit: 100, maxpages: 1, paralleloptions}))
+
+                .map((collection, cb) => collection.fetch_metadata(cb),{name: "Collection fetchMeta level 1", async:true, paralleloptions} ) // Collections with metadata fetched
+                .map((collection) => collection.streamResults({limit: 100, maxpages:1}), {name: "Collection streamResults level 1", paralleloptions}) //, cacheDirectory: config.directory}))
+
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '1 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
                 .map((xx) => xx.identifier, {name: '1 identifier'})
                 .uniq(null, {uniq, name:"1 uniq"})
 
-                .log((m) => ["Level2 queueing", m]) //will display on MirrorCollectionSearchStream when processed
+                .log((m) => ["Level2 queueing", m])
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 2'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 2", limit: 60, maxpages: 1, paralleloptions}))
+                .map((collection, cb) => collection.fetch_metadata(cb),{name: "Collection fetchMeta level 2", async:true, paralleloptions} ) // Collections with metadata fetched
+                .map((collection) => collection.streamResults({limit: 60, maxpages:1}), {name: "Collection streamResults level 2", paralleloptions}) //, cacheDirectory: config.directory}))
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '2 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '2 filter by collection'})
                 .map((xx) => xx.identifier, {name: '2 identifier'})
                 .uniq(null, {uniq, name:"2 uniq"})
 
-                .log((m) => ["Level3 queueing:", m])//will display on MirrorCollectionSearchStream when processed
+                .log((m) => ["Level3 queueing:", m])
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections 3'} )  // Initialize collection - doesnt get metadata or search results
                 // Stream of ArchiveItems - which should all be collections
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Preseed level 3", limit: 30, maxpages: 1, paralleloptions}))
+                .map((collection, cb) => collection.fetch_metadata(cb),{name: "Collection fetchMeta level 3", async:true, paralleloptions} ) // Collections with metadata fetched
+                .map((collection) => collection.streamResults({limit: 30, maxpages:1}), {name: "Collection streamResults level 3", paralleloptions}) //, cacheDirectory: config.directory}))
                 //IGNORED Stream of arrays of Archive Items (mixed)
                 .reduce((a,v)=>(a+1),0,function(res){this.debug("Finished with %d",res);},{name: "END 3level"});
                 //OBS .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally: ()=>this.debug("Finished with:",self.count), name: "END 3level"});
@@ -98,14 +102,17 @@ class Mirror {
 
             // noinspection JSUnusedLocalSymbols
             ParallelStream.from([popularCollections], {name: "EatPopularCollections"})
-                .pipe(new MirrorCollectionSearchStream({name: "Collection popular search", limit: 300, maxpages: 1, paralleloptions}))
+                .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular top'} )  // Initialize collection - doesnt get metadata or search results
+                .map((collection, cb) => collection.fetch_metadata(cb),{name: "Collection fetchMeta popular top", async:true, paralleloptions} ) // Collections with metadata fetched
+                .map((collection) => collection.streamResults({limit: 300, maxpages:1}), {name: "Collection streamResults popular top", paralleloptions}) //, cacheDirectory: config.directory}))
                 // Stream of arrays of Archive Items (mixed)
                 .flatten({name: '1 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
                 .map((xx) => xx.identifier, {name: '1 identifier'})
                 .uniq(null, {name: "Popular uniq"}) // Use own uniq as going more items deep, but not recursing into subcollections
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular'} )  // Initialize collection - doesnt get metadata or search results
-                .pipe(new MirrorCollectionSearchStream({name: "Collection Popular", limit: 100, maxpages: 1, paralleloptions}))
+                .map((collection, cb) => collection.fetch_metadata(cb),{name: "Collection fetchMeta popular", async:true, paralleloptions} ) // Collections with metadata fetched
+                .map((collection) => collection.streamResults({limit: 100, maxpages:1}), {name: "Collection streamResults popular", paralleloptions}) //, cacheDirectory: config.directory}))
                 .reduce((a,v)=>(a+1),0,function(res){this.debug("Finished with %d",res);},{name: "END Popular"});
                 //OBS .finish({init: ()=>this.count = 0, foreach: (data)=>this.count++, finally:()=>this.debug("Finished with: %d",self.count), name: "END Popular"});
             // No need to do something with these

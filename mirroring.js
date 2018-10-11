@@ -13,7 +13,6 @@ const ArchiveItem = require('./ArchiveItemPatched');
 // Other files in this repo
 const config = require('./config');
 const MirrorCollection = require('./MirrorCollection.js');
-const MirrorCollectionSearchStream = require('./MirrorCollectionSearchStream');
 const ParallelStream = require('parallel-streams');
 
 //emitter.setMaxListeners(15); - for error message to fix this  but not sure what "emitter" is
@@ -59,8 +58,6 @@ class Mirror {
             .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
             // Stream of arrays of Search results (minimal JSON) ready for fetching
 
-            //TODO obsolete and remove MirrorCollectionSearchStream in favor of pair of .maps below
-            //.pipe(new MirrorCollectionSearchStream({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch, directory: config.directory}))
             .map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true, paralleloptions} ) // Collections with metadata fetched
             .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch})) //, cacheDirectory: config.directory}))
 
