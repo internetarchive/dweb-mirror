@@ -196,6 +196,9 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     if (err) {
                         _err(`Cannot create stream to ${this.item.metadata.thumbnaillinks}`, err, cb);
                     } else {
+                        readable.on('error',(aa) => {
+                            debug("Failed to read thumbnail from net for", self.itemid); //TODO dont write file (to 0) if fails
+                        })
                         const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                         MirrorFS.writableStreamTo(cacheDirectory, filepath, (err, writable) => {
                             writable.on('close', () => {

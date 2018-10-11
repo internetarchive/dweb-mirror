@@ -27,7 +27,19 @@ class Mirror {
     }
     // noinspection JSUnusedGlobalSymbols
     static async test() {
-        //await HashStore.test();
+        await DwebTransports.p_connect({
+            //transports: ["HTTP", "WEBTORRENT", "IPFS"],
+            transports: ["HTTP"],
+            webtorrent: {tracker: { wrtc }},
+        });
+        //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
+        DwebTransports.http().supportFunctions.push("createReadStream");
+        ArchiveFile.p_new({itemid: "cd_tribal-flute_bryan-akipa", filename: "disc1/05. Bryan Akipa - Sad Heart.mp3"}, (err, af) => {
+            console.assert(!err)
+            af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, af) => {
+                console.log("Saved");
+            })
+        })
     }
     static async p_dev_mirror() {
         const paralleloptions = {limit: 5, silentwait: true};

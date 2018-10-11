@@ -10,6 +10,7 @@ const DTerrors = require('@internetarchive/dweb-transports/Errors.js');
 const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile');
 const ArchiveItem = require('./ArchiveItemPatched');
 // Local files
+const errors = require('./Errors.js');
 const MirrorFS = require('./MirrorFS');
 
 ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, cb) {
@@ -30,7 +31,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         if (!archiveitem.item) {
             return archiveitem.fetch_metadata((err, ai) => {  //TODO-PROMISE-PATTERN replace wth better pattern
                 if (err) return (cb) ? cb(err) : new Promise((resolve, reject) => reject(err));
-                return this.p_new({itemid, ai, metadata, filename}, cb); // Resolves to AF
+                return this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
                 // Promise resolves to AF; dont catch errs here, cb(err) will have been called if exists else will reject()
             });
         }
@@ -40,8 +41,8 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
             if (cb) { cb(null, af); return; } else { // noinspection JSUnusedLocalSymbols
                 return new Promise((resolve, reject) => resolve(af)); }
         } else {
-            const err = new DTerrors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`);
-            if (cb) { cb(err); return; } else { return new Promise((resolve, reject) => reject(err)); }
+            const err = new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`);
+            if (cb) { cb(err); return; } else { return new Promise((resolve, reject) => reject(err)); } //TODO-PROMISE-PATTERN replace here
         }
     }
     if (metadata) {
@@ -135,9 +136,11 @@ ArchiveFile.prototype.save = function({cacheDirectory = undefined, start=0, end=
     cb(err, size) // To call on close
      */
     // noinspection JSIgnoredPromiseFromCall
+    const itemid = this.itemid; // Not available in events otherwise
+    const filename = this.metadata.name;
     this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
         if (err) {
-            console.warn("ArchiveFile.save ignoring error on", this.itemid, err.message);
+            console.warn("ArchiveFile.save ignoring error on", itemid, err.message);
             cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
             // Dont try and write it
         } else {
@@ -146,12 +149,13 @@ ArchiveFile.prototype.save = function({cacheDirectory = undefined, start=0, end=
                     debug("Written %d to file", writable.bytesWritten);
                     // noinspection EqualityComparisonWithCoercionJS
                     if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
-                        console.error(`File ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
+                        console.error(`File ${itemid}/${filename} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
                     } else {
-                        debug(`Closed ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten}`);
+                        debug(`Closed ${itemid}/${filename} size=${writable.bytesWritten}`);
                     }
                     cb(null, writable.bytesWritten);
                 });
+                s.on('error', (err) => debug("Failed to read %s/%s from net err=%s", itemid, filename, err.message)); //TODO make it remove file or better write to temp and rename when success
                 try {
                     s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                 } catch(err) {
