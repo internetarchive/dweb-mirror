@@ -6,7 +6,6 @@ const sha = require('sha');
 process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 // Other Archive repos
-const DTerrors = require('@internetarchive/dweb-transports/Errors.js');
 const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile');
 const ArchiveItem = require('./ArchiveItemPatched');
 // Local files
@@ -31,7 +30,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         } // Drop through now have archiveitem
         if (archiveitem && filename && !metadata) {
             if (!archiveitem.item) {
-                return archiveitem.fetch_metadata((err, ai) => {  //TODO-PROMISE-PATTERN replace wth better pattern
+                return archiveitem.fetch_metadata((err, ai) => {
                     return err ? cb(err)  : this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
                 });
             }
