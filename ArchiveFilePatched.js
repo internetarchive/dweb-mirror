@@ -52,52 +52,76 @@ ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     this.p_urls((err, urls) => err ? cb(err) : DwebTransports.createReadStream(urls, opts, cb))
 };
 
-// NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL
-ArchiveFile.prototype.checkShaAndSave = function({cacheDirectory = undefined, skipfetchfile=false} = {}, cb) {
+ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined, skipfetchfile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
+    /*
+    Return a stream from the cache, or the net and if start/end unset cache it
+    cb(err, s|undefined) if wantStream will call with a stream
+    */
     //TODO - make sure sha.check works if no metadata (undefined or 0)
+    //TODO handle case of start/end as shouldnt cache partial
+    const itemid = this.itemid; // Not available in events otherwise
+    const filename = this.metadata.name;
     // noinspection JSUnresolvedVariable
-    if (!this.metadata.sha1) { // Handle files like _meta.xml which dont have a sha
-        this.save({cacheDirectory}, cb);
+    const sha1 = this.metadata.sha1;
+    if (!sha1) { // Handle files like _meta.xml which dont have a sha
+        _notcached.call(this);
     } else {
-        const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
-        // noinspection JSUnresolvedVariable
-        sha.check(filepath, this.metadata.sha1, (err) => {
-            if (err) {
-                if (skipfetchfile) {
-                    debug("skipfetchfile set (testing) would fetch: %s", filepath);
-                    cb(null, -1);
+        const filepath = path.join(cacheDirectory, itemid, filename);
+        sha.check(filepath, sha1, (err) => {
+            if (err) { //Doesn't match
+                _notcached.call(this);
+            } else { // sha1 matched, skip fetching, just stream from saved
+                if (wantStream) {
+                    debug("streaming from cached", filepath, "as sha1 matches");
+                    cb(null, fs.createReadStream(filepath, {start, end}));   // Already cached and want stream - read from file
                 } else {
-                    this.save({cacheDirectory}, cb);
+                    debug("Already cached", filepath, "with correct sha1");
+                    cb();
                 }
-            } else { // sha1 matched, skip
-                debug("Skipping", filepath, "as sha1 matches");
-                cb(null, -1);
             }
         });
     }
-};
+    function _notcached() {
+        if (skipfetchfile) {
+            debug("skipfetchfile set (testing) would fetch: %s", filename);
+            cb();
+        } else {
+            if (wantStream && (start>0 || end<Infinity)) {  // start or end undefined dont satisfy this test
+                debug("Not caching %s/%s because specifying a range %s:%s and wantStream", itemid, filename, start, end);
+                this.readableFromNet({start, end}, cb); // Dont cache a byte range, just return it
+            } else {
+                this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
+                    if (err) {
+                        console.warn("ArchiveFile.save ignoring error on", itemid, err.message); //TODO - pass error on, ignore at caller level
+                        cb(); // Dont pass error on, will trigger a Promise rejection not handled message
+                        // Dont try and write it
+                    } else {
+                        this.writableToFile({cacheDirectory}, (err, writable) => {
+                            writable.on('close', () => {
+                                debug("Written %d to file", writable.bytesWritten);
+                                // noinspection EqualityComparisonWithCoercionJS
+                                if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
+                                    console.error(`File ${itemid}/${filename} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
+                                } else {
+                                    debug(`Closed ${itemid}/${filename} size=${writable.bytesWritten}`);
+                                }
+                                if (!wantStream) cb(); // If dont want stream then cb signifies file is written
+                            });
+                            s.on('error', (err) => debug("Failed to read %s/%s from net err=%s", itemid, filename, err.message)); //TODO make it remove file or better write to temp and rename when success
+                            try {
+                                s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                                if (wantStream) cb(null, s);
+                            } catch(err) {
+                                console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe shouldnt happen",s);
+                                if (wantStream) cb(err);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    }
 
-// NOTE checkShaAndSave cachedStream ARE ALMOST IDENTICAL
-// TODO-REFACTOR do we need both cachedStream and checkShaAndSave, maybe pass an option to get back either stream or bytesWritten
-ArchiveFile.prototype.cachedStream = function({cacheDirectory = undefined, start=0, end=undefined} = {}, cb) {
-    // cb(err, stream)  will have a stream, also piped to a cache file
-    //TODO - make sure sha.check works if no metadata (undefined or 0)
-    try {
-        const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
-        // noinspection JSUnresolvedVariable
-        sha.check(filepath, this.metadata.sha1, (err) => {
-            if (err) {
-                this.saveNEW({cacheDirectory, start, end}, cb); // cb(err, stream)
-            } else { // sha1 matched, skip
-                debug("Returning cached", filepath, "as sha1 matches");
-                const s = fs.createReadStream(filepath); //TODO add opts { start: 90, end: 99 }
-                cb(null, s);
-            }
-        });
-    } catch(err) {
-        console.error("ArchiveFile.cachedStream:",err);
-        if (cb) { cb(err);} else { throw(err);} // Throw it up
-    }
 };
 
 ArchiveFile.prototype.writableToFile = function({cacheDirectory = undefined} = {}, cb) {
@@ -116,77 +140,6 @@ ArchiveFile.prototype.writableToFile = function({cacheDirectory = undefined} = {
             cb(null, writable);
             // Note at this point file is neither finished, nor closed, its a stream open for writing.
             //fs.close(fd); Should be auto closed when stream to it finishes
-        }
-    });
-};
-
-//TODO merge save and saveNEW
-ArchiveFile.prototype.save = function({cacheDirectory = undefined, start=0, end=undefined} = {}, cb) {
-    /*
-    net > file + output
-    Save a archivefile to the appropriate filepath and return as stream
-    cb(err, size) // To call on close
-     */
-    // noinspection JSIgnoredPromiseFromCall
-    const itemid = this.itemid; // Not available in events otherwise
-    const filename = this.metadata.name;
-    this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
-        if (err) {
-            console.warn("ArchiveFile.save ignoring error on", itemid, err.message);
-            cb(null); // Dont pass error on, will trigger a Promise rejection not handled message
-            // Dont try and write it
-        } else {
-            this.writableToFile({cacheDirectory}, (err, writable) => {
-                writable.on('close', () => {
-                    debug("Written %d to file", writable.bytesWritten);
-                    // noinspection EqualityComparisonWithCoercionJS
-                    if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
-                        console.error(`File ${itemid}/${filename} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
-                    } else {
-                        debug(`Closed ${itemid}/${filename} size=${writable.bytesWritten}`);
-                    }
-                    cb(null, writable.bytesWritten);
-                });
-                s.on('error', (err) => debug("Failed to read %s/%s from net err=%s", itemid, filename, err.message)); //TODO make it remove file or better write to temp and rename when success
-                try {
-                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                } catch(err) {
-                    console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe",s);
-                }
-            });
-        }
-    });
-};
-ArchiveFile.prototype.saveNEW = function({cacheDirectory = undefined} = {}, cb) {
-    /*
-    Save a archivefile to the appropriate filepath
-    cb(err, s) // With stream so can work with while caching
-     */
-    // noinspection JSIgnoredPromiseFromCall
-    this.readableFromNet((err, s) => { //Returns a promise, but not waiting for it
-        if (err) {
-            console.warn("MirrorFS._transform ignoring error on", this.itemid, err.message);
-            cb(err); // Dont pass error on, will trigger a Promise rejection not handled message  //XXX save() ignored error)
-            // Dont try and write it
-        } else {
-            this.writableToFile({cacheDirectory}, (err, writable) => {
-                writable.on('close', () => {
-                    debug("Written %d to file", writable.bytesWritten);
-                    // noinspection EqualityComparisonWithCoercionJS
-                    if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
-                        console.error(`File ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
-                    } else {
-                        debug(`Closed ${this.itemid}/${this.metadata.name} size=${writable.bytesWritten}`);
-                    }
-                    //cb(null, writable.bytesWritten); //XXX save() sends bytesWritten)
-                });
-                try {
-                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                    cb(null, s);        // CB with the stream   //XXX save() sends bytesWritten)
-                } catch(err) {
-                    console.log("XXX @ ArchiveFilePatched - catching error with saveNEW() in s.pipe",s);
-                }
-            });
         }
     });
 };

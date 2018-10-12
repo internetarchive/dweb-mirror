@@ -178,11 +178,11 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                 // noinspection JSUnusedLocalSymbols
                 const recursable = function (err, sizeunused) {
                     if (err) {
-                        _err(`saveThumbnail: failed in checkShaAndSave for ${itemid}`, err, cb)
+                        _err(`saveThumbnail: failed in cacheAndOrStream for ${itemid}`, err, cb)
                     } else {
                         let af;
                         if (typeof(af = thumbnailFiles.shift()) !== "undefined") {
-                            af.checkShaAndSave({cacheDirectory, skipfetchfile}, recursable); // Recurse
+                            af.cacheAndOrStream({cacheDirectory, skipfetchfile}, recursable); // Recurse
                             // Exits, allowing recursable to recurse with next iteration
                         } else {
                             cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition

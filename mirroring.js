@@ -37,7 +37,7 @@ class Mirror {
             console.assert(!err);
             // noinspection JSUnusedLocalSymbols
             // noinspection JSUnresolvedVariable
-            af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, af) => {
+            af.cacheAndOrStream({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, unused)=>{
                 console.log("Saved");
             })
         })
@@ -61,14 +61,12 @@ class Mirror {
             // Stream of arrays of Search results (minimal JSON) ready for fetching
 
             .map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true, paralleloptions} ) // Collections with metadata fetched
-            .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch})) //, cacheDirectory: config.directory}))
-
+            .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch}), {name: "streamResults"}) //, cacheDirectory: config.directory}))
             // Stream of streams of Search results (minimal JSON) ready for fetching
             .log((s)=>s.name, {name:"Stream of Streams (Collection>SearchResults)"})
             .flatten({name: 'Flatten Streams to SearchResults'})
             // Stream of Search results (mixed)
             .log((m)=>[m.identifier], {name:"SearchResults"})
-
             .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
             // a stream of ArchiveItem's with metadata fetched
             .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
@@ -78,8 +76,9 @@ class Mirror {
             .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
             .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
             .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-            .map((af, cb) => af.checkShaAndSave({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, size)=> cb(err, {archivefile: af, size: size})), {name: "SaveFiles", async: true, paralleloptions})
-            .reduce();
+            .map((af, cb) => af.cacheAndOrStream({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, cb), {name: "SaveFiles", async: true, paralleloptions, verbose: true})
+
+            .reduce({name: "END OF MIRRORING"});
         } catch(err) {
             console.error(err);
         }

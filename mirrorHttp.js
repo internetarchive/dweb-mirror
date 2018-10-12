@@ -139,8 +139,9 @@ function streamArchiveFile(req, res, next) {
                 res.status(req.streamOpts ? 206 : 200);
                 res.set('Accept-ranges', 'bytes');
                 if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size)-1}/${af.metadata.size}`);
-                const opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory});
-                af.cachedStream(opts, (err, s) => {
+                const opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory, wantStream: true});
+                // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
+                af.cacheAndOrStream(opts, (err, s) => {
                     if (err) { next(err); }
                     else {
                         s
