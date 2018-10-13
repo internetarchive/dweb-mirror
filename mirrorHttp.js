@@ -53,7 +53,7 @@ DwebTransports.p_connect({
     DwebTransports.http().supportFunctions.push("createReadStream");
 }); // Async, handling may fail while this is happening
 
-app.use(morgan('combined')); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
+app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
 
 app.use((req, res, next) => {
     /* Turn the range headers on a req into an options parameter can use in streams */
@@ -128,7 +128,7 @@ function sendrange(req, res, val) {
 
 function streamArchiveFile(req, res, next) {
     const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
-    const itemid = req.param('itemid');
+    const itemid = req.params['itemid'];
     debug('Sending ArchiveFile %s/%s', itemid, filename);
     loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
         ArchiveFile.p_new({itemid: itemid, archiveitem, filename}, (err, af) => {
@@ -157,7 +157,7 @@ function streamArchiveFile(req, res, next) {
 
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/details/:itemid', (req, res) => {
-    req.query.item = req.param('itemid'); // Move itemid into query
+    req.query.item = req.params['itemid']; // Move itemid into query
     res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); // and redirect to the html file
 });
 // noinspection JSUnresolvedFunction

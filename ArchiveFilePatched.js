@@ -49,7 +49,10 @@ ArchiveFile.prototype.readableFromNet = function(opts, cb) {
      */
     if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts
     // noinspection JSIgnoredPromiseFromCall
-    this.p_urls((err, urls) => err ? cb(err) : DwebTransports.createReadStream(urls, opts, cb))
+    this.p_urls((err, urls) => { if (err) { cb(err) } else {
+        debug("Opening stream for %s/%s from urls", this.itemid, this.metadata.name);
+        DwebTransports.createReadStream(urls, opts, cb);
+    }});
 };
 
 ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined, skipfetchfile=false, wantStream=false, start=0, end=undefined} = {}, cb) {

@@ -32,6 +32,7 @@ const config = new MirrorConfig({
     apps: {
         http: {
             port: 4244,
+            morgan: ':method :url :req[range] :status :res[content-length] :response-time ms',
         }
     }
 });

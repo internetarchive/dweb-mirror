@@ -133,15 +133,16 @@ ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb)
     if (cacheDirectory) {
         this.read({cacheDirectory}, (err, metadata) => {
             if (err) {
-                this.fetch_metadata((err, ai) => {
+                this.fetch_metadata((err, ai) => { // Process Fjords and _listload
                     if (err) {
                         cb(err); // Failed to read & failed to fetch
                     } else {
-                        ai.save({cacheDirectory}, cb);  // Save data fetched
+                        ai.save({cacheDirectory}, cb);  // Save data fetched (de-fjorded)
                     }
                 });    // resolves to this
             } else {    // Local read succeeded.
                 this.item = metadata;
+                this._listLoad();
                 cb(null, this);
             }
         })
