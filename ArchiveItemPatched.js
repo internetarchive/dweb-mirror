@@ -222,24 +222,24 @@ ArchiveItem.prototype.minimumForUI = function() {
         af.metadata.name === "__ia_thumb.jpg"
         || af.metadata.name.endsWith("_itemimage.jpg")
     );
-    //TODO-THUMBNAILS Get services/img link if thumbnailFiles is empty
+    // Note thumbnail is also explicitly saved by saveThumbnail
     minimumFiles.push(...thumbnailFiles);
     switch (this.item.metadata.mediatype) {
         case "collection": //TODO-THUMBNAILS
             break;
-        case "texts": //TODO-THUMBNAILS
+        case "texts": //TODO-THUMBNAILS for text - texts use the Text Reader anyway so dont know which files needed
             break;
-        case "image": //TODO-THUMBNAILS
+        case "image":
+            minimumFiles.push(this._list.find(fi => fi.playable("image"))); // First playable image is all we need
             break;
         case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
+        case "etree":   // Generally treated same as audio, at least for now
             if (!this.playlist) this.setPlaylist();
             // Almost same logic for video & audio
             minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
             // Audio uses the thumbnail image, puts URLs direct in html, but that always includes http://dweb.me/thumbnail/itemid which should get canonicalized
             break;
-        case "etree": // Concerts uploaded
-            break;
-        case "movies": //TODO-THUMBNAILS test
+        case "movies":
             if (!this.playlist) this.setPlaylist();
             // Almost same logic for video & audio
             minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
@@ -248,7 +248,7 @@ ArchiveItem.prototype.minimumForUI = function() {
         case "account":
             break;
         default:
-            //TODO Not yet supporting software, zotero (0 items); data; web
+            //TODO Not yet supporting software, zotero (0 items); data; web because rest of dweb-archive doesnt
     }
     return minimumFiles;
 };
