@@ -57,8 +57,6 @@ ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined, s
     Return a stream from the cache, or the net and if start/end unset cache it
     cb(err, s|undefined) if wantStream will call with a stream
     */
-    //TODO - make sure sha.check works if no metadata (undefined or 0)
-    //TODO handle case of start/end as shouldnt cache partial
     const itemid = this.itemid; // Not available in events otherwise
     const filename = this.metadata.name;
     // noinspection JSUnresolvedVariable
@@ -82,40 +80,70 @@ ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined, s
         });
     }
     function _notcached() {
+        /*
+        Four possibilities - wantstream &&|| partialrange
+        ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; nonsense; !ws&!p caching
+         */
         if (skipfetchfile) {
             debug("skipfetchfile set (testing) would fetch: %s", filename);
             cb();
         } else {
-            if (wantStream && (start>0 || end<Infinity)) {  // start or end undefined dont satisfy this test
+            const partial = (start>0 || end<Infinity);
+            console.assert(wantStream || !partial,"ArchiveFile.cacheAndOrStream - it makes no sense to request a partial fetch without a stream output");
+            if (partial) {  // start or end undefined dont satisfy this test
                 debug("Not caching %s/%s because specifying a range %s:%s and wantStream", itemid, filename, start, end);
                 this.readableFromNet({start, end}, cb); // Dont cache a byte range, just return it
             } else {
                 this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
                     if (err) {
-                        console.warn("ArchiveFile.save ignoring error on", itemid, err.message); //TODO - pass error on, ignore at caller level
-                        cb(); // Dont pass error on, will trigger a Promise rejection not handled message
+                        console.warn("ArchiveFile.cacheAndOrStream had error reading", itemid, err.message);
+                        cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream
                         // Dont try and write it
                     } else {
-                        this.writableToFile({cacheDirectory}, (err, writable) => {
-                            writable.on('close', () => {
-                                debug("Written %d to file", writable.bytesWritten);
-                                // noinspection EqualityComparisonWithCoercionJS
-                                if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
-                                    console.error(`File ${itemid}/${filename} size=${writable.bytesWritten} doesnt match expected ${this.metadata.size}`);
-                                } else {
-                                    debug(`Closed ${itemid}/${filename} size=${writable.bytesWritten}`);
+                        // Now create a stream to the file
+                        const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
+                        const filepathTemp = filepath + ".part"
+                        MirrorFS._fileopenwrite(cacheDirectory, filepathTemp, (err, fd) => {
+                            if (err) {
+                                debug("Unable to write to %s: %s", filepath, err.message);
+                                cb(err);
+                            } else {
+                                // fd is the file descriptor of the newly opened file;
+                                const writable = fs.createWriteStream(null, {fd: fd});
+                                // Note at this point file is neither finished, nor closed, its a stream open for writing.
+                                //fs.close(fd); Should be auto closed when stream to it finishes
+                                writable.on('close', () => {
+                                    // noinspection EqualityComparisonWithCoercionJS
+                                    if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
+                                        debug("File %s/%s size=%d doesnt match expected %s, deleting", itemid, filename, writable.bytesWritten, this.metadata.size);
+                                        fs.unlink(filepathTemp, (err) => {
+                                            if (err) { console.error(`Can't delete ${filepathTemp}`); } // Shouldnt happen
+                                            if (!wantStream) cb(err); // Cant send err if not wantStream as already done it
+                                        })
+                                    } else {
+                                        fs.rename(filepathTemp, filepath, (err) => {
+                                            if (err) {
+                                                console.error(`Failed to rename ${filepathTemp} to ${filepath}`); // Shouldnt happen
+                                                if (!wantStream) cb(err); // If wantStream then already called cb
+                                            } else {
+                                                debug(`Closed ${itemid}/${filename} size=${writable.bytesWritten}`);
+                                                if (!wantStream) cb(); // If wantStream then already called cb, otherwise cb signifies file is written
+                                            }
+                                        })
+                                    }
+                                });
+                                s.on('error', (err) => debug("Failed to read %s/%s from net err=%s", itemid, filename, err.message));
+                                try {
+                                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                                    if (wantStream) cb(null, s);
+                                } catch(err) {
+                                    console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe shouldnt happen",s);
+                                    if (wantStream) cb(err);
                                 }
-                                if (!wantStream) cb(); // If dont want stream then cb signifies file is written
-                            });
-                            s.on('error', (err) => debug("Failed to read %s/%s from net err=%s", itemid, filename, err.message)); //TODO make it remove file or better write to temp and rename when success
-                            try {
-                                s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                                if (wantStream) cb(null, s);
-                            } catch(err) {
-                                console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe shouldnt happen",s);
-                                if (wantStream) cb(err);
                             }
                         });
+
+
                     }
                 });
             }
@@ -124,24 +152,5 @@ ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined, s
 
 };
 
-ArchiveFile.prototype.writableToFile = function({cacheDirectory = undefined} = {}, cb) {
-    /*
-    Save a archivefile to the appropriate filepath
-    cb(err, s) // Pass stream to callback
-     */
-    const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
-    MirrorFS._fileopenwrite(cacheDirectory, filepath, (err, fd) => {
-        if (err) {
-            debug("Unable to write to %s: %s", filepath, err.message);
-            cb(err);
-        } else {
-            // fd is the file descriptor of the newly opened file;
-            const writable = fs.createWriteStream(null, {fd: fd});
-            cb(null, writable);
-            // Note at this point file is neither finished, nor closed, its a stream open for writing.
-            //fs.close(fd); Should be auto closed when stream to it finishes
-        }
-    });
-};
 
 exports = module.exports = ArchiveFile;
