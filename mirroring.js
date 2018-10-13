@@ -38,7 +38,8 @@ class Mirror {
             // noinspection JSUnusedLocalSymbols
             // noinspection JSUnresolvedVariable
             af.cacheAndOrStream({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, unused)=>{
-                console.log("Saved");
+                if (err) { console.err("failed to save", err)}
+                else { console.log("Saved"); }
             })
         })
     }
@@ -70,7 +71,7 @@ class Mirror {
             .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads
             // a stream of ArchiveItem's with metadata fetched
             .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
-            .map((ai, cb) => ai.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveThumbnail", async: true, paralleloptions})
+            .map((ai, cb) => ai.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveThumbnail", justReportError: true, async: true, paralleloptions})
             .map(ai => config.filterlist(ai), {name: "List"}) // Figure out optimum set of items in case config chooses that.
             .flatten({name: "flatten files"})
             .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
