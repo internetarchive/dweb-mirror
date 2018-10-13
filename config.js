@@ -34,6 +34,9 @@ const config = new MirrorConfig({
             port: 4244,
             morgan: ':method :url :req[range] :status :res[content-length] :response-time ms',
         }
+    },
+    archiveorg: {
+        servicesImg: "https://archive.org/services/img/",
     }
 });
 

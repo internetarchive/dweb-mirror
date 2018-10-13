@@ -151,7 +151,13 @@ ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb)
     }
 };
 
-ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false} = {}, cb) {
+ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
+    /*
+    Save a thumbnail to the cache,
+    wantStream      true if want stream instead of ArchiveItem returned
+    skipfetchfile   true if should skip net retrieval - used for debugging
+    cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
+    */
 
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
@@ -159,10 +165,8 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
 
     function _err(msg, err, cb) {
         console.error(msg, err);
-        if (cb) {
+        if (cb) {   // cb will be undefined if cleared after calling with a stream
             cb(err);
-        } else {
-            throw(err)
         }
     }
 
@@ -177,21 +181,29 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
             );
             if (thumbnailFiles.length) {
                 // noinspection JSUnusedLocalSymbols
-                const recursable = function (err, sizeunused) {
+                // Loop through files using recursion (list is always short)
+                const recursable = function (err, streamOrUndefined) {
                     if (err) {
                         _err(`saveThumbnail: failed in cacheAndOrStream for ${itemid}`, err, cb)
                     } else {
+                        if (streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
+                            cb(null, streamOrUndefined);
+                            cb=undefined; } // Clear cb so not called when complete
                         let af;
                         if (typeof(af = thumbnailFiles.shift()) !== "undefined") {
-                            af.cacheAndOrStream({cacheDirectory, skipfetchfile}, recursable); // Recurse
+                            af.cacheAndOrStream({cacheDirectory, skipfetchfile, wantStream}, recursable); // Recurse
                             // Exits, allowing recursable to recurse with next iteration
-                        } else {
-                            cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+                        } else { // Completed loop
+                            // cb will be set except in the case of wantStream in which case will have been called with first stream
+                            if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
                         }
                     }
                 };
                 recursable(null, null);
             } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
+                servicesurl = config.archiveorg.servicesImg + this.itemid;
+                // Include direct link to services
+                if (!this.item.metadata.thumbnaillinks.includes(servicesurls)) this.item.metadata.thumbnaillinks.push(servicesurl);
                 DwebTransports.createReadStream(this.item.metadata.thumbnaillinks, (err, readable) => {
                     if (err) {
                         _err(`Cannot create stream to ${this.item.metadata.thumbnaillinks}`, err, cb);
@@ -201,9 +213,10 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                         });
                         const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                         MirrorFS.writableStreamTo(cacheDirectory, filepath, (err, writable) => {
+                            if (wantStream && cb) { cb(null, writable); cb=undefined; }
                             writable.on('close', () => {
                                 debug("Written %d to thumbnail file for %s", writable.bytesWritten, itemid);
-                                cb(null, self);
+                                if (cb) cb(null, self);
                             });
                             // TODO havent written error checking, or used a temp file here, its unlikely to fail and if it does just leaves a 0 length thumbnail
                             readable.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.

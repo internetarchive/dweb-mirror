@@ -155,6 +155,22 @@ function streamArchiveFile(req, res, next) {
     });
 }
 
+
+function streamThumbnail(req, res, next) {
+    const itemid = req.params['itemid'];
+    debug('Sending Thumbnail for %s', itemid);
+    loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
+        archiveitem.saveThumbnail({cacheDirectory: config.directory, wantStream: true}, (err, s) => {
+            if (err) {
+                debug("item %s.saveThumbnail failed: %s", itemid, err.message);
+                next(err);
+            } else {
+                s.pipe(res);
+            }
+        });
+    });
+}
+
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/details/:itemid', (req, res) => {
     req.query.item = req.params['itemid']; // Move itemid into query
@@ -177,7 +193,7 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
 
 app.get('/arc/archive.org/mds/*', function(req, res, next) { proxyUrl(req, res, next,"https://be-api.us.archive.org/mds", {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
-app.get('/arc/archive.org/services/img/*', (req, res, next) => proxyUrl(req, res, next, "https://archive.org/services/img") );
+app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 app.get('/archive/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
