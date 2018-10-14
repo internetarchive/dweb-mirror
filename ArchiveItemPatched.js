@@ -13,6 +13,7 @@ const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 const errors = require('./Errors');
+const config = require('./config');
 
 
 ArchiveItem.prototype._dirpath = function(directory) {
@@ -203,30 +204,32 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
             } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
                 servicesurl = config.archiveorg.servicesImg + this.itemid;
                 // Include direct link to services
-                if (!this.item.metadata.thumbnaillinks.includes(servicesurls)) this.item.metadata.thumbnaillinks.push(servicesurl);
-                DwebTransports.createReadStream(this.item.metadata.thumbnaillinks, (err, readable) => {
-                    if (err) {
-                        _err(`Cannot create stream to ${this.item.metadata.thumbnaillinks}`, err, cb);
-                    } else {
-                        readable.on('error',(err) => {
-                            debug("Failed to read thumbnail from net for %s err=%s", self.itemid, err.message);
-                        });
-                        const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
-                        MirrorFS.writableStreamTo(cacheDirectory, filepath, (err, writable) => {
-                            if (wantStream && cb) { cb(null, writable); cb=undefined; }
-                            writable.on('close', () => {
-                                debug("Written %d to thumbnail file for %s", writable.bytesWritten, itemid);
-                                if (cb) cb(null, self);
-                            });
-                            // TODO havent written error checking, or used a temp file here, its unlikely to fail and if it does just leaves a 0 length thumbnail
-                            readable.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                        });
-                    }
-                });
+                if (!this.item.metadata.thumbnaillinks.includes(servicesurl)) this.item.metadata.thumbnaillinks.push(servicesurl);
+
+                const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                MirrorFS.cacheAndOrStream({cacheDirectory, filepath, skipfetchfile, wantStream,
+                    urls: this.item.metadata.thumbnaillinks,
+                    debugname: itemid+"/__ia_thumb.jpg"
+                    }, cb);
             }
         }
     });
 };
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
+    /*
+    Save the related items to the cache, TODO-CACHE-TIMING
+    cb(err, obj)  Callback on completion with related items object
+    */
+
+    console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
+    const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,
+        urls: config.archiveorg.related + "/" + itemid,
+        filepath: path.join(cacheDirectory, itemid, itemid+"_related.json"),
+        debugname: itemid + itemid + "_related.json"
+    }, cb);
+};
+
 ArchiveItem.prototype.minimumForUI = function() {
     // This will be tuned for different mediatype etc}
     // Note mediatype will have been retrieved and may have been rewritten by processMetadataFjords from "education"

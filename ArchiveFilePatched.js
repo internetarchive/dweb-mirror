@@ -2,7 +2,6 @@
 // Standard files
 const debug = require('debug')('dweb-mirror:ArchiveFile');
 const path = require('path');
-const sha = require('sha');
 process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 // Other Archive repos
@@ -55,105 +54,24 @@ ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     }});
 };
 
-ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined, skipfetchfile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
-    /*
-    Return a stream from the cache, or the net and if start/end unset cache it
-    cb(err, s|undefined) if wantStream will call with a stream
-    */
+ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
     const itemid = this.itemid; // Not available in events otherwise
     const filename = this.metadata.name;
-    // noinspection JSUnresolvedVariable
-    const sha1 = this.metadata.sha1;
-    if (!sha1) { // Handle files like _meta.xml which dont have a sha
-        _notcached.call(this);
-    } else {
-        const filepath = path.join(cacheDirectory, itemid, filename);
-        sha.check(filepath, sha1, (err) => {
-            if (err) { //Doesn't match
-                _notcached.call(this);
-            } else { // sha1 matched, skip fetching, just stream from saved
-                if (wantStream) {
-                    debug("streaming from cached", filepath, "as sha1 matches");
-                    cb(null, fs.createReadStream(filepath, {start, end}));   // Already cached and want stream - read from file
-                } else {
-                    debug("Already cached", filepath, "with correct sha1");
-                    cb();
-                }
-            }
-        });
-    }
-    function _notcached() {
-        /*
-        Four possibilities - wantstream &&|| partialrange
-        ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; nonsense; !ws&!p caching
-         */
-        if (skipfetchfile) {
-            debug("skipfetchfile set (testing) would fetch: %s", filename);
-            cb();
+    this.p_urls((err, urls) => {
+        if (err) {
+            cb(err);
         } else {
-            const partial = (start>0 || end<Infinity);
-            console.assert(wantStream || !partial,"ArchiveFile.cacheAndOrStream - it makes no sense to request a partial fetch without a stream output");
-            if (partial) {  // start or end undefined dont satisfy this test
-                debug("Not caching %s/%s because specifying a range %s:%s and wantStream", itemid, filename, start, end);
-                this.readableFromNet({start, end}, cb); // Dont cache a byte range, just return it
-            } else {
-                this.readableFromNet({start, end}, (err, s) => { //Returns a promise, but not waiting for it
-                    if (err) {
-                        console.warn("ArchiveFile.cacheAndOrStream had error reading", itemid, err.message);
-                        cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream
-                        // Dont try and write it
-                    } else {
-                        // Now create a stream to the file
-                        const filepath = path.join(cacheDirectory, this.itemid, this.metadata.name);
-                        const filepathTemp = filepath + ".part"
-                        MirrorFS._fileopenwrite(cacheDirectory, filepathTemp, (err, fd) => {
-                            if (err) {
-                                debug("Unable to write to %s: %s", filepath, err.message);
-                                cb(err);
-                            } else {
-                                // fd is the file descriptor of the newly opened file;
-                                const writable = fs.createWriteStream(null, {fd: fd});
-                                // Note at this point file is neither finished, nor closed, its a stream open for writing.
-                                //fs.close(fd); Should be auto closed when stream to it finishes
-                                writable.on('close', () => {
-                                    // noinspection EqualityComparisonWithCoercionJS
-                                    if (this.metadata.size != writable.bytesWritten) { // Intentionally != as metadata is a string
-                                        debug("File %s/%s size=%d doesnt match expected %s, deleting", itemid, filename, writable.bytesWritten, this.metadata.size);
-                                        fs.unlink(filepathTemp, (err) => {
-                                            if (err) { console.error(`Can't delete ${filepathTemp}`); } // Shouldnt happen
-                                            if (!wantStream) cb(err); // Cant send err if not wantStream as already done it
-                                        })
-                                    } else {
-                                        fs.rename(filepathTemp, filepath, (err) => {
-                                            if (err) {
-                                                console.error(`Failed to rename ${filepathTemp} to ${filepath}`); // Shouldnt happen
-                                                if (!wantStream) cb(err); // If wantStream then already called cb
-                                            } else {
-                                                debug(`Closed ${itemid}/${filename} size=${writable.bytesWritten}`);
-                                                if (!wantStream) cb(); // If wantStream then already called cb, otherwise cb signifies file is written
-                                            }
-                                        })
-                                    }
-                                });
-                                s.on('error', (err) => debug("Failed to read %s/%s from net err=%s", itemid, filename, err.message));
-                                try {
-                                    s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                                    if (wantStream) cb(null, s);
-                                } catch(err) {
-                                    console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe shouldnt happen",s);
-                                    if (wantStream) cb(err);
-                                }
-                            }
-                        });
-
-
-                    }
-                });
-            }
+            MirrorFS.cacheAndOrStream({
+                urls, cacheDirectory, skipfetchfile, wantStream, start, end,
+                sha1: this.metadata.sha1,
+                filepath: path.join(cacheDirectory, itemid, filename),
+                debugname: [itemid, filename].join('/'),
+                expectsize: this.metadata.size
+            }, cb);
         }
-    }
+    })
+}
 
-};
 
 
 exports = module.exports = ArchiveFile;
