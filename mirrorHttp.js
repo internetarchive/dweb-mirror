@@ -97,6 +97,28 @@ function _sendFileFromDir(req, res, next, dir) {
     });
 }
 
+function _proxy(req, res, next, err, s, headers) {
+    if (err) {
+        debug("Failed to proxy", err.message);
+        next(err);
+    } else {
+        res.status(200); // Assume error if dont get here
+        res.set(headers);
+        s.pipe(res);
+    }
+}
+function sendRelated(req, res, next) {
+    const itemid = req.params[0]
+    loadedAI({itemid}, (err, archiveitem) => {
+        if (err) { next(err);}
+        else {
+            archiveitem.relatedItems({
+                cacheDirectory: config.directory,
+                wantStream: true
+            }, (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"}));
+        }
+    })
+}
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
 function proxyUrl(req, res, next, urlbase, headers={}) {
     // Proxy a request to somewhere under urlbase, which should NOT end with /
@@ -191,7 +213,8 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     })
 });
 
-app.get('/arc/archive.org/mds/*', function(req, res, next) { proxyUrl(req, res, next,"https://be-api.us.archive.org/mds", {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
+app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
+app.get('/arc/archive.org/mds/*', function(req, res, next) { proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 app.get('/archive/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory ); } );

@@ -37,6 +37,8 @@ const config = new MirrorConfig({
     },
     archiveorg: {
         servicesImg: "https://archive.org/services/img/",
+        related: "https://be-api.us.archive.org/mds/v1/get_related/all",
+        mds: "https://be-api.us.archive.org/mds",
     }
 });
 
