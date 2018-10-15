@@ -55,19 +55,28 @@ ArchiveFile.prototype.readableFromNet = function(opts, cb) {
 };
 
 ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
+    /*
+    Cache an ArchiveFile - see MirrorFS for arguments
+     */
     const itemid = this.itemid; // Not available in events otherwise
     const filename = this.metadata.name;
     this.p_urls((err, urls) => {
         if (err) {
             cb(err);
         } else {
+            debugname = [itemid, filename].join('/')
             MirrorFS.cacheAndOrStream({
-                urls, cacheDirectory, skipfetchfile, wantStream, start, end,
+                urls, cacheDirectory, skipfetchfile, wantStream, start, end, debugname,
                 sha1: this.metadata.sha1,
                 filepath: path.join(cacheDirectory, itemid, filename),
-                debugname: [itemid, filename].join('/'),
                 expectsize: this.metadata.size
-            }, cb);
+            }, (err, streamOrUndefined)=> {
+                if (err) {
+                    debug("Unable to cacheOrStream %s",debugname); cb(err);
+                } else {
+                    cb(null, wantStream ? streamOrUndefined : this);
+                }
+            });
         }
     })
 }

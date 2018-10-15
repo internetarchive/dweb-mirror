@@ -22,12 +22,24 @@ ArchiveItem.prototype._dirpath = function(directory) {
 
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
-        Save _meta and _members as JSON
+        Save _meta and _files and _reviews as JSON (_members will be saved by Subclassing in MirrorCollection)
+        If not already done so, will fetch_metadata (but not query, as that may want to be precisely controlled)
     */
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
     const dirpath = this._dirpath(cacheDirectory);
 
+    if (!this.item) {
+        this.fetch_metadata((err, data) => {
+           if (err) {
+               _err("Cant save because couldnt fetch metadata", err, cb);
+           } else {
+               f.call(this); // Need the call because it loses track of "this"
+           }
+        });
+    } else {
+        f.call(this);
+    }
     function _err(msg, err, cb) {
         console.error(msg, err);
         if (cb) {
@@ -36,44 +48,45 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
             throw(err)
         }
     }
+    function f() {
+        MirrorFS._mkdir(dirpath, (err) => {
+            if (err) {
+                _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
+            } else {
+                const filepath = path.join(dirpath, itemid + "_meta.json");
+                fs.writeFile(filepath, canonicaljson.stringify(this.item.metadata), (err) => {
+                    if (err) {
+                        _err(`Unable to write to ${itemid}`, err, cb);
+                    } else {
 
-    MirrorFS._mkdir(dirpath, (err) => {
-        if (err) {
-            _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
-        } else {
-            const filepath = path.join(dirpath, itemid + "_meta.json");
-            fs.writeFile(filepath, canonicaljson.stringify(this.item.metadata), (err) => {
-                if (err) {
-                    _err(`Unable to write to ${itemid}`, err, cb);
-                } else {
-
-                    const filepath = path.join(dirpath, itemid + "_files.json");
-                    fs.writeFile(filepath, canonicaljson.stringify(this.item.files), (err) => {
-                        if (err) {
-                            _err(`Unable to write to ${itemid}`, err, cb);
-                        } else {
-                            const filepath = path.join(dirpath, itemid + "_reviews.json");
-                            fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
-                                if (err) {
-                                    _err(`Unable to write to ${itemid}`, err, cb);
-                                } else {
-                                    // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
-                                    const filepath = path.join(dirpath, itemid + "_extra.json");
-                                    fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
-                                        if (err) {
-                                            _err(`Unable to write to ${itemid}`, err, cb);
-                                        } else {
-                                            cb(null, this);
-                                        }
-                                    });
-                                }
-                            })
-                        }
-                    })
-                }
-            });
-        }
-    });
+                        const filepath = path.join(dirpath, itemid + "_files.json");
+                        fs.writeFile(filepath, canonicaljson.stringify(this.item.files), (err) => {
+                            if (err) {
+                                _err(`Unable to write to ${itemid}`, err, cb);
+                            } else {
+                                const filepath = path.join(dirpath, itemid + "_reviews.json");
+                                fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
+                                    if (err) {
+                                        _err(`Unable to write to ${itemid}`, err, cb);
+                                    } else {
+                                        // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
+                                        const filepath = path.join(dirpath, itemid + "_extra.json");
+                                        fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
+                                            if (err) {
+                                                _err(`Unable to write to ${itemid}`, err, cb);
+                                            } else {
+                                                cb(null, this);
+                                            }
+                                        });
+                                    }
+                                })
+                            }
+                        })
+                    }
+                });
+            }
+        });
+    }
 };
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
         const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
@@ -187,7 +200,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     if (err) {
                         _err(`saveThumbnail: failed in cacheAndOrStream for ${itemid}`, err, cb)
                     } else {
-                        if (streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
+                        if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
                             cb(null, streamOrUndefined);
                             cb=undefined; } // Clear cb so not called when complete
                         let af;
@@ -210,7 +223,14 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                 MirrorFS.cacheAndOrStream({cacheDirectory, filepath, skipfetchfile, wantStream,
                     urls: this.item.metadata.thumbnaillinks,
                     debugname: itemid+"/__ia_thumb.jpg"
-                    }, cb);
+                    }, (err, streamOrUndefined) => {
+                        if (err) {
+                            debug("Unable to cacheOrStream %s",debugname); cb(err);
+                        } else {
+                            cb(null, wantStream ? streamOrUndefined : this);
+                        }
+
+                    });
             }
         }
     });

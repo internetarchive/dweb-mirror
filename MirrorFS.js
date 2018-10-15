@@ -103,12 +103,16 @@ class MirrorFS {
         skipfetchfile:  If true, then dont actually fetch the file (used for debugging)
         wantStream:     True if want an open stream to the contents, (set to false, when crawling)
         start,end       First and last bytes wanted
-        cb(err, s|undefined) if wantStream will call with a stream
+        cb(err, s|undefined) if wantStream will call with a stream (see below)
 
         TypicalUsages:
         in mirroring    wantStream, start,end undefined
         in browsing     wantStream=true, start & end may be set or be set to 0,undefined.
 
+        cb behavior needs explanation !
+            If wantStream, then cb will call back as soon as a stream is ready from the net
+            If !wantStream, then cb will only call back (with undefined) when the file has been written to disk and the file renamed.
+            In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
         console.assert(urls);
         // noinspection JSUnresolvedVariable
