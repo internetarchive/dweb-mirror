@@ -185,6 +185,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     }
 
     MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
+        //TODO use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
         if (err) {
             _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
         } else {

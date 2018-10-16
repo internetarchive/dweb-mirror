@@ -55,8 +55,8 @@ class MirrorSearch extends ArchiveItem {
                 debug("Searching %s page %d", self.itemid, self.page);
                 if (self.page < maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
                     self.page++;
-                    // Should fetch next page of search, and metadata on first time, note fetch_query is not passed append=true so will replace items
-                    self.fetch_query({append: true, reqThumbnails: false}) //TransportError (or CodingError) if no urls to fetch
+                    // Should fetch next page of search, and metadata on first time, note appends items to item, but just passes next page of results to stream
+                    self.fetch_query() //TransportError (or CodingError) if no urls to fetch
                         .then((docs) => {
                             debug("Collection %s page %s retrieved %d items", self.itemid, self.page, docs.length );
                             const ediblearr = docs; // Copy it, in case it is needed by collection
