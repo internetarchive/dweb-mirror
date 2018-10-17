@@ -61,11 +61,8 @@ class Mirror {
             .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections'} )  // Initialize collection - doesnt get metadata or search results
             // Stream of arrays of Search results (minimal JSON) ready for fetching
 
-            //.map((collection, cb) => collection.fetch_metadata(cb),{name: "fetchMeta", async:true, paralleloptions} ) // Collections with metadata fetched
             .map((collection, cb) => collection.save({cacheDirectory: config.directory}, cb), {name: "SaveCollection", async: true, paralleloptions})
-                .log((m)=>[m.itemid], {name:"XXX1"})
             .map((collection, cb) => collection.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveCollectionThumbnail", justReportError: true, async: true, paralleloptions})
-                .log((m)=>[m.itemid], {name:"XXX2"})
             .map((collection) => collection.streamResults({limit: config.search.itemsperpage, maxpages: config.search.pagespersearch}), {name: "streamResults"}) //, cacheDirectory: config.directory}))
             // Stream of streams of Search results (minimal JSON) ready for fetching
             .log((s)=>s.name, {name:"Stream of Streams (Collection>SearchResults)"})

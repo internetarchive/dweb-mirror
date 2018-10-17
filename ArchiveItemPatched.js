@@ -89,6 +89,12 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     }
 };
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
+    /*
+        Read metadata, reviews, files and extra from corresponding files
+        cacheDirectory: Top level of directory to look for data in
+        TODO-CACHE allow cacheDirectory to be an array
+        cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
+    */
         const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
         fs.readFile(filename, (err, metadataJson) => {
             if (err) {
@@ -133,37 +139,92 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
         });
     };
 
-ArchiveItem.prototype.loadMetadata = function({cacheDirectory=undefined}={}, cb) {
+ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     /*
-    More flexible version of loading metadata
+    Fetch the metadata for this item if it hasn't already been.
+    More flexible version than dweb-archive.ArchiveItem
+    Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
     Alternatives:
     !cacheDirectory:    load from net
     cached:             return from cache
     !cached:            Load from net, save to cache
 
-    cb(err, this)
-    TODO fetch_query should probably use loadMetadata but tricky as fetch_query doesnt know the cacheDirectory
+    cb(err, this) or if undefined, returns a promise resolving to 'this'
      */
-    if (cacheDirectory) {
-        this.read({cacheDirectory}, (err, metadata) => {
-            if (err) {
-                this.fetch_metadata((err, ai) => { // Process Fjords and _listload
-                    if (err) {
-                        cb(err); // Failed to read & failed to fetch
-                    } else {
-                        ai.save({cacheDirectory}, cb);  // Save data fetched (de-fjorded)
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+    const skipCache = opts.skipCache;           // If set will not try and read cache
+    const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
+    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
+    function f(cb) {
+        if (this.itemid && !this.item) { // Check haven't already loaded or fetched metadata
+            if (cacheDirectory && !skipCache) { // We have a cache directory to look in
+                //TODO-CACHE need timing of how long use old metadata
+                this.read({cacheDirectory}, (err, metadata) => {
+                    if (err) { // No cached version
+                        this._fetch_metadata((err, ai) => { // Process Fjords and _listload
+                            if (err) {
+                                cb(err); // Failed to read & failed to fetch
+                            } else {
+                                ai.save({cacheDirectory}, cb);  // Save data fetched (de-fjorded)
+                            }
+                        });    // resolves to this
+                    } else {    // Local read succeeded.
+                        this.item = metadata; // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
+                        this._listLoad();
+                        cb(null, this);
                     }
-                });    // resolves to this
-            } else {    // Local read succeeded.
-                this.item = metadata;
-                this._listLoad();
-                cb(null, this);
+                })
+            } else { // No cache Directory or skipCache telling us not to use it for read or save
+                this._fetch_metadata(cb);
             }
-        })
-    } else {
-        this.fetch_metadata(cb);
+        } else {
+            cb(null, this);
+        }
     }
-};
+}
+
+ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
+    /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
+     */
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+    skipCache = opts.skipCache; // Set if should ignore cache
+    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}
+
+    function f(cb) {
+        //TODO-CACHE-AGING
+        const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
+        if (cacheDirectory && !skipCache) {
+            const filepath = path.join(cacheDirectory, this.itemid, this.itemid + "_members.json");
+            fs.readFile(filepath, (err, jsonstring) => {
+                let arr;
+                if (!err)
+                    arr = canonicaljson.parse(jsonstring);  // Must be an array,
+                if (err || arr.length < ((this.page+1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
+                    this._fetch_query({}, (err, arr) => { // arr will be matching items (not ArchiveItms), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
+                        if (err) {
+                            debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
+                        } else {
+                            fs.writeFile(filepath, canonicaljson.stringify(this.items), (err) => {
+                                if (err) {
+                                    debug("Failed to write cached members at %s: %s", err.message); cb(err);
+                                } else {
+                                    cb(null, arr); // Return just the new items found by the query
+                                }});
+                        }});
+                } else {
+                    debug("Using cached version of query"); // TODO test this its not going to be a common case as should probably load the members when read metadata
+                    let newitems = arr.slice((this.page - 1) * this.limit, this.page * this.limit); // See copy of some of this logic in dweb-mirror.MirrorCollection.fetch_query
+                    this.items = this.items ? arr : newitems; // Note these are just objects, not ArchiveItems
+                    // Note that the info in _member.json is less than in Search, so may break some code unless turn into ArchiveItems
+                    // Note this does NOT support sort, there isnt enough info in members.json to do that
+                    cb(null, newitems);
+                }});
+        } else {
+            this._fetch_query({}, cb); // Cache free fetch (like un-monkey-patched fetch_query
+        }
+    }
+}
+
 
 ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
     /*
@@ -241,7 +302,6 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
     Save the related items to the cache, TODO-CACHE-TIMING
     cb(err, obj)  Callback on completion with related items object
     */
-
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
     MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,

@@ -1,4 +1,4 @@
-const ArchiveItem = require('./ArchiveItemPatched');
+const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_query patch to use cache
 const ParallelStream = require('parallel-streams');
 const debug = require('debug')('dweb-mirror:MirrorSearch');
 
@@ -27,6 +27,7 @@ class MirrorSearch extends ArchiveItem {
         /* Crawl a search or collection, pass output as stream of the search result objects (can be turned into ArchiveFiles
             data: MirrorCollection (subclass of MirrorSearch & ArchiveItem)
                 The ArchiveItem will have numFound, start, page  set after each fetch
+            options{skipCache}  skipCache causes it to ignore cache - both for lookup and saving
 
             Note this cant easily go in a map to a function on Collection as it recurses
 
@@ -41,7 +42,7 @@ class MirrorSearch extends ArchiveItem {
          */
         if (typeof options === 'function') { cb = options; options = {}; } //Allow missing options
         this.streaming = new ParallelStream({name: `Collection ${this.itemid}`, highWaterMark: 999});
-
+        const skipCache = options.skipCache;    // If set then wont try cache or save
         if (typeof this.page === "undefined") this.page = 0;
         if (!this.limit) this.limit = options.limit;
         const maxpages = this.maxpages ? this.maxpages : options.maxpages;
@@ -56,7 +57,7 @@ class MirrorSearch extends ArchiveItem {
                 if (self.page < maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
                     self.page++;
                     // Should fetch next page of search, and metadata on first time, note appends items to item, but just passes next page of results to stream
-                    self.fetch_query() //TransportError (or CodingError) if no urls to fetch
+                    self.fetch_query({skipCache: true}) //TransportError (or CodingError) if no urls to fetch
                         .then((docs) => {
                             debug("Collection %s page %s retrieved %d items", self.itemid, self.page, docs.length );
                             const ediblearr = docs; // Copy it, in case it is needed by collection
@@ -91,10 +92,7 @@ class MirrorSearch extends ArchiveItem {
                             //Comment above and uncomment below to make it stop at this point so you can take a look
                             //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
                         });
-                } else { // Completed loop and each page has fully written to streaming
-                    if (options.cacheDirectory) {   // We don't specify a directory, or save in collectionpreseed for example
-                        self.save({cacheDirectory: options.cacheDirectory});  //Save meta and members, No cb since wont wait on writing to start searching next collection.
-                    }
+                } else { // Completed loop and each page has fully written to streaming - cache will have been written as searching
                     debug("Searches of %s done", self.itemid);
                     // noinspection JSUnresolvedFunction
                     self.streaming.end(); // Signal nothing else coming

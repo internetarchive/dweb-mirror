@@ -40,7 +40,7 @@ const wrtc = require('wrtc');
 // Local files
 const config = require('./config'); // Global configuration, will add app specific requirements
 const ArchiveFile = require('./ArchiveFilePatched');
-const ArchiveItem = require('./ArchiveItemPatched');
+const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 
 
 const app = express();
@@ -67,8 +67,8 @@ app.use((req, res, next) => {
 
 
 function loadedAI({item=undefined, itemid=undefined}, cb) {
-    //TODO-CACHE need timing of how long use old metadata
-    new ArchiveItem({itemid, item}).loadMetadata({cacheDirectory: config.directory}, (err, ai) => {
+    // Get an ArchiveItem, from net or cache
+    new ArchiveItem({itemid, item}).fetch_metadata((err, ai) => {
         if (err) {
             debug("loadedAI: Unable to retrieve metadata for %s", itemid);
             cb(err);

@@ -6,7 +6,7 @@ process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 // Other Archive repos
 const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile');
-const ArchiveItem = require('./ArchiveItemPatched');
+const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata
 // Local files
 const errors = require('./Errors.js');
 const MirrorFS = require('./MirrorFS');
@@ -29,7 +29,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         } // Drop through now have archiveitem
         if (archiveitem && filename && !metadata) {
             if (!archiveitem.item) {
-                return archiveitem.fetch_metadata((err, ai) => {
+                return archiveitem.fetch_metadata((err, ai) => { // Note will load from cahce if available
                     return err ? cb(err)  : this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
                 });
             }
