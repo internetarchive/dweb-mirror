@@ -50,7 +50,8 @@ DwebTransports.p_connect({
     transports: ["HTTP"],
     webtorrent: {tracker: { wrtc }},
 }).then(() => {
-    DwebTransports.http().supportFunctions.push("createReadStream");
+    const Thttp =  DwebTransports.http();
+    if (Thttp) Thttp.supportFunctions.push("createReadStream");
 }); // Async, handling may fail while this is happening
 
 app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
