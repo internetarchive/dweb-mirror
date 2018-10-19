@@ -34,6 +34,7 @@ class HashStore {
         //return await tab.get(key); // Fails ...see https://github.com/Level/level/issues/97
         // Promisified get because of bug reported above.
         return new Promise((resolve, reject) => tab.get(key, function(err, val) {
+            // noinspection JSUnresolvedVariable
             if (err && err.notFound) resolve(undefined);
             if (err) { reject(err) }
             resolve(val);

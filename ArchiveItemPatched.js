@@ -30,6 +30,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     const dirpath = this._dirpath(cacheDirectory);
 
     if (!this.item) {
+        // noinspection JSUnusedLocalSymbols
         this.fetch_metadata((err, data) => {
            if (err) {
                _err("Cant save because couldnt fetch metadata", err, cb);
@@ -153,6 +154,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache;           // If set will not try and read cache
+    // noinspection JSUnresolvedVariable
     const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
     function f(cb) {
@@ -181,26 +183,27 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
             cb(null, this);
         }
     }
-}
+};
 
 ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-    skipCache = opts.skipCache; // Set if should ignore cache
+    const skipCache = opts.skipCache; // Set if should ignore cache
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}
 
     function f(cb) {
         //TODO-CACHE-AGING
+        // noinspection JSUnresolvedVariable
         const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
         if (cacheDirectory && !skipCache) {
             const filepath = path.join(cacheDirectory, this.itemid, this.itemid + "_members.json");
             fs.readFile(filepath, (err, jsonstring) => {
                 let arr;
                 if (!err)
-                    arr = canonicaljson.parse(jsonstring);  // Must be an array,
                 if (err || arr.length < ((this.page+1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
-                    this._fetch_query({}, (err, arr) => { // arr will be matching items (not ArchiveItms), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
+                    arr = canonicaljson.parse(jsonstring);  // Must be an array, will be undefined if parses wrong
+                    this._fetch_query({}, (err, arr) => { // arr will be matching items (not ArchiveItems), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
                         if (err) {
                             debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
                         } else {
@@ -223,7 +226,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
             this._fetch_query({}, cb); // Cache free fetch (like un-monkey-patched fetch_query
         }
     }
-}
+};
 
 
 ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
@@ -277,14 +280,15 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                 };
                 recursable(null, null);
             } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
-                servicesurl = config.archiveorg.servicesImg + this.itemid;
+                // noinspection JSUnresolvedVariable
+                const servicesurl = config.archiveorg.servicesImg + this.itemid;
                 // Include direct link to services
                 if (!this.item.metadata.thumbnaillinks.includes(servicesurl)) this.item.metadata.thumbnaillinks.push(servicesurl);
 
                 const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
-                MirrorFS.cacheAndOrStream({cacheDirectory, filepath, skipfetchfile, wantStream,
+                const debugname = itemid+"/__ia_thumb.jpg";
+                MirrorFS.cacheAndOrStream({cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
                     urls: this.item.metadata.thumbnaillinks,
-                    debugname: itemid+"/__ia_thumb.jpg"
                     }, (err, streamOrUndefined) => {
                         if (err) {
                             debug("Unable to cacheOrStream %s",debugname); cb(err);
@@ -304,6 +308,7 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
     */
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    // noinspection JSUnresolvedVariable
     MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,
         urls: config.archiveorg.related + "/" + itemid,
         filepath: path.join(cacheDirectory, itemid, itemid+"_related.json"),

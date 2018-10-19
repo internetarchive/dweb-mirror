@@ -1,11 +1,6 @@
 //Standard repos
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const path = require('path');
-const debug = require('debug')('MirrorCollection');
 // Other files from this repo
 const MirrorSearch = require('./MirrorSearch');
-const canonicaljson = require('@stratumn/canonicaljson');
-const config = require('./config');
 
 class MirrorCollection extends MirrorSearch {
     /*

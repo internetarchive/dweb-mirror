@@ -19,7 +19,7 @@ class MirrorFS {
                 if (err.code === "ENOENT") { // missing parent dir
                     const parentdir = path.dirname(dirname);
                     MirrorFS._mkdir(parentdir, err => {
-                        if (err) cb(err); // Dont know how to tackle error from _mkdir, note that EEXIST wouldbe odd since ENOENT implies it doesnt exist
+                        if (err) cb(err); // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
                         fs.mkdir(dirname, cb);
                     })
                 } else {
@@ -72,6 +72,7 @@ class MirrorFS {
         }
     }
 
+    // noinspection JSUnusedGlobalSymbols
     static writableStreamTo(directory, filepath, cb) {
         this._fileopenwrite(directory, filepath, (err, fd) => {
             if (err) {
@@ -162,7 +163,7 @@ class MirrorFS {
                             // Dont try and write it
                         } else {
                             // Now create a stream to the file
-                            const filepathTemp = filepath + ".part"
+                            const filepathTemp = filepath + ".part";
                             MirrorFS._fileopenwrite(cacheDirectory, filepathTemp, (err, fd) => {
                                 if (err) {
                                     debug("Unable to write to %s: %s", filepath, err.message);

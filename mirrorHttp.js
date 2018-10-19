@@ -44,6 +44,7 @@ const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadat
 
 
 const app = express();
+// noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d', config.apps.http.port);
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
@@ -54,10 +55,12 @@ DwebTransports.p_connect({
     if (Thttp) Thttp.supportFunctions.push("createReadStream");
 }); // Async, handling may fail while this is happening
 
+// noinspection JSUnresolvedVariable
 app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
 
 app.use((req, res, next) => {
     /* Turn the range headers on a req into an options parameter can use in streams */
+    debug("STARTING: %s",req.url);
     const range = req.range(Infinity);
     if (range && range[0] && range.type === "bytes"){
         req.streamOpts = {start: range[0].start, end: range[0].end};
@@ -69,7 +72,8 @@ app.use((req, res, next) => {
 
 function loadedAI({item=undefined, itemid=undefined}, cb) {
     // Get an ArchiveItem, from net or cache
-    new ArchiveItem({itemid, item}).fetch_metadata((err, ai) => {
+    new ArchiveItem({itemid, item})
+        .fetch_metadata((err, ai) => {
         if (err) {
             debug("loadedAI: Unable to retrieve metadata for %s", itemid);
             cb(err);
@@ -109,10 +113,11 @@ function _proxy(req, res, next, err, s, headers) {
     }
 }
 function sendRelated(req, res, next) {
-    const itemid = req.params[0]
+    const itemid = req.params[0];
     loadedAI({itemid}, (err, archiveitem) => {
         if (err) { next(err);}
         else {
+            // noinspection JSUnresolvedVariable
             archiveitem.relatedItems({
                 cacheDirectory: config.directory,
                 wantStream: true
@@ -162,6 +167,7 @@ function streamArchiveFile(req, res, next) {
                 res.status(req.streamOpts ? 206 : 200);
                 res.set('Accept-ranges', 'bytes');
                 if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size)-1}/${af.metadata.size}`);
+                // noinspection JSUnresolvedVariable
                 const opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory, wantStream: true});
                 // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
                 af.cacheAndOrStream(opts, (err, s) => {
@@ -183,6 +189,7 @@ function streamThumbnail(req, res, next) {
     const itemid = req.params['itemid'];
     debug('Sending Thumbnail for %s', itemid);
     loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
+        // noinspection JSUnresolvedVariable
         archiveitem.saveThumbnail({cacheDirectory: config.directory, wantStream: true}, (err, s) => {
             if (err) {
                 debug("item %s.saveThumbnail failed: %s", itemid, err.message);
@@ -201,9 +208,12 @@ app.get('/arc/archive.org/details/:itemid', (req, res) => {
 });
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
-app.get('/arc/archive.org/images/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
+// noinspection JSUnresolvedFunction
+app.get('/arc/archive.org/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
+    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
+// noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     loadedAI({itemid: req.params.itemid}, (err, ai) => {
         if (err) {
@@ -214,17 +224,28 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     })
 });
 
+// noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
-app.get('/arc/archive.org/mds/*', function(req, res, next) { proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
+// noinspection JSUnresolvedFunction
+app.get('/arc/archive.org/mds/*', function(req, res, next) { // noinspection JSUnresolvedVariable
+    proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
+// noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
+// noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-app.get('/archive/*',  function(req, res, next) { _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
+// noinspection JSUnresolvedFunction
+app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
+    _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
+// noinspection JSUnresolvedFunction
+// noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
+// noinspection JSUnresolvedFunction
 app.get('/info', function(req, res) {
     res.status(200).set('Accept-Ranges','bytes').json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
 });
 
+// noinspection JSUnresolvedFunction
 app.get('/testing', function(req, res) {
     sendrange(req, res, 'hello my world'); //TODO say something about configuration etc
 });

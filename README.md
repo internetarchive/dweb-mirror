@@ -54,7 +54,7 @@ Mirror|Stub|One class to rule them all
 
 ### Key Notes
 #### Crawling via Dweb
-The crawler is transport agnostic, it will as happily crawl the collection via IPFS as via HTTP, and does this transparantly 
+The crawler is transport agnostic, it will as happily crawl the collection via IPFS as via HTTP, and does this transparently 
 via the dweb-archive > dweb-objects > dweb-transport libraries. 
 Ideally - though not initially - this could work in a scenario where access to IA is blocked. 
 

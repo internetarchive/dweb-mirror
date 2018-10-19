@@ -2,7 +2,7 @@
 #   '-v ..' maps $HOME/dweb-pv on mac to /pv inside container as a 'Peristent Volume' alternative
 # docker run -it -p 127.0.0.1:5001:5001 -p 8080:8080 -p 4001:4001 -v $HOME/dweb-mirror-pv:/pv --name dwebmirroripfs mitraardron/dweb-mirror-ipfs:latest bash
 
-#TODO try alpne
+#TODO try alpine
 FROM ubuntu:rolling
 LABEL maintainer "Mitra Ardron <mitra@mitra.biz>"
 

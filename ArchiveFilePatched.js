@@ -3,7 +3,6 @@
 const debug = require('debug')('dweb-mirror:ArchiveFile');
 const path = require('path');
 process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
 // Other Archive repos
 const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata
@@ -18,7 +17,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
 
      archiveitem:   Instance of ArchiveItem with or without its item field loaded
      metadata:      If defined is the result of a metadata API call for loading in .item of AF created
-     filename:      Name of an exsting file, (may be multipart e.g. foo/bar)
+     filename:      Name of an existing file, (may be multipart e.g. foo/bar)
      cb(err, archivefile): passed Archive File
      resolves to: archivefile if no cb
     */
@@ -29,7 +28,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         } // Drop through now have archiveitem
         if (archiveitem && filename && !metadata) {
             if (!archiveitem.item) {
-                return archiveitem.fetch_metadata((err, ai) => { // Note will load from cahce if available
+                return archiveitem.fetch_metadata((err, ai) => { // Note will load from cache if available
                     return err ? cb(err)  : this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
                 });
             }
@@ -42,13 +41,14 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         }
     }
 };
+// noinspection JSUnusedGlobalSymbols
 ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     /*
         cb(err, stream): Called with open readable stream from the net.
      */
     if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts
     // noinspection JSIgnoredPromiseFromCall
-    this.p_urls((err, urls) => { if (err) { cb(err) } else {
+    this.urls((err, urls) => { if (err) { cb(err) } else {
         debug("Opening stream for %s/%s from urls", this.itemid, this.metadata.name);
         DwebTransports.createReadStream(urls, opts, cb);
     }});
@@ -60,11 +60,11 @@ ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  
      */
     const itemid = this.itemid; // Not available in events otherwise
     const filename = this.metadata.name;
-    this.p_urls((err, urls) => {
+    this.urls((err, urls) => {
         if (err) {
             cb(err);
         } else {
-            debugname = [itemid, filename].join('/')
+            const debugname = [itemid, filename].join('/');
             MirrorFS.cacheAndOrStream({
                 urls, cacheDirectory, skipfetchfile, wantStream, start, end, debugname,
                 sha1: this.metadata.sha1,
@@ -79,7 +79,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  
             });
         }
     })
-}
+};
 
 
 
