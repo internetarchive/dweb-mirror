@@ -57,28 +57,32 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                 const filepath = path.join(dirpath, itemid + "_meta.json");
                 fs.writeFile(filepath, canonicaljson.stringify(this.item.metadata), (err) => {
                     if (err) {
-                        _err(`Unable to write to ${itemid}`, err, cb);
+                        _err(`Unable to write metadata to ${itemid}`, err, cb);
                     } else {
 
                         const filepath = path.join(dirpath, itemid + "_files.json");
                         fs.writeFile(filepath, canonicaljson.stringify(this.item.files), (err) => {
                             if (err) {
-                                _err(`Unable to write to ${itemid}`, err, cb);
+                                _err(`Unable to write files to ${itemid}`, err, cb);
                             } else {
-                                const filepath = path.join(dirpath, itemid + "_reviews.json");
-                                fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
+                                // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
+                                const filepath = path.join(dirpath, itemid + "_extra.json");
+                                fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
                                     if (err) {
-                                        _err(`Unable to write to ${itemid}`, err, cb);
+                                        _err(`Unable to write extras to ${itemid}`, err, cb);
                                     } else {
-                                        // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
-                                        const filepath = path.join(dirpath, itemid + "_extra.json");
-                                        fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
-                                            if (err) {
-                                                _err(`Unable to write to ${itemid}`, err, cb);
-                                            } else {
-                                                cb(null, this);
-                                            }
-                                        });
+                                        if (typeof this.item.reviews === "undefined") { // Reviews is optional - most things don't have any
+                                            cb(null, this);
+                                        } else {
+                                            const filepath = path.join(dirpath, itemid + "_reviews.json");
+                                            fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
+                                                if (err) {
+                                                    _err(`Unable to write reviews to ${itemid}`, err, cb);
+                                                } else {
+                                                    cb(null, this);
+                                                }
+                                            });
+                                        }
                                     }
                                 })
                             }
@@ -96,49 +100,52 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
         TODO-CACHE allow cacheDirectory to be an array
         cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
     */
-        const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_meta.json`);
-        fs.readFile(filename, (err, metadataJson) => {
+    const itemid = this.itemid;
+    const res = {};
+    function _parse(part, cb) {
+        const filename = path.join(cacheDirectory, itemid, `${itemid}_${part}.json`);
+        fs.readFile(filename, (err, jsonstring) => {
             if (err) {
-                cb(new errors.NoLocalCopy());
+                cb(err);    // Not logging as not really an err for there to be no file, as will read
             } else {
-                const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_files.json`);
-                fs.readFile(filename, (err, filesJson) => {
-                    if (err) {
-                        cb(new errors.NoLocalCopy()); // Will typically drop through and try net
-                    } else {
-                        const files = canonicaljson.parse(filesJson);
-                        const filesCount = files.length;
-
-                        const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_extra.json`);
-                        fs.readFile(filename, (err, extraJson) => {
-                            if (err) {
-                                cb(new errors.NoLocalCopy());
-                            } else {
-                                const extra = canonicaljson.parse(extraJson);
-                                const filename = path.join(cacheDirectory, this.itemid, `${this.itemid}_reviews.json`);
-                                fs.readFile(filename, (err, reviewsJson) => {
-                                    if (err) {
-                                        cb(new errors.NoLocalCopy());
-                                    } else {
-                                        cb(null, {
-                                                //Omitted from standard dweb.archive.org/metadata/foo call as irrelevant and/or unavailable:
-                                                //  Unavailable but would be good: collection_titles
-                                                // Unavailable and not needed: created, d1, d2, dir, item_size, server, uniq, workable_servers
-                                                files: files,
-                                                files_count: filesCount,
-                                                metadata: canonicaljson.parse(metadataJson),
-                                                reviews: canonicaljson.parse(reviewsJson),
-                                                collection_titles: extra.collection_titles,
-                                            });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
+                let o;
+                try {
+                    o = canonicaljson.parse(jsonstring); // No reviver function, which would allow postprocessing
+                } catch (err) {
+                    // It is on the other hand an error for the JSON to be unreadable
+                    debug("Failed to parse json at %s: %s", itemid, err.message);
+                    cb(err);
+                }
+                cb(null, o);
             }
-        });
-    };
+        })
+    }
+
+    _parse("meta", (err, o) => {
+        if (err) {
+            cb(new errors.NoLocalCopy());   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
+        } else {
+            res.metadata = o;
+            _parse("files", (err, o) => {
+                if (err) {
+                    cb(new errors.NoLocalCopy());   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
+                } else {
+                    res.files = o;  // Undefined if failed which would be an error
+                    res.files_count = res.files.length;
+                    _parse("reviews", (err, o) => {
+                        res.reviews = o; // Undefined if failed
+                        _parse("extra", (err, o) => {
+                            // Unavailable on archive.org but there on dweb.archive.org: collection_titles
+                            // Not relevant on dweb.archive.org, d1, d2, dir, item_size, server, uniq, workable_servers
+                            res.collection_titles = o.collection_titles;
+                            cb(null, res);
+                        });
+                    });
+                }
+            });
+        }
+    });
+};
 
 ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     /*
@@ -163,6 +170,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
                 //TODO-CACHE need timing of how long use old metadata
                 this.read({cacheDirectory}, (err, metadata) => {
                     if (err) { // No cached version
+                        console.assert(err.name === 'NoLocalCopy', "Havent thought about errors other than NoLocalCopy", this.itemid, err.message);
                         this._fetch_metadata((err, ai) => { // Process Fjords and _listload
                             if (err) {
                                 cb(err); // Failed to read & failed to fetch
@@ -201,18 +209,23 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
             fs.readFile(filepath, (err, jsonstring) => {
                 let arr;
                 if (!err)
-                if (err || arr.length < ((this.page+1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
                     arr = canonicaljson.parse(jsonstring);  // Must be an array, will be undefined if parses wrong
+                if (err || (typeof arr === "undefined") || arr.length < ((this.page+1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
                     this._fetch_query({}, (err, arr) => { // arr will be matching items (not ArchiveItems), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
                         if (err) {
                             debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
                         } else {
-                            fs.writeFile(filepath, canonicaljson.stringify(this.items), (err) => {
-                                if (err) {
-                                    debug("Failed to write cached members at %s: %s", err.message); cb(err);
-                                } else {
-                                    cb(null, arr); // Return just the new items found by the query
-                                }});
+                            if (typeof arr === "undefined") {
+                                // fetch_query returns undefined if not a collection
+                                cb(null, undefined); // No results return undefined (which is what AI.fetch_query and AI._fetch_query do if no collection instead of empty array)
+                            } else {
+                                fs.writeFile(filepath, canonicaljson.stringify(this.items), (err) => {
+                                    if (err) {
+                                        debug("Failed to write cached members at %s: %s", err.message); cb(err);
+                                    } else {
+                                        cb(null, arr); // Return just the new items found by the query
+                                    }});
+                            }
                         }});
                 } else {
                     debug("Using cached version of query"); // TODO test this its not going to be a common case as should probably load the members when read metadata
