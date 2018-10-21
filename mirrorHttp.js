@@ -207,6 +207,7 @@ app.get('/arc/archive.org/details/:itemid', (req, res) => {
     res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); // and redirect to the html file
 });
 // noinspection JSUnresolvedFunction
+app.get('/arc/archive.org/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
