@@ -20,6 +20,7 @@ Summary of below:
 /arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
+TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
  */
 // External packages
 //Not debugging: express:*
@@ -153,35 +154,56 @@ function sendrange(req, res, val) {
     }
 }
 
+function temp(req, res, next) {
+
+    console.log(req);
+    next();
+}
 
 function streamArchiveFile(req, res, next) {
-    const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
-    const itemid = req.params['itemid'];
-    debug('Sending ArchiveFile %s/%s', itemid, filename);
-    loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
-        ArchiveFile.p_new({itemid: itemid, archiveitem, filename}, (err, af) => {
-            if (err) {
-                debug("ArchiveFile.p_new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
-                res.status(404).send(err.message);
-            } else {
-                res.status(req.streamOpts ? 206 : 200);
-                res.set('Accept-ranges', 'bytes');
-                if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size)-1}/${af.metadata.size}`);
-                // noinspection JSUnresolvedVariable
-                const opts = Object.assign({}, req.streamOpts, {cacheDirectory: config.directory, wantStream: true});
-                // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
-                af.cacheAndOrStream(opts, (err, s) => {
-                    if (err) { next(err); }
-                    else {
-                        s
-                            .pipe(ParallelStream.log(m => `${itemid}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {name: "crsdata", objectMode: false})) //Just debugging stream on way in
-                            .pipe(res);
-                    }
-                });
-                //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
-            }
+    try {
+        const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
+        const itemid = req.params['itemid'];
+        debug('Sending ArchiveFile %s/%s', itemid, filename);
+        loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
+            ArchiveFile.p_new({itemid: itemid, archiveitem, filename}, (err, af) => {
+                if (err) {
+                    debug("ArchiveFile.p_new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
+                    res.status(404).send(err.message);
+                } else {
+                    res.status(req.streamOpts ? 206 : 200);
+                    res.set('Accept-ranges', 'bytes');
+                    if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size) - 1}/${af.metadata.size}`);
+                    // noinspection JSUnresolvedVariable
+                    const opts = Object.assign({}, req.streamOpts, {
+                        cacheDirectory: config.directory,
+                        wantStream: true
+                    });
+                    res.set("Content-Type", af.mimetype());   // Not sure what happens if doesn't find it.
+
+                    // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
+                    af.cacheAndOrStream(opts, (err, s) => {
+                        if (err) {
+                            next(err);
+                        }
+                        else {
+                            s
+                                .pipe(ParallelStream.log(m => `${itemid}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {
+                                    name: "crsdata",
+                                    objectMode: false
+                                })) //Just debugging stream on way in
+                                .pipe(res);
+                        }
+                    });
+                    debug("XXX=completed");
+                    //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
+                }
+            });
         });
-    });
+    } catch (err) {
+        debug('ERROR caught unhandled error in streamArchiveFile for %s: %s', req.url, err.message);
+        next(err);
+    }
 }
 
 
