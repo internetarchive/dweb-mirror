@@ -49,8 +49,9 @@ class Mirror {
         try {
             // Incremental development building and testing components to path in README.md
             await DwebTransports.p_connect({
-                    transports: ["HTTP", "WEBTORRENT", "IPFS"],
-                    webtorrent: {tracker: { wrtc }},
+                    //transports: ["HTTP", "WEBTORRENT", "IPFS"],
+                    transports: ["HTTP"],
+                webtorrent: {tracker: { wrtc }},
                 });
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");

@@ -246,7 +246,8 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
         }
     })
 });
-
+app.get('/arc/archive.org/metadata/*', function(req, res, next) {
+    proxyUrl(req, res, next, config.archiveorg.metadata,{"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
@@ -273,7 +274,10 @@ app.get('/testing', function(req, res) {
     sendrange(req, res, 'hello my world'); //TODO say something about configuration etc
 });
 
-
+app.use((req,res,next) => {
+    debug("FAILING: %s",req.url);
+    next();
+})
 
 // noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
