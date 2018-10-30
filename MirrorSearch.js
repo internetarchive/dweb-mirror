@@ -57,8 +57,15 @@ class MirrorSearch extends ArchiveItem {
                 if (self.page < maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
                     self.page++;
                     // Should fetch next page of search, and metadata on first time, note appends items to item, but just passes next page of results to stream
-                    self.fetch_query({skipCache}) //TransportError (or CodingError) if no urls to fetch
-                        .then((docs) => {
+                    self.fetch_query({skipCache}, (err, docs) => {
+                        if (err) {  //TransportError (or CodingError) if no urls to fetch
+                            console.error("Error caught in streamOnePage.fetch_query", self.itemid, err);
+                            // noinspection JSUnresolvedFunction
+                            self.streaming.end();
+                            if (cb) { cb(); } // Intentionally not passing error on
+                            //Comment above and uncomment below to make it stop at this point so you can take a look
+                            //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
+                        } else {
                             debug("Collection %s page %s retrieved %d items", self.itemid, self.page, docs.length );
                             const ediblearr = docs; // Copy it, in case it is needed by collection
                             _pushbackablewrite();
@@ -76,22 +83,15 @@ class MirrorSearch extends ArchiveItem {
                                         }
                                     } //while
                                     // Notice the return above will exit if sees backpressure
-                                    streamOnePage();    // Outer recursive loop on searching once pushed all first page
+                                    streamOnePage();    // Outer recursive loop on searching once pushed all first page = this will call cb on the else case or error
                                 } catch(err) {
                                     console.error("Caught in streamOnePage", err);
                                     // noinspection JSUnresolvedFunction
                                     self.streaming.destroy(new Error(`Failure in MirrorSearch.streamOnePage: ${err.message}`))
                                 }
                             }
-                        })
-                        .catch((err) => {
-                            console.error("Caught in streamOnePage.fetch_query", self.itemid, err);
-                            // noinspection JSUnresolvedFunction
-                            self.streaming.end();
-                            if (cb) { cb(); }
-                            //Comment above and uncomment below to make it stop at this point so you can take a look
-                            //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
-                        });
+                        }
+                    })
                 } else { // Completed loop and each page has fully written to streaming - cache will have been written as searching
                     debug("Searches of %s done", self.itemid);
                     // noinspection JSUnresolvedFunction

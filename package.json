@@ -14,7 +14,7 @@
     "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git#mirror",
     "@stratumn/canonicaljson": "^1.0.2",
     "debug": "^4.1.0",
-    "express": "latest",
+    "express": "^4.16.4",
     "ipfs-api": "^24.0.2",
     "level": "^4.0.0",
     "libsodium-wrappers": "^0.7.3",

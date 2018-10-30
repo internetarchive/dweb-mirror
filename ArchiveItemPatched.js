@@ -207,11 +207,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         if (cacheDirectory && !skipCache) {
             const filepath = path.join(cacheDirectory, this.itemid, this.itemid + "_members.json");
             fs.readFile(filepath, (err, jsonstring) => {
-                let arr;
                 if (!err)
-                    arr = canonicaljson.parse(jsonstring);  // Must be an array, will be undefined if parses wrong
-                if (err || (typeof arr === "undefined") || arr.length < ((this.page+1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
-                    this._fetch_query({}, (err, arr) => { // arr will be matching items (not ArchiveItems), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
+                    this.items = canonicaljson.parse(jsonstring);  // Must be an array, will be undefined if parses wrong
+                if (err || (typeof this.items === "undefined") || this.items.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
+                    this._fetch_query(opts, (err, arr) => { // arr will be matching items (not ArchiveItems), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
                         if (err) {
                             debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
                         } else {
@@ -219,6 +218,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                                 // fetch_query returns undefined if not a collection
                                 cb(null, undefined); // No results return undefined (which is what AI.fetch_query and AI._fetch_query do if no collection instead of empty array)
                             } else {
+                                // TODO fix case where this will fail if search on page=1 then page=3 but will still right as 2 pages - just dont write in this case
                                 fs.writeFile(filepath, canonicaljson.stringify(this.items), (err) => {
                                     if (err) {
                                         debug("Failed to write cached members at %s: %s", err.message); cb(err);
@@ -229,14 +229,13 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                         }});
                 } else {
                     debug("Using cached version of query"); // TODO test this its not going to be a common case as should probably load the members when read metadata
-                    let newitems = arr.slice((this.page - 1) * this.limit, this.page * this.limit); // See copy of some of this logic in dweb-mirror.MirrorCollection.fetch_query
-                    this.items = this.items ? arr : newitems; // Note these are just objects, not ArchiveItems
+                    let newitems = this.items.slice((this.page - 1) * this.limit, this.page * this.limit); // See copy of some of this logic in dweb-mirror.MirrorCollection.fetch_query
                     // Note that the info in _member.json is less than in Search, so may break some code unless turn into ArchiveItems
                     // Note this does NOT support sort, there isnt enough info in members.json to do that
-                    cb(null, newitems);
+                    cb(null, opts.wantFullResp ? this._wrapMembersInResponse(newitems) : newitems);
                 }});
         } else {
-            this._fetch_query({}, cb); // Cache free fetch (like un-monkey-patched fetch_query
+            this._fetch_query(opts, cb); // Cache free fetch (like un-monkey-patched fetch_query
         }
     }
 };
