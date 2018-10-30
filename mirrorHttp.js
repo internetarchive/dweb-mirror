@@ -235,15 +235,19 @@ function streamThumbnail(req, res, next) {
     const itemid = req.params['itemid'];
     debug('Sending Thumbnail for %s', itemid);
     loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
-        // noinspection JSUnresolvedVariable
-        archiveitem.saveThumbnail({cacheDirectory: config.directory, wantStream: true}, (err, s) => {
-            if (err) {
-                debug("item %s.saveThumbnail failed: %s", itemid, err.message);
-                next(err);
-            } else {
-                s.pipe(res);
-            }
-        });
+        if (err) { // Failed to load itemid
+            next(err);
+        } else {
+            // noinspection JSUnresolvedVariable
+            archiveitem.saveThumbnail({cacheDirectory: config.directory, wantStream: true}, (err, s) => {
+                if (err) {
+                    debug("item %s.saveThumbnail failed: %s", itemid, err.message);
+                    next(err);
+                } else {
+                    s.pipe(res);
+                }
+            });
+        }
     });
 }
 

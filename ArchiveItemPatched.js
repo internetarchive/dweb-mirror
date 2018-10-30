@@ -10,6 +10,7 @@ const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
+const ArchiveMember = require('@internetarchive/dweb-archive/ArchiveMember');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 const errors = require('./Errors');
@@ -195,6 +196,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
 
 ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
+        cb(err, [ArchiveMember])
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache; // Set if should ignore cache
@@ -204,13 +206,13 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         //TODO-CACHE-AGING
         // noinspection JSUnresolvedVariable
         const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
-        if (cacheDirectory && !skipCache) {
+        if (cacheDirectory && !skipCache && this.itemid) { //TODO-SEARCH cache results of searches somewhere, maybe as a saved-search type pseudo-item with a members file.
             const filepath = path.join(cacheDirectory, this.itemid, this.itemid + "_members.json");
             fs.readFile(filepath, (err, jsonstring) => {
                 if (!err)
-                    this.items = canonicaljson.parse(jsonstring);  // Must be an array, will be undefined if parses wrong
-                if (err || (typeof this.items === "undefined") || this.items.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
-                    this._fetch_query(opts, (err, arr) => { // arr will be matching items (not ArchiveItems), fetch_query.items will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
+                    this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMember(o));  // Must be an array, will be undefined if parses wrong
+                if (err || (typeof this.members === "undefined") || this.members.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
+                    this._fetch_query(opts, (err, arr) => { // arr will be matching ArchiveMembers, fetch_query.members will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
                         if (err) {
                             debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
                         } else {
@@ -219,20 +221,19 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                                 cb(null, undefined); // No results return undefined (which is what AI.fetch_query and AI._fetch_query do if no collection instead of empty array)
                             } else {
                                 // TODO fix case where this will fail if search on page=1 then page=3 but will still right as 2 pages - just dont write in this case
-                                fs.writeFile(filepath, canonicaljson.stringify(this.items), (err) => {
+                                fs.writeFile(filepath, canonicaljson.stringify(this.members), (err) => { //TODO-REFACTOR-MEMBERS make sure stringify works on this.members when its [ArchiveMember]
                                     if (err) {
                                         debug("Failed to write cached members at %s: %s", err.message); cb(err);
                                     } else {
-                                        cb(null, arr); // Return just the new items found by the query
+                                        cb(null, arr); // Return just the new members found by the query
                                     }});
                             }
                         }});
                 } else {
                     debug("Using cached version of query"); // TODO test this its not going to be a common case as should probably load the members when read metadata
-                    let newitems = this.items.slice((this.page - 1) * this.limit, this.page * this.limit); // See copy of some of this logic in dweb-mirror.MirrorCollection.fetch_query
-                    // Note that the info in _member.json is less than in Search, so may break some code unless turn into ArchiveItems
+                    let newmembers = this.members.slice((this.page - 1) * this.limit, this.page * this.limit); // See copy of some of this logic in dweb-mirror.MirrorCollection.fetch_query
                     // Note this does NOT support sort, there isnt enough info in members.json to do that
-                    cb(null, opts.wantFullResp ? this._wrapMembersInResponse(newitems) : newitems);
+                    cb(null, opts.wantFullResp ? this._wrapMembersInResponse(newmembers) : newmembers);
                 }});
         } else {
             this._fetch_query(opts, cb); // Cache free fetch (like un-monkey-patched fetch_query
@@ -313,7 +314,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         }
     });
 };
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) { //TODO-REFACTOR-MEMBERS consider related
     /*
     Save the related items to the cache, TODO-CACHE-TIMING
     cb(err, obj)  Callback on completion with related items object

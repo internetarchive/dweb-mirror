@@ -105,7 +105,7 @@ class Mirror {
                 .map((name) => new MirrorCollection({itemid: name}), {name: 'Create MirrorCollections popular top'} )  // Initialize collection - doesnt get metadata or search results
                 .map((collection, cb) => collection.fetch_metadata({skipCache: true},cb),{name: "Collection fetchMeta popular top", async:true, paralleloptions} ) // Collections with metadata fetched
                 .map((collection) => collection.streamResults({limit: 300, maxpages:1, skipCache: true}), {name: "Collection streamResults popular top", paralleloptions}) //, cacheDirectory: config.directory}))
-                // Stream of arrays of Archive Items (mixed)
+                // Stream of arrays of ArchiveMembers (mixed)
                 .flatten({name: '1 flatten arrays of AI'})
                 .filter((zz) => zz.mediatype === "collection", {name: '1 filter by collection'})
                 .map((xx) => xx.identifier, {name: '1 identifier'})

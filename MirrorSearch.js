@@ -56,8 +56,8 @@ class MirrorSearch extends ArchiveItem {
                 debug("Searching %s page %d", self.itemid, self.page);
                 if (self.page < maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
                     self.page++;
-                    // Should fetch next page of search, and metadata on first time, note appends items to item, but just passes next page of results to stream
-                    self.fetch_query({skipCache}, (err, docs) => {
+                    // Should fetch next page of search, and metadata on first time, note appends members to .members, but just passes next page of results to stream
+                    self.fetch_query({skipCache}, (err, archiveMembers) => {
                         if (err) {  //TransportError (or CodingError) if no urls to fetch
                             console.error("Error caught in streamOnePage.fetch_query", self.itemid, err);
                             // noinspection JSUnresolvedFunction
@@ -66,8 +66,8 @@ class MirrorSearch extends ArchiveItem {
                             //Comment above and uncomment below to make it stop at this point so you can take a look
                             //self.streaming.destroy(new Error(`Failure in ${through.name}.fetch_query: ${err.message}`))
                         } else {
-                            debug("Collection %s page %s retrieved %d items", self.itemid, self.page, docs.length );
-                            const ediblearr = docs; // Copy it, in case it is needed by collection
+                            debug("Collection %s page %s retrieved %d members", self.itemid, self.page, archiveMembers.length );
+                            const ediblearr = archiveMembers; // Copy it, in case it is needed by collection
                             _pushbackablewrite();
                             function _pushbackablewrite() { // Asynchronous, recursable
                                 // Note consumes eatable array from parent
@@ -76,7 +76,7 @@ class MirrorSearch extends ArchiveItem {
                                     while (typeof(i = ediblearr.shift()) !== "undefined") {
                                         // noinspection JSUnresolvedFunction
                                         if (!self.streaming.write(i)) { // It still got written, but there is pushback
-                                            self.streaming.debug("Pushing back on array, %d items left", ediblearr.length);
+                                            self.streaming.debug("Pushing back on array, %d members left", ediblearr.length);
                                             // noinspection JSUnresolvedFunction
                                             self.streaming.once("drain", _pushbackablewrite);
                                             return; // Without finishing
