@@ -73,15 +73,15 @@ app.use((req, res, next) => {
 });
 
 
-function loadedAI({item=undefined, itemid=undefined}, cb) {
+function loadedAI({itemid=undefined, metaapi=undefined}={}, cb) {
     // Get an ArchiveItem, from net or cache
-    new ArchiveItem({itemid, item})
+    new ArchiveItem({itemid, metaapi})
         .fetch_metadata((err, ai) => {
         if (err) {
             debug("loadedAI: Unable to retrieve metadata for %s", itemid);
             cb(err);
         } else {
-            debug("loadedAI: Retrieved metadata for %s", ai.item.metadata.identifier); // Combined data metadata/files/reviews
+            debug("loadedAI: Retrieved metadata for %s", ai.metadata.identifier); // Combined data metadata/files/reviews
             cb(null, ai);
         }
     });
@@ -220,14 +220,22 @@ function streamQuery(req, res, next) {
     o.limit = parseInt(req.query.rows, 10);
     o.page=parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
     o.and=req.query.and; // I dont believe this is used anywhere
-    o.fetch_query({wantFullResp: true}, (err, resp) => {
+    o.fetch_metadata((err, resp) => {
         if (err) {
-            debug('streamQuery for q="%s" failed with %s', o.query, err.message );
+            debug('streamQuery couldnt fetch metadata for %s',o.itemid);
             next(err);
         } else {
-            res.json(resp);
+            o.fetch_query({wantFullResp: true}, (err, resp) => {
+                if (err) {
+                    debug('streamQuery for q="%s" failed with %s', o.query, err.message );
+                    next(err);
+                } else {
+                    res.json(resp);
+                }
+            });
         }
     });
+
 }
 
 
@@ -272,7 +280,7 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
         if (err) {
             next(err);
         } else {
-            res.json(ai.item);
+            res.json(ai.exportMetadataAPI());
         }
     })
 });

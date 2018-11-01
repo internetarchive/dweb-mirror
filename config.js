@@ -14,8 +14,8 @@ const config = new MirrorConfig({
     },
     limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
     search: {
-        itemsperpage: 20, // Optimum is probably around 100,
-        pagespersearch: 2, // If want > 100 files per collection then increase this number
+        itemsperpage: 100, // Optimum is probably around 100,
+        pagespersearch: 10, // If want > 100 files per collection then increase this number
     },
     file: {
         maxfilesize: 100000000
@@ -28,6 +28,7 @@ const config = new MirrorConfig({
         //"prelinger": {},
         "fav-mitra": {},
         //"commute": {},
+        //"fav-brewster": {},
     },
     apps: {
         http: {

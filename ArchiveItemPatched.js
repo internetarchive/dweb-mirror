@@ -9,8 +9,8 @@ const path = require('path');
 const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
-const ArchiveItem = require('@internetarchive/dweb-archive/ArchiveItem');
-const ArchiveMember = require('@internetarchive/dweb-archive/ArchiveMember');
+const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
+const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 const errors = require('./Errors');
@@ -30,7 +30,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
     const dirpath = this._dirpath(cacheDirectory);
 
-    if (!this.item) {
+    if (!this.metadata) {
         // noinspection JSUnusedLocalSymbols
         this.fetch_metadata((err, data) => {
            if (err) {
@@ -56,27 +56,27 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                 _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
             } else {
                 const filepath = path.join(dirpath, itemid + "_meta.json");
-                fs.writeFile(filepath, canonicaljson.stringify(this.item.metadata), (err) => {
+                fs.writeFile(filepath, canonicaljson.stringify(this.metadata), (err) => {
                     if (err) {
                         _err(`Unable to write metadata to ${itemid}`, err, cb);
                     } else {
 
                         const filepath = path.join(dirpath, itemid + "_files.json");
-                        fs.writeFile(filepath, canonicaljson.stringify(this.item.files), (err) => {
+                        fs.writeFile(filepath, canonicaljson.stringify(this.exportFiles()), (err) => {
                             if (err) {
                                 _err(`Unable to write files to ${itemid}`, err, cb);
                             } else {
                                 // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
                                 const filepath = path.join(dirpath, itemid + "_extra.json");
-                                fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.item.collection_titles}), (err) => {
+                                fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.collection_titles}), (err) => {
                                     if (err) {
                                         _err(`Unable to write extras to ${itemid}`, err, cb);
                                     } else {
-                                        if (typeof this.item.reviews === "undefined") { // Reviews is optional - most things don't have any
+                                        if (typeof this.reviews === "undefined") { // Reviews is optional - most things don't have any
                                             cb(null, this);
                                         } else {
                                             const filepath = path.join(dirpath, itemid + "_reviews.json");
-                                            fs.writeFile(filepath, canonicaljson.stringify(this.item.reviews), (err) => {
+                                            fs.writeFile(filepath, canonicaljson.stringify(this.reviews), (err) => {
                                                 if (err) {
                                                     _err(`Unable to write reviews to ${itemid}`, err, cb);
                                                 } else {
@@ -114,7 +114,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                     o = canonicaljson.parse(jsonstring); // No reviver function, which would allow postprocessing
                 } catch (err) {
                     // It is on the other hand an error for the JSON to be unreadable
-                    debug("Failed to parse json at %s: %s", itemid, err.message);
+                    debug("Failed to parse json at %s: part %s %s", itemid, part, err.message);
                     cb(err);
                 }
                 cb(null, o);
@@ -166,13 +166,13 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
     function f(cb) {
-        if (this.itemid && !this.item) { // Check haven't already loaded or fetched metadata
+        if (this.itemid && !this.metadata) { // Check haven't already loaded or fetched metadata
             if (cacheDirectory && !skipCache) { // We have a cache directory to look in
                 //TODO-CACHE need timing of how long use old metadata
                 this.read({cacheDirectory}, (err, metadata) => {
                     if (err) { // No cached version
                         console.assert(err.name === 'NoLocalCopy', "Havent thought about errors other than NoLocalCopy", this.itemid, err.message);
-                        this._fetch_metadata((err, ai) => { // Process Fjords and _listload
+                        this._fetch_metadata((err, ai) => { // Process Fjords and load .metadata and .files etc
                             if (err) {
                                 cb(err); // Failed to read & failed to fetch
                             } else {
@@ -180,13 +180,12 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
                             }
                         });    // resolves to this
                     } else {    // Local read succeeded.
-                        this.item = metadata; // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-                        this._listLoad();
+                        this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
                         cb(null, this);
                     }
                 })
             } else { // No cache Directory or skipCache telling us not to use it for read or save
-                this._fetch_metadata(cb);
+                this._fetch_metadata(cb); // Process Fjords and load .metadata and .files etc
             }
         } else {
             cb(null, this);
@@ -212,7 +211,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                 if (!err)
                     this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMember(o));  // Must be an array, will be undefined if parses wrong
                 if (err || (typeof this.members === "undefined") || this.members.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
-                    this._fetch_query(opts, (err, arr) => { // arr will be matching ArchiveMembers, fetch_query.members will have the full set to this point (note _list is the files for the item, not the ArchiveItems for the search)
+                    this._fetch_query(opts, (err, arr) => { // arr will be matching ArchiveMembers, fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
                         if (err) {
                             debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
                         } else {
@@ -221,7 +220,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                                 cb(null, undefined); // No results return undefined (which is what AI.fetch_query and AI._fetch_query do if no collection instead of empty array)
                             } else {
                                 // TODO fix case where this will fail if search on page=1 then page=3 but will still right as 2 pages - just dont write in this case
-                                fs.writeFile(filepath, canonicaljson.stringify(this.members), (err) => { //TODO-REFACTOR-MEMBERS make sure stringify works on this.members when its [ArchiveMember]
+                                fs.writeFile(filepath, canonicaljson.stringify(this.members), (err) => {
                                     if (err) {
                                         debug("Failed to write cached members at %s: %s", err.message); cb(err);
                                     } else {
@@ -251,7 +250,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     */
 
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
-    const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     const dirpath = this._dirpath(cacheDirectory);
 
     function _err(msg, err, cb) {
@@ -267,7 +266,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
             _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
         } else {
             const self = this; // this not available inside recursable or probably in writable('on)
-            const thumbnailFiles = this._list.filter(af =>
+            const thumbnailFiles = this.files.filter(af =>
                 af.metadata.name === "__ia_thumb.jpg"
                 || af.metadata.name.endsWith("_itemimage.jpg")
             );
@@ -296,12 +295,12 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                 // noinspection JSUnresolvedVariable
                 const servicesurl = config.archiveorg.servicesImg + this.itemid;
                 // Include direct link to services
-                if (!this.item.metadata.thumbnaillinks.includes(servicesurl)) this.item.metadata.thumbnaillinks.push(servicesurl);
+                if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
 
                 const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                 const debugname = itemid+"/__ia_thumb.jpg";
                 MirrorFS.cacheAndOrStream({cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
-                    urls: this.item.metadata.thumbnaillinks,
+                    urls: this.metadata.thumbnaillinks,
                     }, (err, streamOrUndefined) => {
                         if (err) {
                             debug("Unable to cacheOrStream %s",debugname); cb(err);
@@ -314,13 +313,13 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         }
     });
 };
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) { //TODO-REFACTOR-MEMBERS consider related
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) { //TODO-REFACTOR-RELATED consider related
     /*
     Save the related items to the cache, TODO-CACHE-TIMING
     cb(err, obj)  Callback on completion with related items object
     */
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
-    const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+    const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     // noinspection JSUnresolvedVariable
     MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,
         urls: config.archiveorg.related + "/" + itemid,
@@ -332,21 +331,21 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
 ArchiveItem.prototype.minimumForUI = function() {
     // This will be tuned for different mediatype etc}
     // Note mediatype will have been retrieved and may have been rewritten by processMetadataFjords from "education"
-    console.assert(this._list, "minimumForUI assumes _list already set up");
+    console.assert(this.files, "minimumForUI assumes .files already set up");
     const minimumFiles = [];
-    const thumbnailFiles = this._list.filter( af =>
+    const thumbnailFiles = this.files.filter( af =>
         af.metadata.name === "__ia_thumb.jpg"
         || af.metadata.name.endsWith("_itemimage.jpg")
     );
     // Note thumbnail is also explicitly saved by saveThumbnail
     minimumFiles.push(...thumbnailFiles);
-    switch (this.item.metadata.mediatype) {
+    switch (this.metadata.mediatype) {
         case "collection": //TODO-THUMBNAILS
             break;
         case "texts": //TODO-THUMBNAILS for text - texts use the Text Reader anyway so dont know which files needed
             break;
         case "image":
-            minimumFiles.push(this._list.find(fi => fi.playable("image"))); // First playable image is all we need
+            minimumFiles.push(this.files.find(fi => fi.playable("image"))); // First playable image is all we need
             break;
         case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
         case "etree":   // Generally treated same as audio, at least for now

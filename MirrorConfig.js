@@ -1,5 +1,5 @@
-const ArchiveFile  = require("@internetarchive/dweb-archive/ArchiveFile");
-const ArchiveItem  = require("@internetarchive/dweb-archive/ArchiveItem");
+const ArchiveFile  = require("@internetarchive/dweb-archivecontroller/ArchiveFile");
+const ArchiveItem  = require("@internetarchive/dweb-archivecontroller/ArchiveItem");
 
 class MirrorConfig {
     /*
@@ -37,7 +37,7 @@ class MirrorConfig {
             if (this.item["minimumForUi"]) {
                 return o.minimumForUI();
             } else {
-                return o._list;
+                return o.files;
             }
         } else {
             console.error("Invalid type to MirrorConfig.filterlist", o);

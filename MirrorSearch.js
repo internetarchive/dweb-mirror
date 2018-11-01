@@ -3,7 +3,7 @@ const ParallelStream = require('parallel-streams');
 const debug = require('debug')('dweb-mirror:MirrorSearch');
 
 class MirrorSearch extends ArchiveItem {
-    constructor(options) {
+    constructor({itemid=undefined, metaapi=undefined, query=undefined, sort="-downloads"}={}) {
         /*
         Inherited:
         itemid:     the item to fetch - required if "item" not specified
@@ -12,16 +12,10 @@ class MirrorSearch extends ArchiveItem {
         Local - stored and deleted
         query:      Search query (will be specific to collection in MirrorCollection subclass
         sort:  ("-downloads") Sort order (
-        other options   Stored on this.options
         */
-        super(options); // Use and delete item and itemid
-        // noinspection JSUnusedGlobalSymbols
-        this.query = options.query; // Used by ArchiveItem.fetch
-        delete options.query;
-        // noinspection JSUnusedGlobalSymbols
-        this.sort = options.sort || "-downloads";   // Used by ArchiveItem.fetch
-        delete options.sort;
-        this.options = options;
+        super({itemid, metaapi}); // Use and delete item and itemid
+        this.query = query;
+        this.sort = sort;
     }
     streamResults(options={}, cb) {
         /* Crawl a search or collection, pass output as stream of the search result objects (can be turned into ArchiveFiles

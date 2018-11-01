@@ -4,7 +4,7 @@ const debug = require('debug')('dweb-mirror:ArchiveFile');
 const path = require('path');
 process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 // Other Archive repos
-const ArchiveFile = require('@internetarchive/dweb-archive/ArchiveFile');
+const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata
 // Local files
 const errors = require('./Errors.js');
@@ -16,7 +16,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
      Process is itemid > item + filename > fileMetadata
 
      archiveitem:   Instance of ArchiveItem with or without its item field loaded
-     metadata:      If defined is the result of a metadata API call for loading in .item of AF created
+     metadata:      If defined is the result of a metadata API call for loading in AF.metadata
      filename:      Name of an existing file, (may be multipart e.g. foo/bar)
      cb(err, archivefile): passed Archive File
      resolves to: archivefile if no cb
@@ -27,13 +27,12 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
             archiveitem = new ArchiveItem({itemid});
         } // Drop through now have archiveitem
         if (archiveitem && filename && !metadata) {
-            if (!archiveitem.item) {
-                return archiveitem.fetch_metadata((err, ai) => { // Note will load from cache if available
+            if (!archiveitem.metadata) {
+                return archiveitem.fetch_metadata((err, ai) => { // Note will load from cache if available and load ai.metadata and ai.files
                     return err ? cb(err)  : this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
                 });
             }
-            archiveitem._listLoad(); // Load an array of ArchiveFile if not already loaded
-            const af = archiveitem._list.find(af => af.metadata.name === filename); // af, (undefined if not found)
+            const af = archiveitem.files.find(af => af.metadata.name === filename); // af, (undefined if not found)
             return af ? cb(null, af) : cb(new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`));
         }
         if (metadata) {
