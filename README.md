@@ -1,6 +1,12 @@
 # Internet Archive - Mirror project
 
+Lives on github at:
+[dweb-mirror](https://github.com/internetarchive/dweb-mirror);
+[source](https://github.com/internetarchive/dweb-mirror);
+[issues](https://github.com/internetarchive/dweb-mirror/issues);
+
 This project is part of our larger Dweb project, see also: 
+[dweb-universal](https://github.com/internetarchive/dweb-universal);
 [dweb-transport](https://github.com/internetarchive/dweb-transport);
 [dweb-objects](https://github.com/internetarchive/dweb-objects);
 [dweb-archive](https://github.com/internetarchive/dweb-archive);
