@@ -15,6 +15,7 @@ DONE file, need pass on
 
 
 Summary of below:
+TODO update this summary
 /info:  config as JSON
 /arc/archive.org/metadata/:itemid > DIR/:itemid/(_meta,_files,_reviews) || (dweb:/arc/archive.org/metadata/:itemid > Transports >cache) > { files, files_count, metadata, reviews }
 /arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
@@ -61,9 +62,11 @@ DwebTransports.p_connect({
 // noinspection JSUnresolvedVariable
 app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
 
+//app.get('*/', (req, res, next) => { req.url = req.params[0]; next(); } // Strip trailing '/'
 app.use((req, res, next) => {
-    /* Turn the range headers on a req into an options parameter can use in streams */
+    // Pre Munging - applies to all queries
     debug("STARTING: %s",req.url);
+    /* Turn the range headers on a req into an options parameter can use in streams */
     const range = req.range(Infinity);
     if (range && range[0] && range.type === "bytes"){
         req.streamOpts = {start: range[0].start, end: range[0].end};
@@ -259,8 +262,9 @@ function streamThumbnail(req, res, next) {
     });
 }
 
+app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);
-
+app.get('/arc/archive.org/details', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/details/:itemid', (req, res) => {
     req.query.item = req.params['itemid']; // Move itemid into query
