@@ -46,6 +46,7 @@ const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadat
 const MirrorCollection = require('./MirrorCollection');
 const MirrorSearch = require('./MirrorSearch');
 
+//TODO-HTTP check configuration - presence of config.archiveui.directory and that in it is dweb-{transports,objects}-bundle.js
 
 const app = express();
 // noinspection JSUnresolvedVariable
