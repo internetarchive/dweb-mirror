@@ -1,4 +1,5 @@
 const MirrorConfig = require('./MirrorConfig');
+const MirrorFS = require('./MirrorFS');
 
 //TODO add concept of app specific overrides and default set
 const config = new MirrorConfig({
@@ -10,7 +11,7 @@ const config = new MirrorConfig({
     skipfetchfile: false, // Enable to stop it actually fetching the file - useful when testing
     directory: "/Users/mitra/temp/mirrored",    // Used by mirroring and mirrorHTTP
     archiveui: {
-        directory: "/Users/mitra/git/dweb-archive/dist", // TODO - move to process.cwd()+"/node_modules/dweb-archive/dist"
+        directory: MirrorFS.firstExisting("../dweb-archive/dist", "node_modules/dweb-archive/dist",  "/Users/mitra/git/dweb-archive/dist"),
     },
     limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
     search: {
