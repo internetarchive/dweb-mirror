@@ -22,6 +22,11 @@ cd dweb-transport
 
 # install the dependencies including dweb-transports and dweb-objects
 npm install  
+
+# If you want the node to do IPFS then install from ...
+# TODO copy instructions from gitlab/dweb
+
+
 ```
 
 ## Testing

@@ -276,6 +276,8 @@ app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
+app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
+    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
