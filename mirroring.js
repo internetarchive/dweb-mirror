@@ -44,6 +44,7 @@ class Mirror {
         })
     }
     static async p_dev_mirror() {
+        //TODO-MIRROR check for presence of metadata directory, and fail gracefully.
         const paralleloptions = {limit: 5, silentwait: true};
 
         try {

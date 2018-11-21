@@ -16,21 +16,36 @@ Its goal is to allow people to mirror one or more collections (or individual ite
 to their own disks, and then to serve them up via dweb tools such as IPFS or WebTorrent.
 
 ## Installation
-```
-git clone https://git@github.com/internetarchive/dweb-mirror.git
-cd dweb-transport
+ 
+At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-# install the dependencies including dweb-transports and dweb-objects
-npm install  
-
-# If you want the node to do IPFS then install from ...
-# TODO copy instructions from gitlab/dweb
-
-
-```
+* Make sure have current version of node - seen issues with older ones - `https://nodejs.org`
+* `git clone “https://github.com/internetarchive/dweb-mirror”`
+* `npm install`
+* `git clone “https://github.com/internetarchive/dweb-archive”`
+* `npm install`
+* Check you have the desired links for bundles in dweb-archive/dist
+  * Either `cd dweb-archive && ln -s ./node_modules/@internetarchive/dweb-objects/dist/dweb-objects-bundle.js dist`
+  * OR if you plan on developing on dweb-objects install it and `ln -s ../dweb-objects/dist/dweb-objects-bundle.js dist` 
+  * Same for dweb-transports 
+* Edit dweb-mirror/config.js … **this location may change**
+  * `config.js/directory`  should point at where you want the cache to store files 
+    * Make sure this directory exists - TODO-MIRROR make it fail informatively if it doesn’t 
+  * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned.
+    * collections should be a dictionary of collections to download,  collections: `{ “fav-yourusername”: {} }` is a good simple example
 
 ## Testing
-For now (this may change) run `node ./mirroring.js`
+Check mirroring with `cd dweb-mirror && node ./mirroring.js` then check in the cache directory
+
+* Run `cd dweb-mirror && node ./mirrorHttp.js &` to start the HTTP server
+* open `http://localhost:4244/arc/archive.org` in the browser should see the Archive URL
+If you don’t get a Archive UI then look at the server log (in console) to see for any “FAILING” log lines which indicate a problem
+
+Expect to see errors in the Browser log for 
+* http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
+* `Source Map URL: jquery-1.10.2.min.map` until we figure out how to build these min.maps 
+
+**TODO-INSTALLATION** - note currently this isn't working, still figuring out if install, or general, bugs
 
 ## Overall design
 
