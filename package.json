@@ -7,8 +7,9 @@
   "bugs": {
     "url": "https://github.com/internetarchive/dweb-mirror/issues"
   },
-  "name": "dweb-mirror",
+  "name": "@internetarchive/dweb-mirror",
   "dependencies": {
+    "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#master",
     "@internetarchive/dweb-archivecontroller": "git+https://git@github.com/internetarchive/dweb-archivecontroller.git#master",
     "@internetarchive/dweb-objects": "^0.1.10",
     "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git#mirror",
