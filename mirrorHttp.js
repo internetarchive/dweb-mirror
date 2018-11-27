@@ -256,6 +256,8 @@ function streamThumbnail(req, res, next) {
                     debug("item %s.saveThumbnail failed: %s", itemid, err.message);
                     next(err);
                 } else {
+                    res.status(200); // Assume error if dont get here
+                    res.set({"Content-Type": "image/jpeg; charset=UTF-8"} );
                     s.pipe(res);
                 }
             });
@@ -303,9 +305,13 @@ app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 // noinspection JSUnresolvedFunction
+app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+// noinspection JSUnresolvedFunction
 app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
-// noinspection JSUnresolvedFunction
+
+//TODO add generic fallback to use Domain.js for name lookup
+
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
