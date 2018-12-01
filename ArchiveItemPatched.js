@@ -18,7 +18,11 @@ const config = require('./config');
 
 
 ArchiveItem.prototype._dirpath = function(directory) {
-        return path.join(directory, this.itemid);
+        if (!this.itemid && this.query) {
+            return path.join(directory, "_SEARCH_"+this.query);
+        } else {
+            return path.join(directory, this.itemid);
+        }
     };
 
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
@@ -27,71 +31,79 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         If not already done so, will fetch_metadata (but not query, as that may want to be precisely controlled)
     */
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
-    const itemid = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-    const dirpath = this._dirpath(cacheDirectory);
-
-    if (!this.metadata) {
-        // noinspection JSUnusedLocalSymbols
-        this.fetch_metadata((err, data) => {
-           if (err) {
-               _err("Cant save because couldnt fetch metadata", err, cb);
-           } else {
-               f.call(this); // Need the call because it loses track of "this"
-           }
-        });
+    if (!this.itemid) {
+        // Must be a Search so dont try and save files - might save members
+        debug("Search so not saving");
+        cb(null, this);
     } else {
-        f.call(this);
-    }
-    function _err(msg, err, cb) {
-        console.error(msg, err);
-        if (cb) {
-            cb(err);
-        } else {
-            throw(err)
-        }
-    }
-    function f() {
-        MirrorFS._mkdir(dirpath, (err) => {
-            if (err) {
-                _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
-            } else {
-                const filepath = path.join(dirpath, itemid + "_meta.json");
-                fs.writeFile(filepath, canonicaljson.stringify(this.metadata), (err) => {
-                    if (err) {
-                        _err(`Unable to write metadata to ${itemid}`, err, cb);
-                    } else {
+        const namepart = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+        const dirpath = this._dirpath(cacheDirectory);
 
-                        const filepath = path.join(dirpath, itemid + "_files.json");
-                        fs.writeFile(filepath, canonicaljson.stringify(this.exportFiles()), (err) => {
-                            if (err) {
-                                _err(`Unable to write files to ${itemid}`, err, cb);
-                            } else {
-                                // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
-                                const filepath = path.join(dirpath, itemid + "_extra.json");
-                                fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.collection_titles}), (err) => {
-                                    if (err) {
-                                        _err(`Unable to write extras to ${itemid}`, err, cb);
-                                    } else {
-                                        if (typeof this.reviews === "undefined") { // Reviews is optional - most things don't have any
-                                            cb(null, this);
-                                        } else {
-                                            const filepath = path.join(dirpath, itemid + "_reviews.json");
-                                            fs.writeFile(filepath, canonicaljson.stringify(this.reviews), (err) => {
-                                                if (err) {
-                                                    _err(`Unable to write reviews to ${itemid}`, err, cb);
-                                                } else {
-                                                    cb(null, this);
-                                                }
-                                            });
-                                        }
-                                    }
-                                })
-                            }
-                        })
-                    }
-                });
+        if (!this.metadata) {
+            // noinspection JSUnusedLocalSymbols
+            this.fetch_metadata((err, data) => {
+                if (err) {
+                    _err("Cant save because couldnt fetch metadata", err, cb);
+                } else {
+                    f.call(this); // Need the call because it loses track of "this"
+                }
+            });
+        } else {
+            f.call(this);
+        }
+
+        function _err(msg, err, cb) {
+            console.error(msg, err);
+            if (cb) {
+                cb(err);
+            } else {
+                throw(err)
             }
-        });
+        }
+
+        function f() {
+            MirrorFS._mkdir(dirpath, (err) => {
+                if (err) {
+                    _err(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err, cb);
+                } else {
+                    const filepath = path.join(dirpath, namepart + "_meta.json");
+                    fs.writeFile(filepath, canonicaljson.stringify(this.metadata), (err) => {
+                        if (err) {
+                            _err(`Unable to write metadata to ${namepart}`, err, cb);
+                        } else {
+
+                            const filepath = path.join(dirpath, namepart + "_files.json");
+                            fs.writeFile(filepath, canonicaljson.stringify(this.exportFiles()), (err) => {
+                                if (err) {
+                                    _err(`Unable to write files to ${namepart}`, err, cb);
+                                } else {
+                                    // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
+                                    const filepath = path.join(dirpath, namepart + "_extra.json");
+                                    fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.collection_titles}), (err) => {
+                                        if (err) {
+                                            _err(`Unable to write extras to ${namepart}`, err, cb);
+                                        } else {
+                                            if (typeof this.reviews === "undefined") { // Reviews is optional - most things don't have any
+                                                cb(null, this);
+                                            } else {
+                                                const filepath = path.join(dirpath, namepart + "_reviews.json");
+                                                fs.writeFile(filepath, canonicaljson.stringify(this.reviews), (err) => {
+                                                    if (err) {
+                                                        _err(`Unable to write reviews to ${namepart}`, err, cb);
+                                                    } else {
+                                                        cb(null, this);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    })
+                                }
+                            })
+                        }
+                    });
+                }
+            });
+        }
     }
 };
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
@@ -101,10 +113,11 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
         TODO-CACHE allow cacheDirectory to be an array
         cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
     */
-    const itemid = this.itemid;
+    const namepart = this.itemid;
     const res = {};
+    const dirpath = this._dirpath(cacheDirectory);
     function _parse(part, cb) {
-        const filename = path.join(cacheDirectory, itemid, `${itemid}_${part}.json`);
+        const filename = path.join(dirpath, `${namepart}_${part}.json`);
         fs.readFile(filename, (err, jsonstring) => {
             if (err) {
                 cb(err);    // Not logging as not really an err for there to be no file, as will read
@@ -114,7 +127,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                     o = canonicaljson.parse(jsonstring); // No reviver function, which would allow postprocessing
                 } catch (err) {
                     // It is on the other hand an error for the JSON to be unreadable
-                    debug("Failed to parse json at %s: part %s %s", itemid, part, err.message);
+                    debug("Failed to parse json at %s: part %s %s", namepart, part, err.message);
                     cb(err);
                 }
                 cb(null, o);
@@ -205,15 +218,17 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         //TODO-CACHE-AGING
         // noinspection JSUnresolvedVariable
         const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
-        if (cacheDirectory && !skipCache && this.itemid) { //TODO-SEARCH cache results of searches somewhere, maybe as a saved-search type pseudo-item with a members file.
-            const filepath = path.join(cacheDirectory, this.itemid, this.itemid + "_members.json");
+        const namepart = this.itemid;
+        if (cacheDirectory && !skipCache && namepart) { //TODO-SEARCH cache results of searches somewhere, maybe as a saved-search type pseudo-item with a members file.
+            const dirpath = this._dirpath(cacheDirectory);
+            const filepath = path.join(dirpath, this.namepart + "_members.json");
             fs.readFile(filepath, (err, jsonstring) => {
                 if (!err)
                     this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMember(o));  // Must be an array, will be undefined if parses wrong
                 if (err || (typeof this.members === "undefined") || this.members.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
                     this._fetch_query(opts, (err, arr) => { // arr will be matching ArchiveMembers, fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
                         if (err) {
-                            debug("Failed to fetch_query for %s: %s", this.itemid, err.message); cb(err);
+                            debug("Failed to fetch_query for %s: %s", this.namepart, err.message); cb(err);
                         } else {
                             if (typeof arr === "undefined") {
                                 // fetch_query returns undefined if not a collection
@@ -250,7 +265,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     */
 
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
-    const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+    const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     const dirpath = this._dirpath(cacheDirectory);
 
     function _err(msg, err, cb) {
@@ -259,59 +274,65 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
             cb(err);
         }
     }
-
-    MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
-        //TODO use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
-        if (err) {
-            _err(`Cannot mkdir ${dirpath} so cant save item ${itemid}`, err, cb);
-        } else {
-            const self = this; // this not available inside recursable or probably in writable('on)
-            const thumbnailFiles = this.files.filter(af =>
-                af.metadata.name === "__ia_thumb.jpg"
-                || af.metadata.name.endsWith("_itemimage.jpg")
-            );
-            if (thumbnailFiles.length) {
-                // noinspection JSUnusedLocalSymbols
-                // Loop through files using recursion (list is always short)
-                const recursable = function (err, streamOrUndefined) {
-                    if (err) {
-                        _err(`saveThumbnail: failed in cacheAndOrStream for ${itemid}`, err, cb)
-                    } else {
-                        if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
-                            cb(null, streamOrUndefined);
-                            cb=undefined; } // Clear cb so not called when complete
-                        let af;
-                        if (typeof(af = thumbnailFiles.shift()) !== "undefined") {
-                            af.cacheAndOrStream({cacheDirectory, skipfetchfile, wantStream}, recursable); // Recurse
-                            // Exits, allowing recursable to recurse with next iteration
-                        } else { // Completed loop
-                            // cb will be set except in the case of wantStream in which case will have been called with first stream
-                            if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+    if (!this.itemid) {
+        cb(null,this);
+    } else {
+        MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
+            //TODO use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
+            if (err) {
+                _err(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err, cb);
+            } else {
+                const self = this; // this not available inside recursable or probably in writable('on)
+                const thumbnailFiles = this.files.filter(af =>
+                    af.metadata.name === "__ia_thumb.jpg"
+                    || af.metadata.name.endsWith("_itemimage.jpg")
+                );
+                if (thumbnailFiles.length) {
+                    // noinspection JSUnusedLocalSymbols
+                    // Loop through files using recursion (list is always short)
+                    const recursable = function (err, streamOrUndefined) {
+                        if (err) {
+                            _err(`saveThumbnail: failed in cacheAndOrStream for ${namepart}`, err, cb)
+                        } else {
+                            if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
+                                cb(null, streamOrUndefined);
+                                cb = undefined;
+                            } // Clear cb so not called when complete
+                            let af;
+                            if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
+                                af.cacheAndOrStream({cacheDirectory, skipfetchfile, wantStream}, recursable); // Recurse
+                                // Exits, allowing recursable to recurse with next iteration
+                            } else { // Completed loop
+                                // cb will be set except in the case of wantStream in which case will have been called with first stream
+                                if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+                            }
                         }
-                    }
-                };
-                recursable(null, null);
-            } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
-                // noinspection JSUnresolvedVariable
-                const servicesurl = config.archiveorg.servicesImg + this.itemid;
-                // Include direct link to services
-                if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
-
-                const filepath = path.join(cacheDirectory, itemid, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
-                const debugname = itemid+"/__ia_thumb.jpg";
-                MirrorFS.cacheAndOrStream({cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
-                    urls: this.metadata.thumbnaillinks,
+                    };
+                    recursable(null, null);
+                } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
+                    // noinspection JSUnresolvedVariable
+                    const servicesurl = config.archiveorg.servicesImg + this.itemid;
+                    // Include direct link to services
+                    if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
+                    const dirpath = this._dirpath(cacheDirectory);
+                    const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                    const debugname = namepart + "/__ia_thumb.jpg";
+                    MirrorFS.cacheAndOrStream({
+                        cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
+                        urls: this.metadata.thumbnaillinks,
                     }, (err, streamOrUndefined) => {
                         if (err) {
-                            debug("Unable to cacheOrStream %s",debugname); cb(err);
+                            debug("Unable to cacheOrStream %s", debugname);
+                            cb(err);
                         } else {
                             cb(null, wantStream ? streamOrUndefined : this);
                         }
 
                     });
+                }
             }
-        }
-    });
+        });
+    }
 };
 ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) { //TODO-REFACTOR-RELATED consider related
     /*
@@ -321,9 +342,10 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     // noinspection JSUnresolvedVariable
+    const dirpath = this._dirpath(cacheDirectory);
     MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,
         urls: config.archiveorg.related + "/" + itemid,
-        filepath: path.join(cacheDirectory, itemid, itemid+"_related.json"),
+        filepath: path.join(dirpath, itemid+"_related.json"),
         debugname: itemid + itemid + "_related.json"
     }, cb);
 };
@@ -333,37 +355,41 @@ ArchiveItem.prototype.minimumForUI = function() {
     // Note mediatype will have been retrieved and may have been rewritten by processMetadataFjords from "education"
     console.assert(this.files, "minimumForUI assumes .files already set up");
     const minimumFiles = [];
-    const thumbnailFiles = this.files.filter( af =>
-        af.metadata.name === "__ia_thumb.jpg"
-        || af.metadata.name.endsWith("_itemimage.jpg")
-    );
-    // Note thumbnail is also explicitly saved by saveThumbnail
-    minimumFiles.push(...thumbnailFiles);
-    switch (this.metadata.mediatype) {
-        case "collection": //TODO-THUMBNAILS
-            break;
-        case "texts": //TODO-THUMBNAILS for text - texts use the Text Reader anyway so dont know which files needed
-            break;
-        case "image":
-            minimumFiles.push(this.files.find(fi => fi.playable("image"))); // First playable image is all we need
-            break;
-        case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
-        case "etree":   // Generally treated same as audio, at least for now
-            if (!this.playlist) this.setPlaylist();
-            // Almost same logic for video & audio
-            minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
-            // Audio uses the thumbnail image, puts URLs direct in html, but that always includes http://dweb.me/thumbnail/itemid which should get canonicalized
-            break;
-        case "movies":
-            if (!this.playlist) this.setPlaylist();
-            // Almost same logic for video & audio
-            minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
-            minimumFiles.push(this.videoThumbnailFile());
-            break;
-        case "account":
-            break;
-        default:
-            //TODO Not yet supporting software, zotero (0 items); data; web because rest of dweb-archive doesnt
+    if (this.itemid) { // Exclude "search"
+            const thumbnailFiles = this.files.filter(af =>
+                af.metadata.name === "__ia_thumb.jpg"
+                || af.metadata.name.endsWith("_itemimage.jpg")
+            );
+        // Note thumbnail is also explicitly saved by saveThumbnail
+        minimumFiles.push(...thumbnailFiles);
+        switch (this.metadata.mediatype) {
+            case "search": // Pseudo-item
+                break;
+            case "collection": //TODO-THUMBNAILS
+                break;
+            case "texts": //TODO-THUMBNAILS for text - texts use the Text Reader anyway so dont know which files needed
+                break;
+            case "image":
+                minimumFiles.push(this.files.find(fi => fi.playable("image"))); // First playable image is all we need
+                break;
+            case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
+            case "etree":   // Generally treated same as audio, at least for now
+                if (!this.playlist) this.setPlaylist();
+                // Almost same logic for video & audio
+                minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+                // Audio uses the thumbnail image, puts URLs direct in html, but that always includes http://dweb.me/thumbnail/itemid which should get canonicalized
+                break;
+            case "movies":
+                if (!this.playlist) this.setPlaylist();
+                // Almost same logic for video & audio
+                minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+                minimumFiles.push(this.videoThumbnailFile());
+                break;
+            case "account":
+                break;
+            default:
+                //TODO Not yet supporting software, zotero (0 items); data; web because rest of dweb-archive doesnt
+        }
     }
     return minimumFiles;
 };

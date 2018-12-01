@@ -1,4 +1,4 @@
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-archive dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archive dweb-archive-controller dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
 // Standard repos
 const wrtc = require('wrtc');
 const debug = require('debug');
@@ -71,7 +71,8 @@ class Mirror {
             .flatten({name: 'Flatten Streams to SearchResults'})
             // Stream of Search results (mixed)
             .log((m)=>[m.identifier], {name:"SearchResults"})
-            .map((o) => new ArchiveItem({itemid: o.identifier}).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads, note will get first page of results if collection
+
+            .map((o) => ArchiveItem.fromMemberFav(o).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads, note will get first page of results if collection
             // a stream of ArchiveItem's with metadata fetched
             .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
             .map((ai, cb) => ai.saveThumbnail({cacheDirectory: config.directory}, cb), {name: "SaveThumbnail", justReportError: true, async: true, paralleloptions})
