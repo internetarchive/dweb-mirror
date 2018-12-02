@@ -40,6 +40,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 const wrtc = require('wrtc');
 
 // Local files
+const MirrorFS = require('./MirrorFS');
 const config = require('./config'); // Global configuration, will add app specific requirements
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
@@ -167,6 +168,7 @@ function temp(req, res, next) {
 }
 
 function streamArchiveFile(req, res, next) {
+    // Note before this is called req.streamOpts = {start, end}
     try {
         const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
         const itemid = req.params['itemid'];
@@ -265,6 +267,28 @@ function streamThumbnail(req, res, next) {
     });
 }
 
+function streamContenthash(req, res, next) {
+    const contenthash = req.params['contenthash'];
+    MirrorFS.hashstore.get('sha1.filepath', contenthash, (err, filepath) => {
+        if (typeof res !== "undefined") {
+            res.sendFile(filepath, next);
+        } else { // Fetch from upstream
+            debug('Going upstream for contenthash %s', req.url); //TODO-ONLINE TODO-CONTENTHASH need to test this
+            DwebTransports.createReadStream(req.url, req.streamOpts, (err, s) => {
+                if (err) {
+                    debug("No local copy, and unable to fetch %s err=%s", req.url, err.message);
+                    next(err);
+                } else {
+                    res.status(200); // Assume error if dont get here
+                    // Dont have mimetype here, and its not in the URL format since its a contenthash
+                    //res.set(headers);
+                    s.pipe(res);
+                }
+            })
+        }
+    })
+}
+
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);
 app.get('/arc/archive.org/details', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
@@ -311,6 +335,8 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
     _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
 
 //TODO add generic fallback to use Domain.js for name lookup
+
+app.get('/contenthash/:contenthash', streamContenthash);
 
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );

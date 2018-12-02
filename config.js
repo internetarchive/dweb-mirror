@@ -1,5 +1,6 @@
 const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
+const HashStore = require('./HashStore');
 
 //TODO add concept of app specific overrides and default set
 const config = new MirrorConfig({
@@ -44,6 +45,7 @@ const config = new MirrorConfig({
         mds: "https://be-api.us.archive.org/mds",
     }
 });
+MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 
 
 exports = module.exports = config;

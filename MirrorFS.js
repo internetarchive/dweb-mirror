@@ -1,14 +1,21 @@
 //process.env.NODE_DEBUG="fs";    // Uncomment to test fs
+// Node packages
+const crypto = require('crypto');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
+const Transform = require('stream').Transform || require('readable-stream').Transform;
 const debug = require('debug')('dweb-mirror:MirrorFS');
-const sha = require('sha');
+const multihashes = require('multihashes');
+
+// other packages of ours
+const ParallelStream = require('parallel-streams');
+
+// Note cant include config here
 
 class MirrorFS {
     /*
     Utility subclass that knows about the file system.
      */
-
     static firstExisting(...args) {
         // Find the first of args that exists, args can be relative to the process directory .../dweb-mirror
         // returns undefined if none found
@@ -35,6 +42,36 @@ class MirrorFS {
             }
             cb();
         })
+    }
+
+    static streamhash(s, options={}, cb) {
+        /*  Calculate hash on a stream,
+            algorithm: Hash algorithm to be used, (only tested with sha1)
+            cb will be called once, when stream is done - note hashstream will call cb each time.
+        */
+        if (typeof options === "function") { cb = options; options = {}; }
+        const algorithm=options.algorithm || 'sha1';
+        const hash = crypto.createHash(algorithm);
+        let errState = null;
+        return s;
+        .on('error', err =>   { if (!errState) cb(errState = err) }) // Just send errs once
+        .on('data',  chunk => { if (!errState) hash.update(chunk)  })
+        .on('end', () => { if (!errState) cb(null, this.multihash58sha1(hash.digest()))});
+    }
+
+    static hashstream({algorithm='sha1'}={}) {
+        var hash = crypto.createHash(algorithm)
+        var stream = new Transform()
+        stream._transform = function (chunk, encoding, cb) {
+            hash.update(chunk)
+            stream.push(chunk)
+            cb()
+        }
+        stream._flush = function (cb) {
+            stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with with sha1 in metadata
+            cb(null);
+        }
+        return stream
     }
 
     static _fileopenwrite(directory, filepath, cb) {  // cb(err, fd)
@@ -137,13 +174,16 @@ class MirrorFS {
                 }
             }
         });
-        function maybeCheckSha(filepath, sha1, cb) {
+        function maybeCheckSha(filepath, mcsha1, cb) {
             /*
             Check file is readable, or if sha1 offered check sha matches
             cb(err) If doesn't match
              */
-            if (sha1) {
-                sha.check(filepath, sha1, cb);
+            if (mcsha1) {
+                this.streamhash(fs.createReadStream(filepath), (err, multiHash) => {
+                    if (err || multihash !== mcsha1) { cb(err || new Error('multihash doesnt match')); }
+                    else { cb(); }
+                });
             } else { //
                 fs.access(filepath, fs.constants.R_OK, cb);
             }
@@ -177,13 +217,15 @@ class MirrorFS {
                                     cb(err);
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
+                                    const hashstream = this.hashstream();
                                     const writable = fs.createWriteStream(null, {fd: fd});
                                     // Note at this point file is neither finished, nor closed, its a stream open for writing.
                                     //fs.close(fd); Should be auto closed when stream to it finishes
                                     writable.on('close', () => {
                                         // noinspection EqualityComparisonWithCoercionJS
-                                        if (expectsize && (expectsize != writable.bytesWritten)) { // Intentionally != as metadata is a string
-                                            debug("File %s size=%d doesnt match expected %s, deleting", debugname, writable.bytesWritten, expectsize);
+                                        const hexhash = hashstream.actual.toString('hex');
+                                        if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== "undefined") && (hexhash !== sha1))) { // Intentionally != as metadata is a string
+                                            debug("File %s size=%d sha1=%s doesnt match expected %s %s, deleting", debugname, writable.bytesWritten, hexhash, expectsize, sha1);
                                             fs.unlink(filepathTemp, (err) => {
                                                 if (err) { console.error(`Can't delete ${filepathTemp}`); } // Shouldnt happen
                                                 if (!wantStream) cb(err); // Cant send err if not wantStream as already done it
@@ -194,6 +236,7 @@ class MirrorFS {
                                                     console.error(`Failed to rename ${filepathTemp} to ${filepath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
+                                                    this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), filepath);
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
                                                     if (!wantStream) cb(); // If wantStream then already called cb, otherwise cb signifies file is written
                                                 }
@@ -202,10 +245,10 @@ class MirrorFS {
                                     });
                                     s.on('error', (err) => debug("Failed to read %s from net err=%s", debugname, err.message));
                                     try {
-                                        s.pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                                        s.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                                         if (wantStream) cb(null, s);
                                     } catch(err) {
-                                        console.log("XXX @ ArchiveFilePatched - catching error with save() in s.pipe shouldnt happen",s);
+                                        console.error("ArchiveFilePatched.cacheAndOrStream failed ",err);
                                         if (wantStream) cb(err);
                                     }
                                 }
@@ -220,8 +263,47 @@ class MirrorFS {
 
     };
 
+    static streamOfCachedItemPaths({cacheDirectory = undefined}) {
+        // Note returns s immediately, then asynchronous reads directories and pipes into s.
+        let s = new ParallelStream({name: "Cached Item Paths"});
+        fs.readdir(cacheDirectory, (err, files) => {
+            if (err) {
+                debug("Failed to read directory %s", cacheDirectory);
+                cb(err); // Just pass up to caller
+            } else {
+                return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories"})
+                    .map(filename => `${cacheDirectory}/${filename}`, {name: "build filename"})       //   /foo/mirrored/<item>
+                    .map((pathstr, cb) => fs.readdir(pathstr,
+                        (err, files) => {
+                            if (err) { cb(null, pathstr) }      // Just pass on paths that aren't directories
+                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>`${pathstr}/${f}`)) }} ),
+                        {name: "Read files dirs", async: true})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                    .flatten({name: "Flatten arrays"})                                                  //  /foo/mirrored/<item>/<file>
+                    // Flatten once more to handle subdirs
+                    .map((pathstr, cb) => fs.readdir(pathstr,
+                        (err, files) => {
+                            if (err) { cb(null,pathstr) }      // Just pass on paths that aren't directories
+                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>`${pathstr}/${f}`)) }} ),
+                        {name: "Read files dirs", async: true})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                    .flatten({name: "Flatten arrays"})                                                 //  /foo/mirrored/<item>/<file>
+                    .pipe(s);
+            }
+        });
+        return s;
+    }
+    static multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
 
-
+    static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb) {
+        // Normally before running this, will delete the old hashstore
+        const tablename = "sha1.filepath";
+        this.streamOfCachedItemPaths({cacheDirectory})
+            .map((filepath, cb) =>  this.streamhash(fs.createReadStream(filepath), (err, multiHash) => {
+                    if (err) { debug("loadHashTable saw error: %s", err.message); }
+                    else { this.hashstore.put(tablename, multiHash, filepath, cb); };
+                }),
+                {name: "Hashstore", async: true})
+            .reduce();
+    }
 
 }
 exports = module.exports = MirrorFS;

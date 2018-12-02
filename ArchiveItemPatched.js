@@ -353,9 +353,9 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
 ArchiveItem.prototype.minimumForUI = function() {
     // This will be tuned for different mediatype etc}
     // Note mediatype will have been retrieved and may have been rewritten by processMetadataFjords from "education"
-    console.assert(this.files, "minimumForUI assumes .files already set up");
     const minimumFiles = [];
     if (this.itemid) { // Exclude "search"
+        console.assert(this.files, "minimumForUI assumes .files already set up");
             const thumbnailFiles = this.files.filter(af =>
                 af.metadata.name === "__ia_thumb.jpg"
                 || af.metadata.name.endsWith("_itemimage.jpg")

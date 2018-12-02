@@ -1,4 +1,4 @@
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
@@ -20,3 +20,9 @@ const config = require('./config');
     const s = new MirrorCollection({itemid:"prelinger"}).streamResults({limit:20, maxpages:2}, (err,res) => console.log("Streamed"));
     s.log(m=>["Logging obj %o",m]).reduce();
  */
+
+const HashStore = require('./HashStore');
+//HashStore.test();
+
+const MirrorFS = require('./MirrorFS');
+MirrorFS.loadHashTable({cacheDirectory: config.directory});
