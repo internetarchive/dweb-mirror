@@ -111,16 +111,7 @@ function _sendFileFromDir(req, res, next, dir) {
     });
 }
 
-function _proxy(req, res, next, err, s, headers) {
-    if (err) {
-        debug("Failed to proxy", err.message);
-        next(err);
-    } else {
-        res.status(200); // Assume error if dont get here
-        res.set(headers);
-        s.pipe(res);
-    }
-}
+
 function sendRelated(req, res, next) {
     const itemid = req.params[0];
     loadedAI({itemid}, (err, archiveitem) => {
@@ -135,22 +126,25 @@ function sendRelated(req, res, next) {
     })
 }
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
-function proxyUrl(req, res, next, url, headers={}) {
-    // Proxy a request to somewhere under urlbase, which should NOT end with /
-    DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
-        if (err) {
-            debug("Unable to fetch %s err=%s", url, err.message);
-            next(err);
-        } else {
-            res.status(200); // Assume error if dont get here
-            res.set(headers);
-            s.pipe(res);
-        }
-    })
-}
 function proxyUpstream(req, res, next, headers={}) {
     // Note req.url will start with "/"
     proxyUrl(req, res, next, [config.upstream, req.url].join(''), headers);
+}
+function proxyUrl(req, res, next, url, headers={}) {
+    // Proxy a request to somewhere under urlbase, which should NOT end with /
+    DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
+        _proxy(req, res, next, err, s, headers);
+    })
+}
+function _proxy(req, res, next, err, s, headers) {
+    if (err) {
+        debug("Failed to proxy", err.message);
+        next(err);
+    } else {
+        res.status(200); // Assume error if dont get here
+        res.set(headers);
+        s.pipe(res);
+    }
 }
 
 function temp(req, res, next) {
@@ -309,7 +303,7 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 //app.get('/contenthash/:contenthash', streamContenthash);
 app.get('/contenthash/:contenthash', (req, res, next) =>
-    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, err => next())));
+    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, err => { if (err) next()})));
 app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
 // noinspection JSUnresolvedVariable
