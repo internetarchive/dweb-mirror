@@ -252,6 +252,8 @@ function streamThumbnail(req, res, next) {
     });
 }
 
+//app.get('/', (req,res)=>{debug("ROOT URL");});
+app.get('/', (req,res)=>{res.redirect(url.format({pathname:"/archive/archive.html", query: {transport:"HTTP", mirror: req.headers.host}}))})
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);
 app.get('/arc/archive.org/details', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });

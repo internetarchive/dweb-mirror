@@ -263,7 +263,7 @@ function streamContenthash(req, res, next) {
         if (typeof res !== "undefined") {
             res.sendFile(filepath, next);
         } else { // Fetch from upstream
-            debug('Going upstream for contenthash %s', req.url); //TODO-ONLINE TODO-CONTENTHASH need to test this
+            debug('Going upstream for contenthash %s', req.url);
             DwebTransports.createReadStream(req.url, req.streamOpts, (err, s) => {
                 if (err) {
                     debug("No local copy, and unable to fetch %s err=%s", req.url, err.message);
