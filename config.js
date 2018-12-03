@@ -2,7 +2,7 @@ const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 const HashStore = require('./HashStore');
 
-//TODO add concept of app specific overrides and default set
+//TODO-CONFIG add concept of app specific overrides and default set
 const config = new MirrorConfig({
     //hashstore: { file: "level_db" },
     //ui: {},

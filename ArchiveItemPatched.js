@@ -110,7 +110,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
         cacheDirectory: Top level of directory to look for data in
-        TODO-CACHE allow cacheDirectory to be an array
+        TODO-CACHE-MULTI allow cacheDirectory to be an array
         cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
     */
     const namepart = this.itemid;
@@ -181,7 +181,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     function f(cb) {
         if (this.itemid && !this.metadata) { // Check haven't already loaded or fetched metadata
             if (cacheDirectory && !skipCache) { // We have a cache directory to look in
-                //TODO-CACHE need timing of how long use old metadata
+                //TODO-CACHE-AGING need timing of how long use old metadata
                 this.read({cacheDirectory}, (err, metadata) => {
                     if (err) { // No cached version
                         console.assert(err.name === 'NoLocalCopy', "Havent thought about errors other than NoLocalCopy", this.itemid, err.message);
@@ -278,7 +278,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         cb(null,this);
     } else {
         MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
-            //TODO use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
+            //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
             if (err) {
                 _err(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err, cb);
             } else {
@@ -334,7 +334,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         });
     }
 };
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) { //TODO-REFACTOR-RELATED consider related
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-TIMING
     cb(err, obj)  Callback on completion with related items object

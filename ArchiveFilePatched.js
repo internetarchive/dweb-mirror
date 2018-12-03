@@ -2,7 +2,6 @@
 // Standard files
 const debug = require('debug')('dweb-mirror:ArchiveFile');
 const path = require('path');
-process.env.NODE_DEBUG="fs";    //TODO-MIRROR comment out when done testing FS
 // Other Archive repos
 const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata
@@ -43,6 +42,7 @@ ArchiveFile.new = function({itemid=undefined, archiveitem=undefined, metadata=un
 // noinspection JSUnusedGlobalSymbols
 ArchiveFile.prototype.readableFromNet = function(opts, cb) {
     /*
+        This doesnt appear to be used at present.
         cb(err, stream): Called with open readable stream from the net.
      */
     if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts

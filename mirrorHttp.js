@@ -21,7 +21,7 @@ TODO update this summary
 /arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
-TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
+TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects (TODO-ONLINE test if that is correct)
  */
 // External packages
 //Not debugging: express:*
@@ -46,8 +46,6 @@ const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const MirrorCollection = require('./MirrorCollection');
 const MirrorSearch = require('./MirrorSearch');
-
-//TODO-HTTP check configuration - presence of config.archiveui.directory and that in it is dweb-{transports,objects}-bundle.js
 
 const app = express();
 // noinspection JSUnresolvedVariable
@@ -150,17 +148,6 @@ function proxyUrl(req, res, next, urlbase, headers={}) {
 }
 
 
-function sendrange(req, res, val) {
-    const range = req.range(Infinity);
-    if (range && range[0] && range.type === "bytes" && (range[0].start !== 0 || range[0].end !== Infinity)) {
-        debug("Range request = %O", range);
-        //TODO-RANGE copy Content-Range from download:itemid
-        res.status(206).send(val.slice(range[0].start, range[0].end + 1));
-    } else {
-        res.status(200).send(val);
-    }
-}
-
 function temp(req, res, next) {
 
     console.log(req);
@@ -204,7 +191,7 @@ function streamArchiveFile(req, res, next) {
                         }
                     });
                     debug("XXX=completed");
-                    //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
+                    //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile TODO-ONLINE
                 }
             });
         });
@@ -248,7 +235,7 @@ function streamQuery(req, res, next) {
 function streamThumbnail(req, res, next) {
     const itemid = req.params['itemid'];
     debug('Sending Thumbnail for %s', itemid);
-    loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
+    loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.new can do this, but wont use cached metadata
         if (err) { // Failed to load itemid
             next(err);
         } else {
@@ -317,13 +304,13 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
         }
     })
 });
-app.get('/arc/archive.org/metadata/*', function(req, res, next) {
+app.get('/arc/archive.org/metadata/*', function(req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
     proxyUrl(req, res, next, config.archiveorg.metadata,{"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/*', function(req, res, next) { // noinspection JSUnresolvedVariable
-    proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
+    proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )});
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
@@ -344,11 +331,6 @@ app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.direc
 // noinspection JSUnresolvedFunction
 app.get('/info', function(req, res) {
     res.status(200).set('Accept-Ranges','bytes').json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
-});
-
-// noinspection JSUnresolvedFunction
-app.get('/testing', function(req, res) {
-    sendrange(req, res, 'hello my world'); //TODO say something about configuration etc
 });
 
 app.use((req,res,next) => {
