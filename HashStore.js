@@ -41,8 +41,6 @@ class HashStore {
     static async get(table, key, cb) {
         if (cb) { return f.call(this, table, key, cb) } else { return new Promise((resolve, reject) => f.call(this, table, key, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere        const tab = this.db(table);
         function f(table, key, cb) {
-            //return await tab.get(key); // Fails ...see https://github.com/Level/level/issues/97  //TODO-ONLINE TODO-CONTENTHASH check state of this
-            // Promisified get because of bug reported above.
             // This is similar to level.get except not finding the value isnt an error, it returns undefined.
             return this.db(table).get(key, function (err, val) {
                 if (err && !err.notFound) cb(null, undefined); // Undefined isnt an error
