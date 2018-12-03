@@ -12,6 +12,9 @@ const ParallelStream = require('parallel-streams');
 
 // Note cant include config here
 
+function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
+
+
 class MirrorFS {
     /*
     Utility subclass that knows about the file system.
@@ -56,7 +59,7 @@ class MirrorFS {
         return s
         .on('error', err =>   { if (!errState) cb(errState = err) }) // Just send errs once
         .on('data',  chunk => { if (!errState) hash.update(chunk)  })
-        .on('end', () => { if (!errState) cb(null, this.multihash58sha1(hash.digest()))});
+        .on('end', () => { if (!errState) cb(null, multihash58sha1(hash.digest()))});
     }
 
     static hashstream({algorithm='sha1'}={}) {
@@ -161,7 +164,7 @@ class MirrorFS {
         */
         console.assert(urls);
         // noinspection JSUnresolvedVariable
-        maybeCheckSha(filepath, sha1, (err) => {
+        maybeCheckSha.call(this, filepath, sha1, (err) => {
             if (err) { //Doesn't match
                 _notcached.call(this);
             } else { // sha1 matched, skip fetching, just stream from saved
@@ -181,7 +184,7 @@ class MirrorFS {
              */
             if (mcsha1) {
                 this.streamhash(fs.createReadStream(filepath), (err, multiHash) => {
-                    if (err || multihash !== mcsha1) { cb(err || new Error('multihash doesnt match')); }
+                    if (err || multiHash !== mcsha1) { cb(err || new Error('multihash doesnt match')); }
                     else { cb(); }
                 });
             } else { //
@@ -291,7 +294,6 @@ class MirrorFS {
         });
         return s;
     }
-    static multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
 
     static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
