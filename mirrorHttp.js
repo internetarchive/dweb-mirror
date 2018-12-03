@@ -173,10 +173,10 @@ function streamArchiveFile(req, res, next) {
         const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
         const itemid = req.params['itemid'];
         debug('Sending ArchiveFile %s/%s', itemid, filename);
-        loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.p_new can do this, but wont use cached metadata
-            ArchiveFile.p_new({itemid: itemid, archiveitem, filename}, (err, af) => {
+        loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.new can do this, but wont use cached metadata
+            ArchiveFile.new({itemid: itemid, archiveitem, filename}, (err, af) => {
                 if (err) {
-                    debug("ArchiveFile.p_new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
+                    debug("ArchiveFile.new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
                     res.status(404).send(err.message);
                 } else {
                     res.status(req.streamOpts ? 206 : 200);

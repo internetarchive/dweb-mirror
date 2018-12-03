@@ -33,7 +33,7 @@ class Mirror {
         });
         //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
         DwebTransports.http().supportFunctions.push("createReadStream");
-        ArchiveFile.p_new({itemid: "cd_tribal-flute_bryan-akipa", filename: "disc1/05. Bryan Akipa - Sad Heart.mp3"}, (err, af) => {
+        ArchiveFile.new({itemid: "cd_tribal-flute_bryan-akipa", filename: "disc1/05. Bryan Akipa - Sad Heart.mp3"}, (err, af) => {
             console.assert(!err);
             // noinspection JSUnusedLocalSymbols
             // noinspection JSUnresolvedVariable

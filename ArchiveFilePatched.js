@@ -10,7 +10,7 @@ const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadat
 const errors = require('./Errors.js');
 const MirrorFS = require('./MirrorFS');
 
-ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, cb) {
+ArchiveFile.new = function({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, cb) {
     /*
      Load ArchiveFile, async because may have to find metadata etc
      Process is itemid > item + filename > fileMetadata
@@ -29,7 +29,7 @@ ArchiveFile.p_new = function({itemid=undefined, archiveitem=undefined, metadata=
         if (archiveitem && filename && !metadata) {
             if (!archiveitem.metadata) {
                 return archiveitem.fetch_metadata((err, ai) => { // Note will load from cache if available and load ai.metadata and ai.files
-                    return err ? cb(err)  : this.p_new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
+                    return err ? cb(err)  : this.new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
                 });
             }
             const af = archiveitem.files.find(af => af.metadata.name === filename); // af, (undefined if not found)
