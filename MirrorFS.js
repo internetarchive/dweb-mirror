@@ -53,7 +53,7 @@ class MirrorFS {
         const algorithm=options.algorithm || 'sha1';
         const hash = crypto.createHash(algorithm);
         let errState = null;
-        return s;
+        return s
         .on('error', err =>   { if (!errState) cb(errState = err) }) // Just send errs once
         .on('data',  chunk => { if (!errState) hash.update(chunk)  })
         .on('end', () => { if (!errState) cb(null, this.multihash58sha1(hash.digest()))});

@@ -43,7 +43,8 @@ const config = new MirrorConfig({
         servicesImg: "https://archive.org/services/img/",           // TODO check intentionality of trailing slash, and ideally remove
         related: "https://be-api.us.archive.org/mds/v1/get_related/all",
         mds: "https://be-api.us.archive.org/mds",
-    }
+    },
+    upstream: "https://dweb.me"    // Generic upstream server, should be able to parse urls like /arc or /contenthash
 });
 MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 

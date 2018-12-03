@@ -135,9 +135,8 @@ function sendRelated(req, res, next) {
     })
 }
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
-function proxyUrl(req, res, next, urlbase, headers={}) {
+function proxyUrl(req, res, next, url, headers={}) {
     // Proxy a request to somewhere under urlbase, which should NOT end with /
-    const url = [urlbase, req.params[0]].join('/');
     DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
         if (err) {
             debug("Unable to fetch %s err=%s", url, err.message);
@@ -149,7 +148,10 @@ function proxyUrl(req, res, next, urlbase, headers={}) {
         }
     })
 }
-
+function proxyUpstream(req, res, next, headers={}) {
+    // Note req.url will start with "/"
+    proxyUrl(req, res, next, [config.upstream, req.url].join(''), headers);
+}
 
 function temp(req, res, next) {
 
@@ -257,28 +259,6 @@ function streamThumbnail(req, res, next) {
     });
 }
 
-function streamContenthash(req, res, next) {
-    const contenthash = req.params['contenthash'];
-    MirrorFS.hashstore.get('sha1.filepath', contenthash, (err, filepath) => {
-        if (typeof res !== "undefined") {
-            res.sendFile(filepath, next);
-        } else { // Fetch from upstream
-            debug('Going upstream for contenthash %s', req.url); //TODO-ONLINE TODO-CONTENTHASH need to test this
-            DwebTransports.createReadStream(req.url, req.streamOpts, (err, s) => {
-                if (err) {
-                    debug("No local copy, and unable to fetch %s err=%s", req.url, err.message);
-                    next(err);
-                } else {
-                    res.status(200); // Assume error if dont get here
-                    // Dont have mimetype here, and its not in the URL format since its a contenthash
-                    //res.set(headers);
-                    s.pipe(res);
-                }
-            })
-        }
-    })
-}
-
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);
 app.get('/arc/archive.org/details', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
@@ -308,12 +288,12 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     })
 });
 app.get('/arc/archive.org/metadata/*', function(req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
-    proxyUrl(req, res, next, config.archiveorg.metadata,{"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
+    proxyUrl(req, res, next, [config.archiveorg.metadata,req.params[0]].join('/'), {"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/*', function(req, res, next) { // noinspection JSUnresolvedVariable
-    proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )});
+    proxyUrl(req, res, next, [config.archiveorg.mds,req.params[0]].join('/'), {"Content-Type": "application/json"} )});
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
@@ -326,7 +306,11 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 //TODO add generic fallback to use Domain.js for name lookup
 
-app.get('/contenthash/:contenthash', streamContenthash);
+
+//app.get('/contenthash/:contenthash', streamContenthash);
+app.get('/contenthash/:contenthash', (req, res, next) =>
+    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, err => next())));
+app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
