@@ -189,8 +189,7 @@ function streamArchiveFile(req, res, next) {
                                 .pipe(res);
                         }
                     });
-                    debug("XXX=completed");
-                    //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile TODO-ONLINE
+                    //TODO-CACHE-AGING Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile (maxAge, immutable)
                 }
             });
         });
@@ -303,11 +302,11 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 //app.get('/contenthash/:contenthash', streamContenthash);
 app.get('/contenthash/:contenthash', (req, res, next) =>
-    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, err => { if (err) next()})));
+    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => { if (err) next()})));
 app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
 // noinspection JSUnresolvedVariable
-app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
+app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", {maxAge: "86400000", immutable: true}, (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
 app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
     _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
