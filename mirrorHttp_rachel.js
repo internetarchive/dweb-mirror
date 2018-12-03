@@ -22,8 +22,8 @@ TODO update this summary
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
-TODO-RACHEL - merge this with mirrorHTTP
-*/
+TODO-RACHEL - merge mirrorHttp with this with mirrorHttp_rachel
+ */
 // External packages
 //Not debugging: express:*
 process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
@@ -39,15 +39,15 @@ const ParallelStream = require('parallel-streams');
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 //TODO-RACHEL auto test for presence of wrtc, its not available on rachel
-// const wrtc = require('wrtc');
+//const wrtc = require('wrtc');
 
 // Local files
+const MirrorFS = require('./MirrorFS');
 const config = require('./config'); // Global configuration, will add app specific requirements
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const MirrorCollection = require('./MirrorCollection');
 const MirrorSearch = require('./MirrorSearch');
-
 
 const app = express();
 // noinspection JSUnresolvedVariable
@@ -83,14 +83,14 @@ function loadedAI({itemid=undefined, metaapi=undefined}={}, cb) {
     // Get an ArchiveItem, from net or cache
     new ArchiveItem({itemid, metaapi})
         .fetch_metadata((err, ai) => {
-        if (err) {
-            debug("loadedAI: Unable to retrieve metadata for %s", itemid);
-            cb(err);
-        } else {
-            debug("loadedAI: Retrieved metadata for %s", ai.metadata.identifier); // Combined data metadata/files/reviews
-            cb(null, ai);
-        }
-    });
+            if (err) {
+                debug("loadedAI: Unable to retrieve metadata for %s", itemid);
+                cb(err);
+            } else {
+                debug("loadedAI: Retrieved metadata for %s", ai.metadata.identifier); // Combined data metadata/files/reviews
+                cb(null, ai);
+            }
+        });
 }
 
 // Serving static (e.g. UI) files
@@ -151,17 +151,6 @@ function proxyUrl(req, res, next, urlbase, headers={}) {
 }
 
 
-function sendrange(req, res, val) {
-    const range = req.range(Infinity);
-    if (range && range[0] && range.type === "bytes" && (range[0].start !== 0 || range[0].end !== Infinity)) {
-        debug("Range request = %O", range);
-        //TODO-RANGE copy Content-Range from download:itemid
-        res.status(206).send(val.slice(range[0].start, range[0].end + 1));
-    } else {
-        res.status(200).send(val);
-    }
-}
-
 function temp(req, res, next) {
 
     console.log(req);
@@ -169,6 +158,7 @@ function temp(req, res, next) {
 }
 
 function streamArchiveFile(req, res, next) {
+    // Note before this is called req.streamOpts = {start, end}
     try {
         const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
         const itemid = req.params['itemid'];
@@ -204,7 +194,7 @@ function streamArchiveFile(req, res, next) {
                         }
                     });
                     debug("XXX=completed");
-                    //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile
+                    //TODO-CACHE Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile TODO-ONLINE
                 }
             });
         });
@@ -258,11 +248,35 @@ function streamThumbnail(req, res, next) {
                     debug("item %s.saveThumbnail failed: %s", itemid, err.message);
                     next(err);
                 } else {
+                    res.status(200); // Assume error if dont get here
+                    res.set({"Content-Type": "image/jpeg; charset=UTF-8"} );
                     s.pipe(res);
                 }
             });
         }
     });
+}
+
+function streamContenthash(req, res, next) {
+    const contenthash = req.params['contenthash'];
+    MirrorFS.hashstore.get('sha1.filepath', contenthash, (err, filepath) => {
+        if (typeof res !== "undefined") {
+            res.sendFile(filepath, next);
+        } else { // Fetch from upstream
+            debug('Going upstream for contenthash %s', req.url); //TODO-ONLINE TODO-CONTENTHASH need to test this
+            DwebTransports.createReadStream(req.url, req.streamOpts, (err, s) => {
+                if (err) {
+                    debug("No local copy, and unable to fetch %s err=%s", req.url, err.message);
+                    next(err);
+                } else {
+                    res.status(200); // Assume error if dont get here
+                    // Dont have mimetype here, and its not in the URL format since its a contenthash
+                    //res.set(headers);
+                    s.pipe(res);
+                }
+            })
+        }
+    })
 }
 
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
@@ -293,32 +307,36 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
         }
     })
 });
-app.get('/arc/archive.org/metadata/*', function(req, res, next) {
+app.get('/arc/archive.org/metadata/*', function(req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
     proxyUrl(req, res, next, config.archiveorg.metadata,{"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/*', function(req, res, next) { // noinspection JSUnresolvedVariable
-    proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )}); //TODO-CONFIG and also handle APIs better
+    proxyUrl(req, res, next, config.archiveorg.mds, {"Content-Type": "application/json"} )});
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 // noinspection JSUnresolvedFunction
+app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+// noinspection JSUnresolvedFunction
 app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
-// noinspection JSUnresolvedFunction
+
+//TODO add generic fallback to use Domain.js for name lookup
+
+app.get('/contenthash/:contenthash', streamContenthash);
+
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
+
+app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
+    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
 // noinspection JSUnresolvedFunction
 app.get('/info', function(req, res) {
     res.status(200).set('Accept-Ranges','bytes').json({"config": config}); //TODO this may change to include info on transports (IPFS, WebTransport etc)
-});
-
-// noinspection JSUnresolvedFunction
-app.get('/testing', function(req, res) {
-    sendrange(req, res, 'hello my world'); //TODO say something about configuration etc
 });
 
 app.use((req,res,next) => {

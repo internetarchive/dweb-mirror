@@ -21,7 +21,8 @@ TODO update this summary
 /arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
-TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects (TODO-ONLINE test if that is correct)
+TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
+TODO-RACHEL - merge mirrorHttp with this with mirrorHttp_rachel
  */
 // External packages
 //Not debugging: express:*
@@ -37,6 +38,7 @@ const ParallelStream = require('parallel-streams');
 // IA packages
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
+//TODO-RACHEL auto test for presence of wrtc, its not available on rachel
 const wrtc = require('wrtc');
 
 // Local files
@@ -53,6 +55,7 @@ debug('Starting HTTP server on %d', config.apps.http.port);
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     transports: ["HTTP"],
+    //TODO-RACHEL comment out if wrtc not avail
     webtorrent: {tracker: { wrtc }},
 }).then(() => {
     const Thttp =  DwebTransports.http();
@@ -80,14 +83,14 @@ function loadedAI({itemid=undefined, metaapi=undefined}={}, cb) {
     // Get an ArchiveItem, from net or cache
     new ArchiveItem({itemid, metaapi})
         .fetch_metadata((err, ai) => {
-        if (err) {
-            debug("loadedAI: Unable to retrieve metadata for %s", itemid);
-            cb(err);
-        } else {
-            debug("loadedAI: Retrieved metadata for %s", ai.metadata.identifier); // Combined data metadata/files/reviews
-            cb(null, ai);
-        }
-    });
+            if (err) {
+                debug("loadedAI: Unable to retrieve metadata for %s", itemid);
+                cb(err);
+            } else {
+                debug("loadedAI: Retrieved metadata for %s", ai.metadata.identifier); // Combined data metadata/files/reviews
+                cb(null, ai);
+            }
+        });
 }
 
 // Serving static (e.g. UI) files
@@ -327,6 +330,9 @@ app.get('/contenthash/:contenthash', streamContenthash);
 
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", (err)=>err ? next(err) : debug('sent /favicon.ico')) );
+
+app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
+    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
 // noinspection JSUnresolvedFunction
 app.get('/info', function(req, res) {
