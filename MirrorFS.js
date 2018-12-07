@@ -54,12 +54,13 @@ class MirrorFS {
         */
         if (typeof options === "function") { cb = options; options = {}; }
         const algorithm=options.algorithm || 'sha1';
+        console.assert(options.format, 'Format of digest - should be defined as multihash58|hex');
         const hash = crypto.createHash(algorithm);
         let errState = null;
         return s
         .on('error', err =>   { if (!errState) cb(errState = err) }) // Just send errs once
         .on('data',  chunk => { if (!errState) hash.update(chunk)  })
-        .on('end', () => { if (!errState) cb(null, multihash58sha1(hash.digest()))});
+        .on('end', () => { if (!errState) cb(null, options.format === "multihash58" ? multihash58sha1(hash.digest()) : hash.digest('hex'))});
     }
 
     static hashstream({algorithm='sha1'}={}) {
@@ -164,7 +165,7 @@ class MirrorFS {
         */
         console.assert(urls);
         // noinspection JSUnresolvedVariable
-        maybeCheckSha.call(this, filepath, sha1, (err) => {
+        maybeCheckSha.call(this, filepath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err) => {
             if (err) { //Doesn't match
                 _notcached.call(this);
             } else { // sha1 matched, skip fetching, just stream from saved
@@ -177,14 +178,14 @@ class MirrorFS {
                 }
             }
         });
-        function maybeCheckSha(filepath, mcsha1, cb) {
+        function maybeCheckSha(filepath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
             /*
             Check file is readable, or if sha1 offered check sha matches
             cb(err) If doesn't match
              */
-            if (mcsha1) {
-                this.streamhash(fs.createReadStream(filepath), (err, multiHash) => {
-                    if (err || multiHash !== mcsha1) { cb(err || new Error('multihash doesnt match')); }
+            if (digest) {
+                this.streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
+                    if (err || (actual !== digest)) { cb(err || new Error(`multihash ${format} ${algorithm} ${actual} doesnt match ${digest}`)); }
                     else { cb(); }
                 });
             } else { //
@@ -297,9 +298,9 @@ class MirrorFS {
 
     static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
-        const tablename = "sha1.filepath";
+        const tablename = `${algorithm}.filepath`;
         this.streamOfCachedItemPaths({cacheDirectory})
-            .map((filepath, cb) =>  this.streamhash(fs.createReadStream(filepath), (err, multiHash) => {
+            .map((filepath, cb) =>  this.streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
                     if (err) { debug("loadHashTable saw error: %s", err.message); }
                     else { this.hashstore.put(tablename, multiHash, filepath, cb); };
                 }),

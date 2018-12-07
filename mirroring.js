@@ -71,7 +71,7 @@ class Mirror {
             .flatten({name: 'Flatten Streams to SearchResults'})
             // Stream of Search results (mixed)
             .log((m)=>[m.identifier], {name:"SearchResults"})
-
+            // This next line will fail, and skip if item doesnt exist or is unfetchable (e.g. @foo where foo doesnt exist)
             .map((o) => ArchiveItem.fromMemberFav(o).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads, note will get first page of results if collection
             // a stream of ArchiveItem's with metadata fetched
             .map((ai, cb) => ai.save({cacheDirectory: config.directory}, cb), {name: "SaveItems", async: true, paralleloptions})
