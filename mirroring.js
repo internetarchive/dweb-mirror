@@ -69,6 +69,11 @@ class Mirror {
             // Stream of streams of Search results (minimal JSON) ready for fetching
             .log((s)=>s.name, {name:"Stream of Streams (Collection>SearchResults)"})
             .flatten({name: 'Flatten Streams to SearchResults'})
+                // This block is just for testing and TODO can be deleted.
+                //.log((m)=>[m.identifier], {name:"XXXSearchResults"})
+                //.filter(m => m.identifier === "commute", {name:"Filter for test case"})
+                //.log((m)=>[m.identifier], {name:"XYZSearchResults"})
+                //.map(m => { if (m.identifier === "commute")  m.identifier = "@brenton"; return m }, {name:"Fake for test case @brenton"}) // TODO-XXX Just for debugging
             // Stream of Search results (mixed)
             .log((m)=>[m.identifier], {name:"SearchResults"})
             // This next line will fail, and skip if item doesnt exist or is unfetchable (e.g. @foo where foo doesnt exist)

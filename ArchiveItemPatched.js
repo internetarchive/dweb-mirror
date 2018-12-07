@@ -221,7 +221,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         const namepart = this.itemid;
         if (cacheDirectory && !skipCache && namepart) { //TODO-SEARCH cache results of searches somewhere, maybe as a saved-search type pseudo-item with a members file.
             const dirpath = this._dirpath(cacheDirectory);
-            const filepath = path.join(dirpath, this.namepart + "_members.json");
+            const filepath = path.join(dirpath, namepart + "_members.json");
             fs.readFile(filepath, (err, jsonstring) => {
                 if (!err)
                     this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMember(o));  // Must be an array, will be undefined if parses wrong
