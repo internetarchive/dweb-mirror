@@ -247,7 +247,7 @@ class MirrorFS {
                                             })
                                         }
                                     });
-                                    s.on('error', (err) => debug("Failed to read %s from net err=%s", debugname, err.message));
+                                    s.on('error', (err) => debug("Failed to read %o from net err=%s", urls, err.message));
                                     try {
                                         s.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                                         if (wantStream) cb(null, s);
