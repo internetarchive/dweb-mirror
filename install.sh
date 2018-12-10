@@ -1,7 +1,10 @@
 #!/bin/bash
 
-#
+# Note - this can be run multiple times, and should adjust to current reality
 npm install # Get all the node_modules etc
+if [ -d ../dweb-objects ]
+
+exit # TODO untested from here down
 
 if ! (ipfs --version)
 then

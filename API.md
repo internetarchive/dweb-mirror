@@ -17,9 +17,33 @@ The API may change fairly frequently up until v1.0.0. Likely changes should be d
 # Config file
 
 #### Expected changes
-This is definately going to change to provide both generic control, and an ability to fine grain configuration 
-at the app; collection; and item; levels
+confi.js is definately going to change to provide both generic control, and an ability to fine grain configuration 
+at the app; collection; and item; levels. 
+
+For now - the file is (inadequate) documentation  TODO-DOCS
+
+
+# Local classes
 
 # ArchiveController and Extensions
 
-# Local classes
+##ArchiveFile
+See dweb-archivecontroller/API.md for docs before dweb-mirror extensions
+
+*Note* some of this functionality will be moved into dweb-archivecontroller TODO-DOCS
+
+#####ArchiveFile.new(({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, f(err,data)))
+
+Asynchronously create a new ArchiveFile instance and load its metadata.
+
+```
+ archiveitem:   Instance of ArchiveItem with or without its metadata loaded
+ itemid:        Identifier of item (only used if archiveitem not defined)
+ metadata:      If defined is the result of a metadata API call for loading in AF.metadata
+ filename:      Name of an existing file, (may be multipart e.g. foo/bar)
+ cb(err, archivefile): passed Archive File
+ resolves to:   archivefile if no cb
+ errors:        FileNotFound or errors from ArchiveFile() or fetch_metadata()
+```
+
+TODO-DOC ... work through rest of ArchiveFilePatched 

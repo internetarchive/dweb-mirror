@@ -19,11 +19,29 @@ to their own disks, and then to serve them up via dweb tools such as IPFS or Web
  
 At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-* Make sure have current version of node - seen issues with older ones - `https://nodejs.org`
+#### Prelim - getting your machine ready.
+* You'll need git, node, npm, which should be on most Linux machines.
+* TODO Mac specific instructions to add these (need a clean machine to test on)
+* This is only tested on current versions, so I recommend updating before installing.
+  * Node: `https://nodejs.org` It should auto-detect your machine, and get the "recommended" version.
+  * Npm: # sudo npm install npm@latest -g
+  * Git: Try `git --version` and if its not installed then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+
+#### Install dweb-mirror
+* From a command line:
+* `cd /path/to/install' # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
 * `git clone “https://github.com/internetarchive/dweb-mirror”`
-* `npm install`
+* `cd dweb-mirror`
+* `npm install` # Expect this to take a while and generate error messages. 
+* `npm install` # Second time will help understand if error messages are significant
+* `cd ..`
 * `git clone “https://github.com/internetarchive/dweb-archive”`
+* `cd dweb-archive`
 * `npm install`
+
+TODO installer should check for presence of other repos
+
+
 * Check you have the desired links for bundles in dweb-archive/dist
   * Either `cd dweb-archive && ln -s ./node_modules/@internetarchive/dweb-objects/dist/dweb-objects-bundle.js dist`
   * OR if you plan on developing on dweb-objects install it and `ln -s ../dweb-objects/dist/dweb-objects-bundle.js dist` 

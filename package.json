@@ -34,7 +34,8 @@
     "url": "git://github.com/internetarchive/dweb-mirror.git"
   },
   "scripts": {
-    "build": "echo 'TODO: build is Not defined yet'"
+    "build": "echo 'TODO: build is Not defined yet'",
+    "install": "./install.sh",
   },
   "version": "0.0.5"
 }
