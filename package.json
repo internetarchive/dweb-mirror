@@ -35,7 +35,7 @@
   },
   "scripts": {
     "build": "echo 'TODO: build is Not defined yet'",
-    "install": "./install.sh",
+    "install": "./install.sh"
   },
   "version": "0.0.5"
 }
