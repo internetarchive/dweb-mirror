@@ -243,6 +243,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                                     } else {
                                         cb(null, arr); // Return just the new members found by the query
                                     }});
+                                //TODO-ADVANCEDSEARCH - write to ITEM_extra files as well via ArchiveMember.save
                             }
                         }});
                 } else {

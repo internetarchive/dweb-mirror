@@ -51,7 +51,7 @@ class MirrorSearch extends ArchiveItem {
                 if (self.page < maxpages && ((typeof(self.numFound) === "undefined") || ((self.start + self.limit) < self.numFound))) {
                     self.page++;
                     // Should fetch next page of search, and metadata on first time, note appends members to .members, but just passes next page of results to stream
-                    self.fetch_query({skipCache}, (err, archiveMembers) => {
+                    self.fetch_query({skipCache}, (err, archiveMembers) => {    // Will get dweb-archivecontroller/Util.gateway.url_default_fl fields which are sufficient for Tiles
                         if (err) {  //TransportError (or CodingError) if no urls to fetch
                             console.error("Error caught in streamOnePage.fetch_query", self.itemid, err);
                             // noinspection JSUnresolvedFunction
