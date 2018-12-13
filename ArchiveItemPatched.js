@@ -136,6 +136,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     }
 
     _parse("meta", (err, o) => {
+        // errors: NoLocalCopy if called with an error
         if (err) {
             cb(new errors.NoLocalCopy());   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
         } else {
@@ -172,6 +173,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     !cached:            Load from net, save to cache
 
     cb(err, this) or if undefined, returns a promise resolving to 'this'
+    Errors              TransportError (404)
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache;           // If set will not try and read cache

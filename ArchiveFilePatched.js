@@ -11,14 +11,15 @@ const MirrorFS = require('./MirrorFS');
 
 ArchiveFile.new = function({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, cb) {
     /*
-     Load ArchiveFile, async because may have to find metadata etc
-     Process is itemid > item + filename > fileMetadata
+     Asynchronously create a new ArchiveFile instance and load its metadata.
 
-     archiveitem:   Instance of ArchiveItem with or without its item field loaded
+     archiveitem:   Instance of ArchiveItem with or without its metadata loaded
+     itemid:        Identifier of item (only used if archiveitem not defined)
      metadata:      If defined is the result of a metadata API call for loading in AF.metadata
      filename:      Name of an existing file, (may be multipart e.g. foo/bar)
      cb(err, archivefile): passed Archive File
-     resolves to: archivefile if no cb
+     resolves to:   archivefile if no cb
+      errors:        FileNotFound or errors from ArchiveFile() or fetch_metadata()
     */
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}
     function f(cb) {

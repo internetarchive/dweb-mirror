@@ -276,7 +276,11 @@ app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVar
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     loadedAI({itemid: req.params.itemid}, (err, ai) => {
         if (err) {
-            next(err);
+            if (err.name === "TransportError") {
+                res.status(404).send(err.message); // Its neither local, nor from server
+            } else {
+                next(err);
+            }
         } else {
             res.json(ai.exportMetadataAPI());
         }
