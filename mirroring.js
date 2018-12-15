@@ -1,4 +1,4 @@
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-archive dweb-archive-controller dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archive dweb-archive:* dweb-archivecontroller dweb-archivecontroller:* dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
 // Standard repos
 const wrtc = require('wrtc');
 const debug = require('debug');
@@ -9,6 +9,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched');
+const ArchiveMember = require('./ArchiveMemberPatched');
 
 // Other files in this repo
 const config = require('./config');

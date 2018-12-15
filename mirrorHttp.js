@@ -46,6 +46,7 @@ const MirrorFS = require('./MirrorFS');
 const config = require('./config'); // Global configuration, will add app specific requirements
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
+const ArchiveMember = require('./ArchiveMemberPatched');
 const MirrorCollection = require('./MirrorCollection');
 const MirrorSearch = require('./MirrorSearch');
 

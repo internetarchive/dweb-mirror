@@ -11,6 +11,7 @@ const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
+const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 const errors = require('./Errors');
@@ -226,11 +227,11 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
             const filepath = path.join(dirpath, namepart + "_members.json");
             fs.readFile(filepath, (err, jsonstring) => {
                 if (!err)
-                    this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMember(o));  // Must be an array, will be undefined if parses wrong
+                    this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMemberSearch(o));  // Must be an array, will be undefined if parses wrong
                 if (err || (typeof this.members === "undefined") || this.members.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
                     this._fetch_query(opts, (err, arr) => { // arr will be matching ArchiveMembers, fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
                         if (err) {
-                            debug("Failed to fetch_query for %s: %s", this.namepart, err.message); cb(err);
+                            debug("Failed to fetch_query for %s: %s", namepart, err.message); cb(err);
                         } else {
                             if (typeof arr === "undefined") {
                                 // fetch_query returns undefined if not a collection
@@ -241,7 +242,8 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                                     if (err) {
                                         debug("Failed to write cached members at %s: %s", err.message); cb(err);
                                     } else {
-                                        cb(null, arr); // Return just the new members found by the query
+                                        arr.forEach(ams=>ams.save({cacheDirectory}, (err)=>{}))
+                                        cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save)
                                     }});
                                 //TODO-ADVANCEDSEARCH - write to ITEM_extra files as well via ArchiveMember.save
                             }
