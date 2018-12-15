@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # Note - this can be run multiple times, and should adjust to current reality
-npm install # Get all the node_modules etc
-if [ -d ../dweb-objects ]
 
-exit # TODO untested from here down
+# Not running install as this script is in packages.json so called BY `npm install`
+#npm install # Get all the node_modules etc
 
+
+exit # IPFS NOT INTEGRATED YET
+#TODO-IPFS
 if ! (ipfs --version)
 then
     echo "Need to install IPFS from "https://dist.ipfs.io/#go-ipfs"
@@ -15,6 +17,6 @@ else
     ipfs config --json Experimental.FilestoreEnabled true
 fi
 
-# TODO update from GIT - using template from previous installtransport.sh
 
-# TODO add docker files as alternative ?
+
+
