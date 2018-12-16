@@ -29,41 +29,52 @@ At the moment this is one set for developing, or use, later I'll split it when i
 
 #### Install dweb-mirror
 * From a command line:
-* `cd /path/to/install' # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
+* cd /path/to/install #  # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
+
+If you plan on developing on dweb-archive, dweb-archivecontroller, dweb-objects, dweb-transports; then for example to develop on dweb-archive:
+
+* `git clone “https://github.com/internetarchive/dweb-archive”`
+* `cd dweb-archive`
+* `npm install` # Expect this to take a while and generate error messages. 
+* `cd ..`       # Back to /path/to/install
+
+You can come back and do this again later. 
+
 * `git clone “https://github.com/internetarchive/dweb-mirror”`
 * `cd dweb-mirror`
 * `npm install` # Expect this to take a while and generate error messages. 
 * `npm install` # Second time will help understand if error messages are significant
 * `cd ..`
-* `git clone “https://github.com/internetarchive/dweb-archive”`
-* `cd dweb-archive`
-* `npm install`
 
-TODO installer should check for presence of other repos
+`npm install` will run the script install.sh which can be safely run multiple times, it will
+* Add links to Javascript webpack-ed bundles into the dist directory, 
+from the git cloned repos if you chose to install them above, 
+otherwise to those automatically brought in by `npm install`
 
 
-* Check you have the desired links for bundles in dweb-archive/dist
-  * Either `cd dweb-archive && ln -s ./node_modules/@internetarchive/dweb-objects/dist/dweb-objects-bundle.js dist`
-  * OR if you plan on developing on dweb-objects install it and `ln -s ../dweb-objects/dist/dweb-objects-bundle.js dist` 
-  * Same for dweb-transports 
+TODO Later versions will do other tasks like configuring IPFS
+
+
+
+TODO EDIT AND TEST FROM HERE DOWN
+
+
 * Edit dweb-mirror/config.js … **this location may change**
   * `config.js/directory`  should point at where you want the cache to store files 
     * Make sure this directory exists - TODO-MIRROR make it fail informatively if it doesn’t 
-  * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned.
+  * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned, it will try a few locations and usually guess correctly.
     * collections should be a dictionary of collections to download,  collections: `{ “fav-yourusername”: {} }` is a good simple example
 
 ## Testing
-Check mirroring with `cd dweb-mirror && node ./mirroring.js` then check in the cache directory
+Check mirroring with `cd dweb-mirror && ./mirroring.js` then check in the cache directory for the files appearing. 
 
 * Run `cd dweb-mirror && node ./mirrorHttp.js &` to start the HTTP server
-* open `http://localhost:4244/arc/archive.org` in the browser should see the Archive URL
+* open `http://localhost:4244` in the browser should see the Archive URL
 If you don’t get a Archive UI then look at the server log (in console) to see for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
 * `Source Map URL: jquery-1.10.2.min.map` until we figure out how to build these min.maps 
-
-**TODO-INSTALLATION** - note currently this isn't working, still figuring out if install, or general, bugs
 
 ## Overall design
 
