@@ -1,3 +1,4 @@
+const debug = require('debug')("dweb-mirror:config");
 const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 const HashStore = require('./HashStore');
@@ -12,7 +13,7 @@ const config = new MirrorConfig({
     skipfetchfile: false, // Enable to stop it actually fetching the file - useful when testing
     directory: "/Users/mitra/temp/mirrored",    // Used by mirroring and mirrorHTTP
     archiveui: {
-        directory: MirrorFS.firstExisting("../dweb-archive/dist", "node_modules/dweb-archive/dist",  "/Users/mitra/git/dweb-archive/dist"),
+        directory: MirrorFS.firstExisting("../dweb-archive/dist", "node_modules/@internetarchive/dweb-archive/dist",  "/Users/mitra/git/dweb-archive/dist"),
     },
     limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
     search: {
@@ -47,6 +48,6 @@ const config = new MirrorConfig({
     upstream: "https://dweb.me"    // Generic upstream server, should be able to parse urls like /arc or /contenthash
 });
 MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
-
+debug("config summary: archiveui:%s",config.archiveui.directory)
 
 exports = module.exports = config;
