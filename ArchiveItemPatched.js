@@ -3,27 +3,35 @@ This file is extensions to ArchiveItem that probably in some form could go back 
 
  */
 
-//Standard repos
+//NPM repos
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
+const waterfall = require('async/waterfall');
+const multihashes = require('multihashes');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
-const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
+const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 const errors = require('./Errors');
 const config = require('./config');
 
-
+ArchiveItem.prototype._namepart = function() {
+    // The name used for the directory and file prefixes, normally the item identifier, but some special cases
+    if (!this.itemid && this.query) {
+        return "_SEARCH_"+MirrorFS.quickhash(this.query, {algorithm: 'sha1', format:'multihash58'})
+    } else if (this.itemid) {
+        return this.itemid;
+    } else {
+        return undefined; // Should be caught at higher level to decide not to use cache
+    }
+}
 ArchiveItem.prototype._dirpath = function(directory) {
-        if (!this.itemid && this.query) {
-            return path.join(directory, "_SEARCH_"+this.query);
-        } else {
-            return path.join(directory, this.itemid);
-        }
+    const namepart = this._namepart();
+    return namepart ? path.join(directory, namepart) : undefined;
     };
 
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
@@ -44,7 +52,8 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
             // noinspection JSUnusedLocalSymbols
             this.fetch_metadata((err, data) => {
                 if (err) {
-                    _err("Cant save because couldnt fetch metadata", err, cb);
+                    console.error(`Cant save because couldnt fetch metadata for %s: %s`, this.itemid, err.message);
+                    cb(err);
                 } else {
                     f.call(this); // Need the call because it loses track of "this"
                 }
@@ -53,59 +62,41 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
             f.call(this);
         }
 
-        function _err(msg, err, cb) {
-            console.error(msg, err);
-            if (cb) {
-                cb(err);
-            } else {
-                throw(err)
-            }
-        }
-
         function f() {
             MirrorFS._mkdir(dirpath, (err) => {
                 if (err) {
-                    _err(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err, cb);
+                    console.error(`Cannot mkdir ${dirpath} so cant save item ${namepart} %s`, err.message);
+                    cb(err);
                 } else {
-                    const filepath = path.join(dirpath, namepart + "_meta.json");
-                    fs.writeFile(filepath, canonicaljson.stringify(this.metadata), (err) => {
-                        if (err) {
-                            _err(`Unable to write metadata to ${namepart}`, err, cb);
-                        } else {
-
-                            const filepath = path.join(dirpath, namepart + "_files.json");
-                            fs.writeFile(filepath, canonicaljson.stringify(this.exportFiles()), (err) => {
-                                if (err) {
-                                    _err(`Unable to write files to ${namepart}`, err, cb);
-                                } else {
-                                    // Write any additional info we want that isn't derived from (meta|reviews|files)_xml etc or added by gateway
-                                    const filepath = path.join(dirpath, namepart + "_extra.json");
-                                    fs.writeFile(filepath, canonicaljson.stringify({collection_titles: this.collection_titles}), (err) => {
-                                        if (err) {
-                                            _err(`Unable to write extras to ${namepart}`, err, cb);
-                                        } else {
-                                            if (typeof this.reviews === "undefined") { // Reviews is optional - most things don't have any
-                                                cb(null, this);
-                                            } else {
-                                                const filepath = path.join(dirpath, namepart + "_reviews.json");
-                                                fs.writeFile(filepath, canonicaljson.stringify(this.reviews), (err) => {
-                                                    if (err) {
-                                                        _err(`Unable to write reviews to ${namepart}`, err, cb);
-                                                    } else {
-                                                        cb(null, this);
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    })
-                                }
-                            })
-                        }
-                    });
+                    Util.forEach(   // This is same as async.forEach
+                        [
+                            ["meta", this.metadata],
+                            ["members", this.members],
+                            ["files", this.exportFiles()],
+                            ["extras", {collection_titles: this.collection_titles}],
+                            ["reviews", this.reviews]
+                        ],
+                        (i, cbInner) => { // [ part, obj ]
+                            const filepath = path.join(dirpath, `${namepart}_${i[0]}.json`);
+                            if (typeof i[1] === "undefined") {
+                                cbInner(null);
+                            } else {
+                                fs.writeFile(filepath, canonicaljson.stringify(i[1]), (err) => {
+                                    if (err) {
+                                        console.error(`Unable to write ${i[0]} to ${filepath}`);
+                                        cbInner(err);
+                                    } else {
+                                        cbInner(null);
+                                    }
+                                });
+                            }
+                        },
+                        (err)=>{if (err) { cb(err) } else { cb(null, this);}});
                 }
             });
         }
     }
+
 };
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     /*
@@ -116,7 +107,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     */
     const namepart = this.itemid;
     const res = {};
-    const dirpath = this._dirpath(cacheDirectory);
+    const dirpath = this._dirpath(cacheDirectory);  // Undefined if just members and neither query nor itemid
     function _parse(part, cb) {
         const filename = path.join(dirpath, `${namepart}_${part}.json`);
         fs.readFile(filename, (err, jsonstring) => {
@@ -150,11 +141,14 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                     res.files_count = res.files.length;
                     _parse("reviews", (err, o) => {
                         res.reviews = o; // Undefined if failed
-                        _parse("extra", (err, o) => {
-                            // Unavailable on archive.org but there on dweb.archive.org: collection_titles
-                            // Not relevant on dweb.archive.org, d1, d2, dir, item_size, server, uniq, workable_servers
-                            res.collection_titles = o.collection_titles;
-                            cb(null, res);
+                        _parse("members", (err, o) => {
+                            res.members = o; // Undefined if failed
+                            _parse("extra", (err, o) => {
+                                // Unavailable on archive.org but there on dweb.archive.org: collection_titles
+                                // Not relevant on dweb.archive.org, d1, d2, dir, item_size, server, uniq, workable_servers
+                                res.collection_titles = o && o.collection_titles;
+                                cb(null, res);
+                            });
                         });
                     });
                 }
@@ -221,41 +215,53 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         //TODO-CACHE-AGING
         // noinspection JSUnresolvedVariable
         const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
-        const namepart = this.itemid;
-        if (cacheDirectory && !skipCache && namepart) { //TODO-SEARCH cache results of searches somewhere, maybe as a saved-search type pseudo-item with a members file.
-            const dirpath = this._dirpath(cacheDirectory);
-            const filepath = path.join(dirpath, namepart + "_members.json");
-            fs.readFile(filepath, (err, jsonstring) => {
-                if (!err)
-                    this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMemberSearch(o));  // Must be an array, will be undefined if parses wrong
-                if (err || (typeof this.members === "undefined") || this.members.length < (Math.max(this.page,1)*this.limit)) { // Either cant read file (cos yet cached), or it has a smaller set of results
-                    this._fetch_query(opts, (err, arr) => { // arr will be matching ArchiveMembers, fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
-                        if (err) {
-                            debug("Failed to fetch_query for %s: %s", namepart, err.message); cb(err);
-                        } else {
-                            if (typeof arr === "undefined") {
-                                // fetch_query returns undefined if not a collection
-                                cb(null, undefined); // No results return undefined (which is what AI.fetch_query and AI._fetch_query do if no collection instead of empty array)
-                            } else {
-                                // TODO fix case where this will fail if search on page=1 then page=3 but will still right as 2 pages - just dont write in this case
-                                fs.writeFile(filepath, canonicaljson.stringify(this.members), (err) => {
-                                    if (err) {
-                                        debug("Failed to write cached members at %s: %s", err.message); cb(err);
-                                    } else {
-                                        arr.forEach(ams=>ams.save({cacheDirectory}, (err)=>{}))
-                                        cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save)
-                                    }});
-                                //TODO-ADVANCEDSEARCH - write to ITEM_extra files as well via ArchiveMember.save
+        const namepart = this._namepart();  // Can be undefined for example for list of members unconnectd to an item
+        if (cacheDirectory && !skipCache) {
+            const dirpath = namepart && this._dirpath(cacheDirectory); //TODO-SEARCH cache results in _SEARCH_<query>
+            const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json")
+            waterfall([
+                (cb) => { // Read from cache if available
+                    if (!filepath) {
+                        cb();
+                    } else {
+                        fs.readFile(filepath, (err, jsonstring) => {
+                            if (!err) {
+                                this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMemberSearch(o));
                             }
-                        }});
-                } else {
-                    debug("Using cached version of query"); // TODO test this its not going to be a common case as should probably load the members when read metadata
-                    let newmembers = this.members.slice((this.page - 1) * this.limit, this.page * this.limit); // See copy of some of this logic in dweb-mirror.MirrorCollection.fetch_query
-                    // Note this does NOT support sort, there isnt enough info in members.json to do that
-                    cb(null, opts.wantFullResp ? this._wrapMembersInResponse(newmembers) : newmembers);
-                }});
+                            cb();
+                        });
+                    } },
+                (cb) => { // Expand the members if necessary and possible, errors are ignored
+                    if (this.members) {
+                        Util.asyncMap(this.members,
+                            (am,cb2) => {
+                                if (am instanceof ArchiveMemberSearch) { cb2(null, am) }
+                                else { am.read({cacheDirectory}, (err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : am)); }}   ,
+                            (err, arr) => {this.members=arr; cb() }); // Expand where possible
+                    } else {
+                        cb();
+                    }
+                },
+                // _fetch_query will optimize, it expands any unexpanded members, and only does the query if needed (because too few pages retrieved)
+                (cb) => {
+                    this._fetch_query(opts, cb) }, // arr of search result or slice of existing members
+                (arr, cb) => {
+                    // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
+                    // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
+                    if (this.members && filepath) {
+                        MirrorFS.writeFile(filepath, canonicaljson.stringify(this.members), (err) => cb(err, arr))
+                    } else {
+                        cb(null, arr);
+                    }
+                },
+                (arr, cb) => { // Save members
+                    if (this.members) { this.members.forEach(ams=>ams.save({cacheDirectory}, (err)=>{})); } // Note this returns before they are saved
+                    cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
+                                   // Not that arr may or may not be wrapped in response by _fetch_query depending on opts
+                }
+            ], cb );
         } else {
-            this._fetch_query(opts, cb); // Cache free fetch (like un-monkey-patched fetch_query
+            this._fetch_query(opts, cb);    // Uncached version (like ArchiveItem.fetch_query did before patching)
         }
     }
 };
@@ -379,15 +385,20 @@ ArchiveItem.prototype.minimumForUI = function() {
                 break;
             case "audio":  //TODO-THUMBNAILS check that it can find the image for the thumbnail with the way the UI is done. Maybe make ReactFake handle ArchiveItem as teh <img>
             case "etree":   // Generally treated same as audio, at least for now
-                if (!this.playlist) this.setPlaylist();
+                if (!this.playlist) { // noinspection JSUnresolvedFunction
+                    this.setPlaylist();
+                }
                 // Almost same logic for video & audio
                 minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
                 // Audio uses the thumbnail image, puts URLs direct in html, but that always includes http://dweb.me/thumbnail/itemid which should get canonicalized
                 break;
             case "movies":
-                if (!this.playlist) this.setPlaylist();
+                if (!this.playlist) { // noinspection JSUnresolvedFunction
+                    this.setPlaylist();
+                }
                 // Almost same logic for video & audio
                 minimumFiles.push(...Object.values(this.playlist).map(track => track.sources[0].urls)); // First source from each (urls is a single ArchiveFile in this case)
+                // noinspection JSUnresolvedFunction
                 minimumFiles.push(this.videoThumbnailFile());
                 break;
             case "account":

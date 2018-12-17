@@ -17,7 +17,7 @@ const config = new MirrorConfig({
     },
     limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
     search: {
-        itemsperpage: 100, // Optimum is probably around 100,
+        itemsperpage: 10, // Optimum is probably around 100,
         pagespersearch: 1, // If want > 100 files per collection then increase this number
     },
     file: {
@@ -28,8 +28,8 @@ const config = new MirrorConfig({
         minimumForUi: true
     },
     collections: {
-        //"prelinger": {},
-        "fav-mitra": {},
+        "prelinger": {},
+        //"fav-mitra": {},
         //"commute": {},
         //"fav-brewster": {},
     },
@@ -49,6 +49,6 @@ const config = new MirrorConfig({
 });
 // Dont edit anything from here on down
 MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
-debug("config summary: archiveui:%s",config.archiveui.directory)
+debug("config summary: archiveui:%s",config.archiveui.directory);
 
 exports = module.exports = config;

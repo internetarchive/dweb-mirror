@@ -47,6 +47,11 @@ class MirrorFS {
         })
     }
 
+    static quickhash(str, options={}) {
+        const hash = crypto.createHash(options.algorithm || 'sha1').update(str);
+        return  options.format === "multihash58" ? multihash58sha1(hash.digest()) : hash.digest('hex');
+    }
+
     static streamhash(s, options={}, cb) {
         /*  Calculate hash on a stream,
             algorithm: Hash algorithm to be used, (only tested with sha1)
@@ -76,6 +81,24 @@ class MirrorFS {
             cb(null);
         }
         return stream
+    }
+
+    static writeFile(filepath, data, cb) {
+        // Like fs.writeFile but will mkdir the directory before writing the file
+        const dirpath = path.dirname(filepath);
+        MirrorFS._mkdir(dirpath, (err) => {
+            if (err) {
+                debug("MirrorFS.writeFile: Cannot mkdir %s", dirpath, err.message);
+                cb(err);
+            } else {
+                fs.writeFile(filepath, data, (err) => {
+                    if (err) {
+                        debug("MirrorFS.writeFile: Unable to write to %s: %s", filepath, err.message);
+                        cb(err);
+                    } else {
+                        cb(null);
+                    }});
+            }});
     }
 
     static _fileopenwrite(directory, filepath, cb) {  // cb(err, fd)

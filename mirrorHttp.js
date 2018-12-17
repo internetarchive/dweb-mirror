@@ -26,7 +26,8 @@ TODO-RACHEL - merge mirrorHttp with this with mirrorHttp_rachel
  */
 // External packages
 //Not debugging: express:*
-process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
+// noinspection JSUnresolvedVariable
+process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:* dweb-archivecontroller:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const url = require('url');
@@ -206,6 +207,12 @@ function streamQuery(req, res, next) {
     if (req.query.q && req.query.q.startsWith("collection:") && (req.query.q.lastIndexOf(':') === 10)) { // Only interested in standardised q=collection:ITEMID
         const itemid = req.query.q.split(':').pop();
         o = new MirrorCollection({sort: req.query.sort, itemid})
+    } else if (req.query.q && req.query.q.startsWith("identifier:") && (req.query.q.lastIndexOf(':') === 10)) {
+        const ids = req.query.q.slice(11).split(' OR '); // ["foo","bar"]
+        o = new MirrorSearch();
+        o.members = req.query.q.slice(11).split(' OR ') // ["foo","bar"]
+            .map(identifier => new ArchiveMember({identifier}));
+        // The members will be expanded by fetch_query either from local cache or by querying upstream
     } else {
         o = new MirrorSearch({sort: req.query.sort, query: req.query.q});
     }
@@ -254,7 +261,7 @@ function streamThumbnail(req, res, next) {
 }
 
 //app.get('/', (req,res)=>{debug("ROOT URL");});
-app.get('/', (req,res)=>{res.redirect(url.format({pathname:"/archive/archive.html", query: {transport:"HTTP", mirror: req.headers.host}}))})
+app.get('/', (req,res)=>{res.redirect(url.format({pathname:"/archive/archive.html", query: {transport:"HTTP", mirror: req.headers.host}}))});
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);
 app.get('/arc/archive.org/details', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
@@ -326,7 +333,7 @@ app.get('/info', function(req, res) {
 app.use((req,res,next) => {
     debug("FAILING: %s",req.url);
     next();
-})
+});
 
 // noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
