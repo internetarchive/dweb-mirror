@@ -1,3 +1,8 @@
+/*
+// Monkey patches dweb-archivecontroller,
+// Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadta is used to use the cache
+ */
+
 // Generic NPM modules
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
@@ -11,11 +16,13 @@ const MirrorFS = require('./MirrorFS');
 ArchiveMember._dirpath = function(directory, identifier) {
     return path.join(directory, identifier);
 };
+// noinspection JSUnresolvedVariable
 ArchiveMember.prototype._dirpath = function(directory) {
     return ArchiveMember._dirpath(directory, this.identifier);
 };
 
 
+// noinspection JSUnresolvedVariable
 ArchiveMember.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
     function f(cb) {
@@ -65,6 +72,7 @@ ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefine
         }
     });
 };
+// noinspection JSUnresolvedVariable
 ArchiveMember.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     ArchiveMember.read({cacheDirectory, identifier: this.identifier}, cb);
 };

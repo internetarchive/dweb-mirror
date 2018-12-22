@@ -9,7 +9,6 @@ const path = require('path');
 const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
-const multihashes = require('multihashes');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
@@ -19,6 +18,7 @@ const MirrorFS = require('./MirrorFS');
 const errors = require('./Errors');
 const config = require('./config');
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
     // The name used for the directory and file prefixes, normally the item identifier, but some special cases
     if (!this.itemid && this.query) {
@@ -28,12 +28,15 @@ ArchiveItem.prototype._namepart = function() {
     } else {
         return undefined; // Should be caught at higher level to decide not to use cache
     }
-}
+};
+
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype._dirpath = function(directory) {
     const namepart = this._namepart();
     return namepart ? path.join(directory, namepart) : undefined;
     };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
         Save _meta and _files and _reviews as JSON (_members will be saved by Subclassing in MirrorCollection)
@@ -52,7 +55,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
             // noinspection JSUnusedLocalSymbols
             this.fetch_metadata((err, data) => {
                 if (err) {
-                    console.error(`Cant save because couldnt fetch metadata for %s: %s`, this.itemid, err.message);
+                    console.error(`Cant save because could not fetch metadata for %s: %s`, this.itemid, err.message);
                     cb(err);
                 } else {
                     f.call(this); // Need the call because it loses track of "this"
@@ -98,6 +101,8 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     }
 
 };
+// noinspection JSUnresolvedVariable
+// noinspection JSUnusedGlobalSymbols
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
@@ -157,6 +162,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     });
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     /*
     Fetch the metadata for this item if it hasn't already been.
@@ -181,7 +187,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
                 //TODO-CACHE-AGING need timing of how long use old metadata
                 this.read({cacheDirectory}, (err, metadata) => {
                     if (err) { // No cached version
-                        console.assert(err.name === 'NoLocalCopy', "Havent thought about errors other than NoLocalCopy", this.itemid, err.message);
+                        console.assert(err.name === 'NoLocalCopy', "Have npt thought about errors other than NoLocalCopy", this.itemid, err.message);
                         this._fetch_metadata((err, ai) => { // Process Fjords and load .metadata and .files etc
                             if (err) {
                                 cb(err); // Failed to read & failed to fetch
@@ -203,6 +209,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     }
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
         cb(err, [ArchiveMember])
@@ -215,10 +222,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         //TODO-CACHE-AGING
         // noinspection JSUnresolvedVariable
         const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
-        const namepart = this._namepart();  // Can be undefined for example for list of members unconnectd to an item
+        const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
         if (cacheDirectory && !skipCache) {
-            const dirpath = namepart && this._dirpath(cacheDirectory); //TODO-SEARCH cache results in _SEARCH_<query>
-            const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json")
+            const dirpath = namepart && this._dirpath(cacheDirectory);
+            const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json");
             waterfall([
                 (cb) => { // Read from cache if available
                     if (!filepath) {
@@ -255,7 +262,9 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     }
                 },
                 (arr, cb) => { // Save members
-                    if (this.members) { this.members.forEach(ams=>ams.save({cacheDirectory}, (err)=>{})); } // Note this returns before they are saved
+                    if (this.members) {
+                        // noinspection JSUnusedLocalSymbols
+                        this.members.forEach(ams=>ams.save({cacheDirectory}, (unusederr)=>{})); } // Note this returns before they are saved
                     cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
                                    // Not that arr may or may not be wrapped in response by _fetch_query depending on opts
                 }
@@ -267,6 +276,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 };
 
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache,
@@ -322,7 +332,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     recursable(null, null);
                 } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
                     // noinspection JSUnresolvedVariable
-                    const servicesurl = config.archiveorg.servicesImg + this.itemid;
+                    const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid};
                     // Include direct link to services
                     if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
                     const dirpath = this._dirpath(cacheDirectory);
@@ -345,15 +355,17 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
         });
     }
 };
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
     /*
-    Save the related items to the cache, TODO-CACHE-TIMING
+    Save the related items to the cache, TODO-CACHE-AGING
     cb(err, obj)  Callback on completion with related items object
     */
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     // noinspection JSUnresolvedVariable
     const dirpath = this._dirpath(cacheDirectory);
+    // noinspection JSUnresolvedVariable
     MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,
         urls: config.archiveorg.related + "/" + itemid,
         filepath: path.join(dirpath, itemid+"_related.json"),

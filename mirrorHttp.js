@@ -15,7 +15,7 @@ DONE file, need pass on
 
 
 Summary of below:
-TODO update this summary
+TODO-2SC update this summary
 /info:  config as JSON
 /arc/archive.org/metadata/:itemid > DIR/:itemid/(_meta,_files,_reviews) || (dweb:/arc/archive.org/metadata/:itemid > Transports >cache) > { files, files_count, metadata, reviews }
 /arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
@@ -227,6 +227,7 @@ function streamQuery(req, res, next) {
             o.fetch_query({wantFullResp: true}, (err, resp) => {
                 if (err) {
                     debug('streamQuery for q="%s" failed with %s', o.query, err.message );
+                    res.status(404).send(err.message);
                     next(err);
                 } else {
                     res.json(resp);
@@ -261,6 +262,7 @@ function streamThumbnail(req, res, next) {
 }
 
 //app.get('/', (req,res)=>{debug("ROOT URL");});
+
 app.get('/', (req,res)=>{res.redirect(url.format({pathname:"/archive/archive.html", query: {transport:"HTTP", mirror: req.headers.host}}))});
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);

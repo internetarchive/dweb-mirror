@@ -79,7 +79,6 @@ class Mirror {
                 //.map(m => { if (m.identifier === "commute")  m.identifier = "@brenton"; return m }, {name:"Fake for test case @brenton"}) // TODO-XXX Just for debugging
             // Stream of Search results (mixed)
             .log((m)=>[m.identifier], {name:"SearchResults"})
-    /* XXX Testing adv search so stopping here
             // This next line will fail, and skip if item doesnt exist or is unfetchable (e.g. @foo where foo doesnt exist)
             .map((o) => ArchiveItem.fromMemberFav(o).fetch(), {name: "AI fetch", paralleloptions}) // Parallel metadata reads, note will get first page of results if collection
             // a stream of ArchiveItem's with metadata fetched
@@ -91,7 +90,6 @@ class Mirror {
             .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
             .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
             .map((af, cb) => af.cacheAndOrStream({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, cb), {name: "SaveFiles", async: true, paralleloptions, verbose: true})
-    */
             .reduce({name: "END OF MIRRORING"});
         } catch(err) {
             console.error(err);

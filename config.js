@@ -41,7 +41,7 @@ const config = new MirrorConfig({
     },
     archiveorg: {
         metadata: "https://dweb.me/arc/archive.org/metadata",
-        servicesImg: "https://archive.org/services/img/",           // TODO check intentionality of trailing slash, and ideally remove
+        servicesImg: "https://archive.org/services/img",
         related: "https://be-api.us.archive.org/mds/v1/get_related/all",
         mds: "https://be-api.us.archive.org/mds",
     },

@@ -20,6 +20,7 @@
     "ipfs-api": "^24.0.2",
     "level": "^4.0.0",
     "libsodium-wrappers": "^0.7.3",
+    "multihashes": "latest",
     "morgan": "^1.9.1",
     "parallel-streams": "^0.0.10",
     "sha": "^2.0.1",
