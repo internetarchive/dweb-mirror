@@ -1,59 +1,17 @@
-/* Monkey patches ArchiveFile, TODO merge into ArchiveFile when proven */
+/*
+// Monkey patches dweb-archivecontroller,
+// Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadta is used to use the cache
+ */
+
 // Standard files
 const debug = require('debug')('dweb-mirror:ArchiveFile');
 const path = require('path');
 // Other Archive repos
 const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile');
-const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata
 // Local files
-const errors = require('./Errors.js');
 const MirrorFS = require('./MirrorFS');
 
-ArchiveFile.new = function({itemid=undefined, archiveitem=undefined, metadata=undefined, filename=undefined}={}, cb) {
-    /*
-     Asynchronously create a new ArchiveFile instance and load its metadata.
-
-     archiveitem:   Instance of ArchiveItem with or without its metadata loaded
-     itemid:        Identifier of item (only used if archiveitem not defined)
-     metadata:      If defined is the result of a metadata API call for loading in AF.metadata
-     filename:      Name of an existing file, (may be multipart e.g. foo/bar)
-     cb(err, archivefile): passed Archive File
-     resolves to:   archivefile if no cb
-      errors:        FileNotFound or errors from ArchiveFile() or fetch_metadata()
-    */
-    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}
-    function f(cb) {
-        if (itemid && filename && !metadata && !archiveitem) {
-            archiveitem = new ArchiveItem({itemid});
-        } // Drop through now have archiveitem
-        if (archiveitem && filename && !metadata) {
-            if (!archiveitem.metadata) {
-                return archiveitem.fetch_metadata((err, ai) => { // Note will load from cache if available and load ai.metadata and ai.files
-                    return err ? cb(err)  : this.new({itemid, archiveitem: ai, metadata, filename}, cb); // Resolves to AF
-                });
-            }
-            const af = archiveitem.files.find(af => af.metadata.name === filename); // af, (undefined if not found)
-            return af ? cb(null, af) : cb(new errors.FileNotFoundError(`Valid itemid "${itemid}" but file "${filename}" not found`));
-        }
-        if (metadata) {
-            cb(null, new ArchiveFile({itemid, metadata}));
-        }
-    }
-};
-// noinspection JSUnusedGlobalSymbols
-ArchiveFile.prototype.readableFromNet = function(opts, cb) {
-    /*
-        This doesnt appear to be used at present.
-        cb(err, stream): Called with open readable stream from the net.
-     */
-    if (typeof opts === "function") { cb = opts; opts = {start: 0}; } // Allow skipping opts
-    // noinspection JSIgnoredPromiseFromCall
-    this.urls((err, urls) => { if (err) { cb(err) } else {
-        debug("Opening stream for %s/%s from urls", this.itemid, this.metadata.name);
-        DwebTransports.createReadStream(urls, opts, cb);
-    }});
-};
-
+// noinspection JSUnresolvedVariable
 ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
