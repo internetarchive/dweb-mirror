@@ -73,7 +73,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                             ["meta", this.metadata],
                             ["members", this.members],
                             ["files", this.exportFiles()],
-                            ["extras", {collection_titles: this.collection_titles}],
+                            ["extra", {collection_titles: this.collection_titles}],
                             ["reviews", this.reviews]
                         ],
                         (i, cbInner) => { // [ part, obj ]
