@@ -26,6 +26,7 @@ TODO-RACHEL - merge mirrorHttp with this with mirrorHttp_rachel
  */
 // External packages
 //Not debugging: express:*
+// noinspection JSUnresolvedVariable
 process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
@@ -151,6 +152,7 @@ function proxyUrl(req, res, next, urlbase, headers={}) {
 }
 
 
+// noinspection JSUnusedLocalSymbols
 function temp(req, res, next) {
 
     console.log(req);
@@ -216,9 +218,9 @@ function streamQuery(req, res, next) {
     o.limit = parseInt(req.query.rows, 10);
     o.page=parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
     o.and=req.query.and; // I dont believe this is used anywhere
-    o.fetch_metadata((err, resp) => {
+    o.fetch_metadata((err, unused) => {
         if (err) {
-            debug('streamQuery couldnt fetch metadata for %s',o.itemid);
+            debug('streamQuery could not fetch metadata for %s',o.itemid);
             next(err);
         } else {
             o.fetch_query({wantFullResp: true}, (err, resp) => {
@@ -342,7 +344,7 @@ app.get('/info', function(req, res) {
 app.use((req,res,next) => {
     debug("FAILING: %s",req.url);
     next();
-})
+});
 
 // noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge

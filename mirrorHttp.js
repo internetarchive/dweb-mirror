@@ -130,6 +130,7 @@ function sendRelated(req, res, next) {
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
 function proxyUpstream(req, res, next, headers={}) {
     // Note req.url will start with "/"
+    // noinspection JSUnresolvedVariable
     proxyUrl(req, res, next, [config.upstream, req.url].join(''), headers);
 }
 function proxyUrl(req, res, next, url, headers={}) {
@@ -149,6 +150,7 @@ function _proxy(req, res, next, err, s, headers) {
     }
 }
 
+// noinspection JSUnusedLocalSymbols
 function temp(req, res, next) {
 
     console.log(req);
@@ -219,9 +221,9 @@ function streamQuery(req, res, next) {
     o.limit = parseInt(req.query.rows, 10);
     o.page=parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
     o.and=req.query.and; // I dont believe this is used anywhere
-    o.fetch_metadata((err, resp) => {
+    o.fetch_metadata((err, unused) => {
         if (err) {
-            debug('streamQuery couldnt fetch metadata for %s',o.itemid);
+            debug('streamQuery could not fetch metadata for %s',o.itemid);
             next(err);
         } else {
             o.fetch_query({wantFullResp: true}, (err, resp) => {
@@ -297,6 +299,7 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     })
 });
 app.get('/arc/archive.org/metadata/*', function(req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
+    // noinspection JSUnresolvedVariable
     proxyUrl(req, res, next, [config.archiveorg.metadata,req.params[0]].join('/'), {"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
@@ -317,6 +320,7 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 
 //app.get('/contenthash/:contenthash', streamContenthash);
+// noinspection JSUnresolvedVariable
 app.get('/contenthash/:contenthash', (req, res, next) =>
     MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => { if (err) next()})));
 app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server

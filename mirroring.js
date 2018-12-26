@@ -11,6 +11,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched');
+// noinspection JSUnusedLocalSymbols
 const ArchiveMember = require('./ArchiveMemberPatched');
 
 // Other files in this repo

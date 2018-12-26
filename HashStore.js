@@ -41,9 +41,9 @@ class HashStore {
     static async get(table, key, cb) {
         if (cb) { return f.call(this, table, key, cb) } else { return new Promise((resolve, reject) => f.call(this, table, key, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere        const tab = this.db(table);
         function f(table, key, cb) {
-            // This is similar to level.get except not finding the value isnt an error, it returns undefined.
+            // This is similar to level.get except not finding the value is not an error, it returns undefined.
             return this.db(table).get(key, function (err, val) {
-                if (err && !err.notFound) cb(null, undefined); // Undefined isnt an error
+                if (err && !err.notFound) cb(null, undefined); // Undefined is not an error
                 if (err) {
                     cb(err);
                 }
@@ -86,6 +86,7 @@ class HashStore {
             }
         );
     }
+    // noinspection JSUnusedGlobalSymbols
     static async test() {
         try {
             this.init({dir: "testleveldb."});

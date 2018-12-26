@@ -1,3 +1,4 @@
+// noinspection JSUnresolvedVariable
 process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 
 // noinspection JSUnusedLocalSymbols
@@ -25,4 +26,5 @@ const HashStore = require('./HashStore');
 //HashStore.test();
 
 const MirrorFS = require('./MirrorFS');
-MirrorFS.loadHashTable({cacheDirectory: config.directory});
+// noinspection JSUnresolvedVariable
+MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));

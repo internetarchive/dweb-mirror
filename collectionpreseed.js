@@ -1,4 +1,5 @@
 //global.window = {}; // Target for things like window.onpopstate in Nav.js
+// noinspection JSUnresolvedVariable
 process.env.DEBUG="express:* dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:*";
 const debug = require('debug');
 const wrtc = require('wrtc');

@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
+// noinspection JSUnresolvedVariable
 const Transform = require('stream').Transform || require('readable-stream').Transform;
 const debug = require('debug')('dweb-mirror:MirrorFS');
 const multihashes = require('multihashes');
@@ -22,6 +23,7 @@ class MirrorFS {
     static firstExisting(...args) {
         // Find the first of args that exists, args can be relative to the process directory .../dweb-mirror
         // returns undefined if none found
+        // noinspection JSUnresolvedVariable
         const here = process.cwd();
         return args.map(p=>path.resolve(here, p)).find(p=>fs.existsSync(p));
     }
@@ -69,17 +71,17 @@ class MirrorFS {
     }
 
     static hashstream({algorithm='sha1'}={}) {
-        var hash = crypto.createHash(algorithm)
-        var stream = new Transform()
+        const hash = crypto.createHash(algorithm);
+        const stream = new Transform();
         stream._transform = function (chunk, encoding, cb) {
-            hash.update(chunk)
-            stream.push(chunk)
+            hash.update(chunk);
+            stream.push(chunk);
             cb()
-        }
+        };
         stream._flush = function (cb) {
             stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with with sha1 in metadata
             cb(null);
-        }
+        };
         return stream
     }
 
@@ -207,11 +209,13 @@ class MirrorFS {
             cb(err) If doesn't match
              */
             if (digest) {
+                // noinspection JSPotentiallyInvalidUsageOfClassThis
                 this.streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
                     if (err || (actual !== digest)) { cb(err || new Error(`multihash ${format} ${algorithm} ${actual} doesnt match ${digest}`)); }
                     else { cb(); }
                 });
             } else { //
+                // noinspection JSUnresolvedVariable
                 fs.access(filepath, fs.constants.R_OK, cb);
             }
         }
@@ -244,6 +248,7 @@ class MirrorFS {
                                     cb(err);
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
+                                    // noinspection JSPotentiallyInvalidUsageOfClassThis
                                     const hashstream = this.hashstream();
                                     const writable = fs.createWriteStream(null, {fd: fd});
                                     // Note at this point file is neither finished, nor closed, its a stream open for writing.
@@ -251,7 +256,9 @@ class MirrorFS {
                                     writable.on('close', () => {
                                         // noinspection EqualityComparisonWithCoercionJS
                                         const hexhash = hashstream.actual.toString('hex');
+                                        // noinspection EqualityComparisonWithCoercionJS
                                         if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== "undefined") && (hexhash !== sha1))) { // Intentionally != as metadata is a string
+                                            // noinspection JSUnresolvedVariable
                                             debug("File %s size=%d sha1=%s doesnt match expected %s %s, deleting", debugname, writable.bytesWritten, hexhash, expectsize, sha1);
                                             fs.unlink(filepathTemp, (err) => {
                                                 if (err) { console.error(`Can't delete ${filepathTemp}`); } // Shouldnt happen
@@ -264,6 +271,7 @@ class MirrorFS {
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
                                                     this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), filepath);
+                                                    // noinspection JSUnresolvedVariable
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
                                                     if (!wantStream) cb(); // If wantStream then already called cb, otherwise cb signifies file is written
                                                 }
@@ -325,7 +333,7 @@ class MirrorFS {
         this.streamOfCachedItemPaths({cacheDirectory})
             .map((filepath, cb) =>  this.streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
                     if (err) { debug("loadHashTable saw error: %s", err.message); }
-                    else { this.hashstore.put(tablename, multiHash, filepath, cb); };
+                    else { this.hashstore.put(tablename, multiHash, filepath, cb); }
                 }),
                 {name: "Hashstore", async: true})
             .reduce();
