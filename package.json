@@ -15,14 +15,15 @@
     "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
     "@stratumn/canonicaljson": "^1.0.2",
     "async": "^2.6.1",
-    "debug": "^4.1.0",
+    "debug": "^4.1.1",
     "express": "^4.16.4",
     "ipfs-api": "^24.0.2",
     "level": "^4.0.0",
     "libsodium-wrappers": "^0.7.3",
-    "multihashes": "latest",
     "morgan": "^1.9.1",
+    "multihashes": "^0.4.14",
     "parallel-streams": "^0.0.10",
+    "readable-stream": "^3.1.1",
     "sha": "^2.0.1",
     "wrtc": "^0.2.1"
   },
@@ -37,7 +38,8 @@
   },
   "scripts": {
     "build": "echo 'TODO: build is Not defined yet'",
-    "install": "./install.sh"
+    "install": "./install.sh",
+    "update": "./install.sh"
   },
   "version": "0.0.5"
 }
