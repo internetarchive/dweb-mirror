@@ -48,6 +48,8 @@ const config = require('./config'); // Global configuration, will add app specif
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const ArchiveMember = require('./ArchiveMemberPatched');
+// noinspection JSUnusedLocalSymbols
+const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 const MirrorCollection = require('./MirrorCollection');
 const MirrorSearch = require('./MirrorSearch');
 
@@ -164,9 +166,9 @@ function streamArchiveFile(req, res, next) {
         const itemid = req.params['itemid'];
         debug('Sending ArchiveFile %s/%s', itemid, filename);
         loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.new can do this, but wont use cached metadata
-            ArchiveFile.new({itemid: itemid, archiveitem, filename}, (err, af) => {
+            ArchiveFile.new({archiveitem, filename}, (err, af) => {
                 if (err) {
-                    debug("ArchiveFile.new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
+                    debug("streamArchiveFile -> ArchiveFile.new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
                     res.status(404).send(err.message);
                 } else {
                     res.status(req.streamOpts ? 206 : 200);
@@ -207,13 +209,14 @@ function streamQuery(req, res, next) {
     let o;
     // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.limit}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
     if (req.query.q && req.query.q.startsWith("collection:") && (req.query.q.lastIndexOf(':') === 10)) { // Only interested in standardised q=collection:ITEMID
+        // Special case: query just looking for members of a collection
         const itemid = req.query.q.split(':').pop();
         o = new MirrorCollection({sort: req.query.sort, itemid})
     } else if (req.query.q && req.query.q.startsWith("identifier:") && (req.query.q.lastIndexOf(':') === 10)) {
+        // Special case: query just looking for fields on a list of identifiers
         const ids = req.query.q.slice(11).split(' OR '); // ["foo","bar"]
         o = new MirrorSearch();
-        o.members = req.query.q.slice(11).split(' OR ') // ["foo","bar"]
-            .map(identifier => new ArchiveMember({identifier}));
+        o.members = ids.map(identifier => new ArchiveMember({identifier}));
         // The members will be expanded by fetch_query either from local cache or by querying upstream
     } else {
         o = new MirrorSearch({sort: req.query.sort, query: req.query.q});

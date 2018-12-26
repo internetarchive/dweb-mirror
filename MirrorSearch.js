@@ -15,6 +15,7 @@ class MirrorSearch extends ArchiveItem {
         */
         super({itemid, metaapi}); // Use and delete item and itemid
         this.query = query;
+        // noinspection JSUnusedGlobalSymbols
         this.sort = sort;
     }
     streamResults(options={}, cb) {

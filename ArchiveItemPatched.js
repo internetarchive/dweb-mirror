@@ -1,6 +1,6 @@
 /*
-// Monkey patches dweb-arhivecontroller,
-// Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadta is used to use the cache
+// Monkey patches dweb-archivecontroller,
+// Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadata is used to use the cache
  */
 
 //NPM repos
@@ -216,7 +216,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache; // Set if should ignore cache
-    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}
+    if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})}
 
     function f(cb) {
         //TODO-CACHE-AGING
@@ -227,7 +227,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
             const dirpath = namepart && this._dirpath(cacheDirectory);
             const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json");
             waterfall([
-                (cb) => { // Read from cache if available
+                (cb) => { // Read from member.json files from cache if available
                     if (!filepath) {
                         cb();
                     } else {
@@ -238,7 +238,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                             cb();
                         });
                     } },
-                (cb) => { // Expand the members if necessary and possible, errors are ignored
+                (cb) => { // Expand the members if necessary and possible locally, errors are ignored
+                    // unexpanded members typically come from either:
+                    // a direct req from client to server for identifier:...
+                    // or for identifier=fav-* when members loaded with unexpanded
                     if (this.members) {
                         Util.asyncMap(this.members,
                             (am,cb2) => {
@@ -249,7 +252,8 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                         cb();
                     }
                 },
-                // _fetch_query will optimize, it expands any unexpanded members, and only does the query if needed (because too few pages retrieved)
+                // _fetch_query will optimize, it tries to expand any unexpanded members, and only does the query if needed (because too few pages retrieved)
+                // unexpanded members are a valid response - client should do what it can to display them.
                 (cb) => {
                     this._fetch_query(opts, cb) }, // arr of search result or slice of existing members
                 (arr, cb) => {
@@ -264,7 +268,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                 (arr, cb) => { // Save members
                     if (this.members) {
                         // noinspection JSUnusedLocalSymbols
-                        this.members.forEach(ams=>ams.save({cacheDirectory}, (unusederr)=>{})); } // Note this returns before they are saved
+                        this.members.filter(ams => ams instanceof ArchiveMemberSearch).forEach(ams=>ams.save({cacheDirectory}, (unusederr)=>{})); } // Note this returns before they are saved
                     cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
                                    // Not that arr may or may not be wrapped in response by _fetch_query depending on opts
                 }
@@ -289,50 +293,49 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     const dirpath = this._dirpath(cacheDirectory);
 
-    function _err(msg, err, cb) {
-        console.error(msg, err);
-        if (cb) {   // cb will be undefined if cleared after calling with a stream
-            cb(err);
-        }
-    }
     if (!this.itemid) {
         cb(null,this);
     } else {
         MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
             //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
             if (err) {
-                _err(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err, cb);
+                console.error(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err);
+                cb(err);
             } else {
                 const self = this; // this not available inside recursable or probably in writable('on)
                 const thumbnailFiles = this.files.filter(af =>
                     af.metadata.name === "__ia_thumb.jpg"
                     || af.metadata.name.endsWith("_itemimage.jpg")
                 );
-                if (thumbnailFiles.length) {
+                if (thumbnailFiles.length) {//TODO-THUMBNAIL if more than 1, select smallest (or closest to 10k)
                     // noinspection JSUnusedLocalSymbols
                     // Loop through files using recursion (list is always short)
                     const recursable = function (err, streamOrUndefined) {
                         if (err) {
-                            _err(`saveThumbnail: failed in cacheAndOrStream for ${namepart}`, err, cb)
-                        } else {
-                            if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
-                                cb(null, streamOrUndefined);
-                                cb = undefined;
-                            } // Clear cb so not called when complete
-                            let af;
-                            if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
-                                af.cacheAndOrStream({cacheDirectory, skipfetchfile, wantStream}, recursable); // Recurse
-                                // Exits, allowing recursable to recurse with next iteration
-                            } else { // Completed loop
-                                // cb will be set except in the case of wantStream in which case will have been called with first stream
-                                if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+                            debug(`saveThumbnail: failed in cacheAndOrStream for ${namepart}: %s`, err.message);
+                            if (cb && (thumbnailFiles.length === 0)) {   // cb will be undefined if cleared after calling with a stream
+                                cb(err);
+                                return; // Failed as no other files, (and didn't start another stream else cb would be undefined)
                             }
+                            // Otherwise intentionally drops through after error and tries next file
+                        }
+                        if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
+                            cb(null, streamOrUndefined);
+                            cb = undefined;
+                        } // Clear cb so not called when complete
+                        let af;
+                        if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
+                            af.cacheAndOrStream({cacheDirectory, skipfetchfile, wantStream}, recursable); // Recurse
+                            // Exits, allowing recursable to recurse with next iteration
+                        } else { // Completed loop
+                            // cb will be set except in the case of wantStream in which case will have been called with first stream
+                            if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
                         }
                     };
                     recursable(null, null);
                 } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
                     // noinspection JSUnresolvedVariable
-                    const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid};
+                    const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid}`;
                     // Include direct link to services
                     if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
                     const dirpath = this._dirpath(cacheDirectory);

@@ -13,6 +13,8 @@ const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveMember = require('./ArchiveMemberPatched');
+// noinspection JSUnusedLocalSymbols
+const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 // Other files in this repo
 const config = require('./config');
