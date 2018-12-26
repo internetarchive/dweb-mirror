@@ -15,7 +15,6 @@ const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/Arc
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
-const errors = require('./Errors');
 const config = require('./config');
 
 // noinspection JSUnresolvedVariable
@@ -133,14 +132,14 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     }
 
     _parse("meta", (err, o) => {
-        // errors: NoLocalCopy if called with an error
+        // errors: if called with an error when reading files
         if (err) {
             cb(new errors.NoLocalCopy());   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
         } else {
             res.metadata = o;
             _parse("files", (err, o) => {
                 if (err) {
-                    cb(new errors.NoLocalCopy());   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
+                    cb(new Error(`There is no local copy of the files for ${namepart}`));   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
                 } else {
                     res.files = o;  // Undefined if failed which would be an error
                     res.files_count = res.files.length;
@@ -187,7 +186,6 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
                 //TODO-CACHE-AGING need timing of how long use old metadata
                 this.read({cacheDirectory}, (err, metadata) => {
                     if (err) { // No cached version
-                        console.assert(err.name === 'NoLocalCopy', "Have npt thought about errors other than NoLocalCopy", this.itemid, err.message);
                         this._fetch_metadata((err, ai) => { // Process Fjords and load .metadata and .files etc
                             if (err) {
                                 cb(err); // Failed to read & failed to fetch

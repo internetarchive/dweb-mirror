@@ -1,15 +1,13 @@
-const errors = require('./Errors.js');
-
 class MirrorUI {
 /*
 Drives the UI on port 4244
 TODO-UI build this out its NOT CURRENTLY USED
  */
     addcollection(itemid) {
-        throw new errors.ToBeImplementedError("MirrorUI.addcollection");
+        throw new Error("To be implemented: MirrorUI.addcollection");
     }
     additem(itemid) {
-        throw new errors.ToBeImplementedError("MirrorUI.additem");
+        throw new Error("To be implemented: MirrorUI.additem");
     }
 }
 exports = module.exports = MirrorUI;

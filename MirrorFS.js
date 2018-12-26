@@ -116,7 +116,7 @@ class MirrorFS {
                     if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
                         // noinspection JSUnusedLocalSymbols
                         fs.stat(directory, (err, stats) => {
-                            if (err) throw new errors.MissingDirectoryError(`The root directory for mirroring: ${directory} is missing - please create by hand`);
+                            if (err) throw new Error(`The root directory for mirroring: ${directory} is missing - please create by hand`);
                             debug("MirrorFS creating directory: %s", path.dirname(filepath));
                             MirrorFS._mkdir(path.dirname(filepath), err => {
                                 if (err) {

@@ -1,5 +1,4 @@
 const level = require('level');
-const errors = require("./Errors.js"); // ToBeImplementedError
 const debug = require("debug")("dweb-mirror:HashStore");
 
 class HashStore {
@@ -9,7 +8,7 @@ class HashStore {
     Note this could probably build on top of Redis or Gun as well - Redis might end up too large for memory, and actually want local item store, not global one
      */
     constructor() {
-        throw new errors.IntentionallyUnimplementedError("There is no meaningful constructor for HashStore")
+        throw new Error("There is no meaningful constructor for HashStore")
     }
     static init(config) {
         this.config = config;
