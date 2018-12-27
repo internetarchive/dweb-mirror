@@ -15,12 +15,12 @@ class HashStore {
         this.tables = {};
         return this;
     }
-    static tablepath(table) {
+    static _tablepath(table) {  // Return the file systeem path to where we have, or will create, a table
         return `${this.config.dir}${table}`;
     }
-    static db(table) {
+    static _db(table) {
         if (!this.tables[table]) {
-            this.tables[table] = level(this.tablepath(table));
+            this.tables[table] = level(this._tablepath(table));
         }
         return this.tables[table]; // Note file might not be open yet, if not any put/get/del will be queued by level till its ready
     }
@@ -29,19 +29,19 @@ class HashStore {
         function f(table, key, val) {
             debug("%s.%o <- %o", table, key, val);
             if (typeof key === "object") {
-                return this.db(table).batch(Object.keys(key).map(k => {
+                return this._db(table).batch(Object.keys(key).map(k => {
                     return {type: "put", key: k, value: key[k]};
                 }));
             } else {
-                return this.db(table).put(key, val);
+                return this._db(table).put(key, val);
             }
         }
     }
     static async get(table, key, cb) {
-        if (cb) { return f.call(this, table, key, cb) } else { return new Promise((resolve, reject) => f.call(this, table, key, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere        const tab = this.db(table);
+        if (cb) { return f.call(this, table, key, cb) } else { return new Promise((resolve, reject) => f.call(this, table, key, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere        const tab = this._db(table);
         function f(table, key, cb) {
             // This is similar to level.get except not finding the value is not an error, it returns undefined.
-            return this.db(table).get(key, function (err, val) {
+            return this._db(table).get(key, function (err, val) {
                 if (err && !err.notFound) cb(null, undefined); // Undefined is not an error
                 if (err) {
                     cb(err);
@@ -54,22 +54,22 @@ class HashStore {
     static async del(table, key) {
         debug("del %s.%o", table, key);
         if (typeof key === "object") {  // Delete all keys in object
-            await this.db(table).batch(Object.keys(key).map(k => {return {type: "del", key: k};}));
+            await this._db(table).batch(Object.keys(key).map(k => {return {type: "del", key: k};}));
         } else {
-            await this.db(table).del(key);
+            await this._db(table).del(key);
         }
     }
     static async map(table, cb, {end=undefined}={}) {
         // cb(data) => data.key, data.value
         // Returns a stream so can add further .on
         // UNTESTED
-        return this.db(table)
+        return this._db(table)
             .createReadStream()
             .on('data', cb );
     }
-    static async keys(table) {
+    static async keys(table) { //TODO would probably be useful to have a cb version of this (cb on resolve)
         const keys=[];
-        const db = this.db(table);    //synchronous
+        const db = this._db(table);    //synchronous
         return await new Promise(function(resolve, reject) {
                 try {
                     db

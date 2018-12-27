@@ -27,7 +27,7 @@ ArchiveMember.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
 
 ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefined}, cb) {
     /*
-        Read member info from item
+        Read member info for an item
         cacheDirectory: Top level of directory to look for data in
         identifier: Where to look - can be a real identifier or pseudo-one for a saved search
         TODO-CACHE-MULTI allow cacheDirectory to be an array

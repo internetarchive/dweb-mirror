@@ -38,8 +38,16 @@ ArchiveItem.prototype._dirpath = function(directory) {
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
-        Save _meta and _files and _reviews as JSON (_members will be saved by Subclassing in MirrorCollection)
-        If not already done so, will fetch_metadata (but not query, as that may want to be precisely controlled)
+        Save metadata for this file as JSON in multiple files.
+        .metadata -> <IDENTIFIER>.meta.json
+        .reviews -> <IDENTIFIER>.reviews.json
+        .files -> <IDENTIFIER>.files.json
+        {collection_titles} -> <IDENTIFIER>.extra.json
+        Note `.members` will be saved in `<IDENTIFIER>_members.json` by Subclassing in MirrorCollection
+        and .member_cached.json is saved from ArchiveMemberSearch not from ArchiveItems
+
+        If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
+
     */
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
     if (!this.itemid) {
@@ -70,7 +78,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                     console.error(`Cannot mkdir ${dirpath} so cant save item ${namepart} %s`, err.message);
                     cb(err);
                 } else {
-                    Util.forEach(   // This is same as async.forEach
+                    Util.forEach(   // TODO move to async.forEach which has same syntax
                         [
                             ["meta", this.metadata],
                             ["members", this.members],
@@ -211,6 +219,13 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
 ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
         cb(err, [ArchiveMember])
+
+        Strategy is:
+        * Read <IDENTIFIER>_members_cached.json if it exists into .members
+        * Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
+        * Run _fetch_query which will also handled fav-*'s `members.json` files, and `query` metadata field.
+        * Write the result back to `<IDENTIFIER>_members_cached.json`
+        * Write each member to its own `<IDENTIFIER>_member.json`
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache; // Set if should ignore cache
@@ -225,7 +240,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
             const dirpath = namepart && this._dirpath(cacheDirectory);
             const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json");
             waterfall([
-                (cb) => { // Read from member.json files from cache if available
+                (cb) => { // Read from members_cached.json files from cache if available
                     if (!filepath) {
                         cb();
                     } else {
@@ -360,6 +375,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
 ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
+    wantStream      true if want stream instead of object returned
     cb(err, obj)  Callback on completion with related items object
     */
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");

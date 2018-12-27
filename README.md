@@ -54,16 +54,20 @@ otherwise to those automatically brought in by `npm install`
 
 TODO Later versions will do other tasks like configuring IPFS
 
-
-
 TODO EDIT AND TEST FROM HERE DOWN
 
 
 * Edit dweb-mirror/config.js … **this location may change**
   * `config.js/directory`  should point at where you want the cache to store files 
-    * Make sure this directory exists - TODO-MIRROR make it fail informatively if it doesn’t 
+    * Make sure this directory exists - TODO-MIRROR make it fail informatively if it does not TODO handle multiple dirs
   * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned, it will try a few locations and usually guess correctly.
     * collections should be a dictionary of collections to download,  collections: `{ “fav-yourusername”: {} }` is a good simple example
+
+#### Updating
+To update:
+* cd /path/to/install/dweb-mirror
+* npm update
+* npm run update # Note there is an intentional npm bug that doesnt run an "update" script automatically. 
 
 ## Testing
 Check mirroring with `cd dweb-mirror && ./mirroring.js` then check in the cache directory for the files appearing. 
