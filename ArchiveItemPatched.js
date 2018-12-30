@@ -142,7 +142,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     _parse("meta", (err, o) => {
         // errors: if called with an error when reading files
         if (err) {
-            cb(new errors.NoLocalCopy());   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
+            cb(new Error(`There is no local copy of the metadata for ${namepart}`));   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
         } else {
             res.metadata = o;
             _parse("files", (err, o) => {
