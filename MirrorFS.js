@@ -162,7 +162,7 @@ class MirrorFS {
     }
 
     static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined,
-                                  expectsize=undefined, sha1=undefined, skipfetchfile=false, wantStream=false,
+                                  expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
                                   start=0, end=undefined} = {}, cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
@@ -174,8 +174,9 @@ class MirrorFS {
         debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
         expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
         sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
-        skipfetchfile:  If true, then dont actually fetch the file (used for debugging)
+        skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
         wantStream:     True if want an open stream to the contents, (set to false, when crawling)
+        wantBuff:       True if want a buffer of data (not stream)
         start,end       First and last bytes wanted
         cb(err, s|undefined) if wantStream will call with a stream (see below)
 
@@ -199,10 +200,17 @@ class MirrorFS {
                     cb(null, fs.createReadStream(filepath, {start, end}));   // Already cached and want stream - read from file
                 } else {
                     debug("Already cached", filepath, "with correct sha1");
-                    cb();
+                    callbackEmptyOrData(filepath);
                 }
             }
         });
+        function callbackEmptyOrData(filepath) {
+            if (wantBuff) {
+                fs.readFile(filepath, cb); //TODO check if its a string or a buffer or what
+            } else {
+                cb();
+            }
+        }
         function maybeCheckSha(filepath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
             /*
             Check file is readable, or if sha1 offered check sha matches
@@ -224,8 +232,8 @@ class MirrorFS {
             Four possibilities - wantstream &&|| partialrange
             ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; nonsense; !ws&!p caching
              */
-            if (skipfetchfile) {
-                debug("skipfetchfile set (testing) would fetch: %s", debugname);
+            if (skipFetchFile) {
+                debug("skipFetchFile set (testing) would fetch: %s", debugname);
                 cb();
             } else {
                 const partial = (start>0 || end<Infinity);
@@ -273,7 +281,9 @@ class MirrorFS {
                                                     this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), filepath);
                                                     // noinspection JSUnresolvedVariable
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
-                                                    if (!wantStream) cb(); // If wantStream then already called cb, otherwise cb signifies file is written
+                                                    if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
+                                                        callbackEmptyOrData(filepath);
+                                                    }
                                                 }
                                             })
                                         }

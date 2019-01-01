@@ -3,31 +3,34 @@ const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 const HashStore = require('./HashStore');
 
-//TODO-CONFIG add concept of app specific overrides and default set
+//TODO-CRAWL add concept of app specific overrides and default set
 const config = new MirrorConfig({
     //hashstore: { file: "level_db" },
     //ui: {},
     //fs: {},
 
     // All these are from mirroring.js
-    skipfetchfile: false, // Enable to stop it actually fetching the file - useful when testing
+    skipFetchFile: true, // Enable to stop it actually fetching the file - useful when testing
     directory: "/Users/mitra/temp/mirrored",    // Used by mirroring and mirrorHTTP
     archiveui: {
         directory: MirrorFS.firstExisting("../dweb-archive/dist", "node_modules/@internetarchive/dweb-archive/dist"),
     },
-    limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged)
+    limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged) //TODO-CRAWL move to MirrorCrawl
+    /* OBSOLETED by MirrorCrawl
     search: {
         itemsperpage: 10, // Optimum is probably around 100,
         pagespersearch: 1, // If want > 100 files per collection then increase this number
     },
+    OBSOLETE*/
     file: {
-        maxfilesize: 100000000
-        //maxfilesize: 200000, // Testing - only small files, will catch breath_takers_2/breath_takers_2.gif
+        maxFileSize: 100000000  //TODO-CRAWL move to MirrorCrawl
     },
+    /*OBSOLETED BY MirrorCrawl
     item: {
         minimumForUi: true
     },
-    collections: {
+    OBSOLETE*/
+    collections: {  //TODO-CRAWL need to push default crawl here
         "prelinger": {},
         //"fav-mitra": {},
         //"commute": {},

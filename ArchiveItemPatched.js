@@ -11,6 +11,7 @@ const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
+const ArchiveMemberFav = require('@internetarchive/dweb-archivecontroller/ArchiveMemberFav');
 const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
@@ -40,10 +41,10 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
         Save metadata for this file as JSON in multiple files.
         .metadata -> <IDENTIFIER>.meta.json
+        .members -> <IDENTIFIER>.members.json
         .reviews -> <IDENTIFIER>.reviews.json
         .files -> <IDENTIFIER>.files.json
         {collection_titles} -> <IDENTIFIER>.extra.json
-        Note `.members` will be saved in `<IDENTIFIER>_members.json` by Subclassing in MirrorCollection
         and .member_cached.json is saved from ArchiveMemberSearch not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
@@ -55,7 +56,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         debug("Search so not saving");
         cb(null, this);
     } else {
-        const namepart = this.itemid; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+        const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
         const dirpath = this._dirpath(cacheDirectory);
 
         if (!this.metadata) {
@@ -246,7 +247,8 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     } else {
                         fs.readFile(filepath, (err, jsonstring) => {
                             if (!err) {
-                                this.members = canonicaljson.parse(jsonstring).map(o => new ArchiveMemberSearch(o));
+                                this.members = canonicaljson.parse(jsonstring)
+                                    .map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
                             }
                             cb();
                         });
@@ -294,11 +296,11 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
-    Save a thumbnail to the cache,
+    Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
-    skipfetchfile   true if should skip net retrieval - used for debugging
+    skipFetchFile   true if should skip net retrieval - used for debugging
     cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
     */
 
@@ -306,13 +308,13 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     const dirpath = this._dirpath(cacheDirectory);
 
-    if (!this.itemid) {
+    if (!namepart) {
         cb(null,this);
     } else {
         MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
             //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
             if (err) {
-                console.error(`Cannot mkdir ${dirpath} so cant save item ${namepart}`, err);
+                console.error(`Cannot mkdir ${dirpath} so cant save thumbnail for ${namepart}`, err);
                 cb(err);
             } else {
                 const self = this; // this not available inside recursable or probably in writable('on)
@@ -338,7 +340,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                         } // Clear cb so not called when complete
                         let af;
                         if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
-                            af.cacheAndOrStream({cacheDirectory, skipfetchfile, wantStream}, recursable); // Recurse
+                            af.cacheAndOrStream({cacheDirectory, skipFetchFile, wantStream}, recursable); // Recurse
                             // Exits, allowing recursable to recurse with next iteration
                         } else { // Completed loop
                             // cb will be set except in the case of wantStream in which case will have been called with first stream
@@ -355,7 +357,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                     const debugname = namepart + "/__ia_thumb.jpg";
                     MirrorFS.cacheAndOrStream({
-                        cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
+                        cacheDirectory, filepath, skipFetchFile, wantStream, debugname,
                         urls: this.metadata.thumbnaillinks,
                     }, (err, streamOrUndefined) => {
                         if (err) {
@@ -372,22 +374,49 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     }
 };
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false, wantObj=true} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
-    wantStream      true if want stream instead of object returned
-    cb(err, obj)  Callback on completion with related items object
+    wantStream      true if want stream) alternative is nothing (e.g. when crawling and dont want to look at data)
+    cb(err, stream|buff|undefined)  Callback on completion with related items object
     */
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
+    console.assert(!(wantStream && wantObj), "Cant have wantObj && wantStream");
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    // noinspection JSUnresolvedVariable
-    const dirpath = this._dirpath(cacheDirectory);
-    // noinspection JSUnresolvedVariable
-    MirrorFS.cacheAndOrStream({cacheDirectory, wantStream,
-        urls: config.archiveorg.related + "/" + itemid,
-        filepath: path.join(dirpath, itemid+"_related.json"),
-        debugname: itemid + itemid + "_related.json"
-    }, cb);
+    if (itemid) {
+        // noinspection JSUnresolvedVariable
+        const dirpath = this._dirpath(cacheDirectory);
+        const filepath = path.join(dirpath, this._namepart()+"_related.json");
+        // noinspection JSUnresolvedVariable
+        MirrorFS.cacheAndOrStream({cacheDirectory, wantStream, filepath,
+            wantBuff: wantObj,
+            urls: config.archiveorg.related + "/" + itemid,
+            debugname: itemid + "/" + itemid + "_related.json"
+        }, (err, res) => {
+            if (wantObj) {
+                cb(null, canonicaljson.parse(res));
+            } else {
+                cb(err, res)
+            }
+        });
+    } else {
+        cb(null, undefined);
+    }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 exports = module.exports = ArchiveItem;

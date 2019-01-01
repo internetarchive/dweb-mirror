@@ -1,10 +1,11 @@
+/* OBSOLETED BY MirrorCrawl and by code moved into ArchiveItem.
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_query patch to use cache
 const ParallelStream = require('parallel-streams');
 const debug = require('debug')('dweb-mirror:MirrorSearch');
 
 class MirrorSearch extends ArchiveItem {
     constructor({itemid=undefined, metaapi=undefined, query=undefined, sort="-downloads"}={}) {
-        /*
+        /-*
         Inherited:
         itemid:     the item to fetch - required if "item" not specified
         item:       if already fetched, usually not
@@ -12,14 +13,14 @@ class MirrorSearch extends ArchiveItem {
         Local - stored and deleted
         query:      Search query (will be specific to collection in MirrorCollection subclass
         sort:  ("-downloads") Sort order (
-        */
+        *-/
         super({itemid, metaapi}); // Use and delete item and itemid
         this.query = query;
         // noinspection JSUnusedGlobalSymbols
         this.sort = sort;
     }
     streamResults(options={}, cb) {
-        /* Crawl a search or collection, pass output as stream of the search result objects (can be turned into ArchiveFiles
+        /-* Crawl a search or collection, pass output as stream of the search result objects (can be turned into ArchiveFiles
             data: MirrorCollection (subclass of MirrorSearch & ArchiveItem)
                 The ArchiveItem will have numFound, start, page  set after each fetch
             options{skipCache}  skipCache causes it to ignore cache - both for lookup and saving
@@ -34,7 +35,7 @@ class MirrorSearch extends ArchiveItem {
                 (see mirroring.js or collectionpreseed.js for example)
 
             Note this should not be passed the async flag when passed to .map as it returns the stream synchronously and calls cb to indicate completion
-         */
+         *-/
         if (typeof options === 'function') { cb = options; options = {}; } //Allow missing options
         this.streaming = new ParallelStream({name: `Collection ${this.itemid}`, highWaterMark: 999});
         const skipCache = options.skipCache;    // If set then wont try cache or save
@@ -99,7 +100,6 @@ class MirrorSearch extends ArchiveItem {
             }
         }
     }
-
 }
-
 exports = module.exports = MirrorSearch;
+OBSOLETED */

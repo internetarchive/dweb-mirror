@@ -1,5 +1,5 @@
 // noinspection JSUnresolvedVariable
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
@@ -17,14 +17,60 @@ const config = require('./config');
 
 
 // noinspection JSUnusedLocalSymbols
-/*
-    const s = new MirrorCollection({itemid:"prelinger"}).streamResults({limit:20, maxpages:2}, (err,res) => console.log("Streamed"));
-    s.log(m=>["Logging obj %o",m]).reduce();
- */
 
+/*
 const HashStore = require('./HashStore');
 //HashStore.test();
-
 const MirrorFS = require('./MirrorFS');
 // noinspection JSUnresolvedVariable
 MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));
+*/
+
+const CrawlManager = require('./MirrorCrawl');
+// Also worth testing: fav-brewster, fav-mitra, ""
+testCrawlEdgeCases = [
+    { identifier: "ThePowerOfNightmares", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}},
+    { identifier: "@brenton", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}}, // unidentified user
+    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}}, // Contains SavedSearch, isDark, @brenton
+
+]
+testCrawl = [
+    { identifier: "commute", level: "metadata" },
+    { identifier: "prelinger", level: "details",
+        related: { rows: 10, level: "thumbnail"},
+        search: [                     // Fetch details for prelinger
+            { sort: "-downloads", rows: 1, level: "details" }   ,     // Query first 1 items and get their details - by default will then crawl thumbnails and related
+            { sort: "-downloads", rows: 2, level: "thumbnail" } ] },  // and next 2 items and get their thumbnails only
+    { query: "Byron Bay", search: {rows: 10, level: "thumbnail"}} // Note uses a bare query; doesnt crawl its thumbnail, and uses abbreviated search
+];
+testBrewster = [
+    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, isDark, @brenton
+]
+testCrawlOne = [
+    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, isDark, @brenton
+
+]
+testcrawlpreseed = [ //skipFetchFile, skipcache, mediatype: collection
+    // Get the tiles for the top 30 items on the top 60 collections in the top 100 collections of each media type
+    { identifier: ["image","movies","texts","audio"], level: "details",
+        search: { rows: 2, level: "details", sort: "-downloads",
+            search: { rows: 2, level: "details", sort: "-downloads",
+                search: { rows: 2, level: "tile", sort: "-downloads" } } } },
+    // Get the tiles for the top 100 items on the top 300 collections
+    { query: "mediatype:collection AND NOT _exists_:access-restricted",
+        search: { rows: 2, level: "details", sort: "-downloads",
+            search: { rows: 2, level: "tile", sort: "-downloads" }}}
+]
+
+
+DwebTransports.connect({
+    //transports: ["HTTP", "WEBTORRENT", "IPFS"],
+    transports: ["HTTP"],
+    //webtorrent: {tracker: { wrtc }},
+}, (err, unused) => {
+    //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
+    DwebTransports.http().supportFunctions.push("createReadStream");
+    //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
+    CrawlManager.startCrawl(testCrawlOne, {skipFetchFile: true, skipCache: true, maxFileSize: 1000000, concurrency: 1, limitTotalTasks: 100}); // TODO Want skipCache once implemented
+});
+

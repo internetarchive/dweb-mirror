@@ -37,11 +37,11 @@ ArchiveMemberSearch.prototype.save = function({cacheDirectory = undefined} = {},
                         cb(null, this);
 } }); }}); }};
 
-ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
+ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
-    skipfetchfile   true if should skip net retrieval - used for debugging
+    skipFetchFile   true if should skip net retrieval - used for debugging
     resolve or cb(err.res)  this on completion or stream on opening
     */
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
@@ -65,7 +65,7 @@ ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefin
                         const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                         const debugname = namepart + "/__ia_thumb.jpg";
                         MirrorFS.cacheAndOrStream({
-                            cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
+                            cacheDirectory, filepath, skipFetchFile, wantStream, debugname,
                             urls: this.thumbnaillinks,
                         }, (err, streamOrUndefined) => {
                             if (err) {

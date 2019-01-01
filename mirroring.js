@@ -1,3 +1,6 @@
+/*
+THIS IS OBSOLETED BY MirrorCrawl
+
 #!/usr/bin/env node
 // noinspection JSUnresolvedVariable
 process.env.DEBUG="dweb-transports dweb-transports:* dweb-archive dweb-archive:* dweb-archivecontroller dweb-archivecontroller:* dweb-objects dweb-mirror:* parallel-streams:*";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
@@ -43,7 +46,7 @@ class Mirror {
             console.assert(!err);
             // noinspection JSUnusedLocalSymbols
             // noinspection JSUnresolvedVariable
-            af.cacheAndOrStream({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, (err, unused)=>{
+            af.cacheAndOrStream({cacheDirectory: config.directory, skipFetchFile: config.skipFetchFile}, (err, unused)=>{
                 if (err) { console.error("failed to save", err)}
                 else { console.log("Saved"); }
             })
@@ -92,7 +95,7 @@ class Mirror {
             .filter(af => config.filter(af), {name: "filter"})  // Stream of ArchiveFiles matching criteria
             .slice(0,config.limittotalfiles, {name: `slice first ${config.limittotalfiles} files`}) // Stream of <limit ArchiveFiles
             .log((m)=>[ "%s/%s", m.itemid, m.metadata.name], {name: "FileResult"})
-            .map((af, cb) => af.cacheAndOrStream({cacheDirectory: config.directory, skipfetchfile: config.skipfetchfile}, cb), {name: "SaveFiles", async: true, paralleloptions, verbose: true})
+            .map((af, cb) => af.cacheAndOrStream({cacheDirectory: config.directory, skipFetchFile: config.skipFetchFile}, cb), {name: "SaveFiles", async: true, paralleloptions, verbose: true})
             .reduce({name: "END OF MIRRORING"});
         } catch(err) {
             console.error(err);
@@ -104,3 +107,5 @@ Mirror.init()
     //.then(() => Mirror.test())
     .then(() => Mirror.p_dev_mirror())
     .then(() => Mirror.debug("tested waiting for output"));
+
+*/
