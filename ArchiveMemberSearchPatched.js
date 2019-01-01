@@ -37,4 +37,49 @@ ArchiveMemberSearch.prototype.save = function({cacheDirectory = undefined} = {},
                         cb(null, this);
 } }); }}); }};
 
+ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipfetchfile=false, wantStream=false} = {}, cb) {
+    /*
+    Save a thumbnail to the cache, note must be called after fetch_metadata
+    wantStream      true if want stream instead of ArchiveItem returned
+    skipfetchfile   true if should skip net retrieval - used for debugging
+    resolve or cb(err.res)  this on completion or stream on opening
+    */
+    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
+    function f(cb) {
+        console.assert(cacheDirectory, "ArchiveMember needs a directory in order to saveThumbnail");
+        const namepart = this.identifier; // Its also in this.metadata.identifier but only if done a fetch_metadata
+        const dirpath = this._dirpath(cacheDirectory);
+
+        if (!namepart) {
+            cb(null,this);
+        } else {
+            MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
+                //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
+                if (err) {
+                    console.error(`Cannot mkdir ${dirpath} so cant save thumbnail for ${namepart}`, err);
+                    cb(err);
+                } else {
+                        // noinspection JSUnresolvedVariable
+                        // DONT Include direct link to services as have https://dweb.me/arc/archive.org/thumbnail/IDENTIFIER which is same
+                        const dirpath = this._dirpath(cacheDirectory);
+                        const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                        const debugname = namepart + "/__ia_thumb.jpg";
+                        MirrorFS.cacheAndOrStream({
+                            cacheDirectory, filepath, skipfetchfile, wantStream, debugname,
+                            urls: this.thumbnaillinks,
+                        }, (err, streamOrUndefined) => {
+                            if (err) {
+                                debug("Unable to cacheOrStream %s", debugname);
+                                cb(err);
+                            } else {
+                                cb(null, wantStream ? streamOrUndefined : this);
+                            }
+                        });
+                    }
+            });
+        }
+    }
+};
+
+
 exports = module.exports = ArchiveMemberSearch;
