@@ -321,8 +321,6 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 //TODO add generic fallback to use Domain.js for name lookup
 
-
-//app.get('/contenthash/:contenthash', streamContenthash);
 // noinspection JSUnresolvedVariable
 app.get('/contenthash/:contenthash', (req, res, next) =>
     MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => { if (err) next()})));
@@ -331,8 +329,6 @@ app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try t
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", {maxAge: "86400000", immutable: true}, (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
-app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
-    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
 // noinspection JSUnresolvedFunction
 app.get('/info', function(req, res) {
