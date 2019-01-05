@@ -1,4 +1,4 @@
-/* OBSOLETED BY MirrorCrawl and by code moved into ArchiveItem.
+/* OBSOLETED BY CrawlManager and by code moved into ArchiveItem.
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_query patch to use cache
 const ParallelStream = require('parallel-streams');
 const debug = require('debug')('dweb-mirror:MirrorSearch');

@@ -10,7 +10,7 @@ class MirrorConfig {
     constructor(init) {
         Object.keys(init).forEach(f => { this[f] = init[f]; delete init[f] }) // Copy each of init.xx to this.xx
     }
-    /*OBSOLETED BY MirrorCrawl
+    /*OBSOLETED BY CrawlManager
     // noinspection JSUnusedGlobalSymbols
     filterlist(o) {
         if (o instanceof ArchiveItem) {

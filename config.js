@@ -15,17 +15,17 @@ const config = new MirrorConfig({
     archiveui: {
         directory: MirrorFS.firstExisting("../dweb-archive/dist", "node_modules/@internetarchive/dweb-archive/dist"),
     },
-    limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged) //TODO-CRAWL move to MirrorCrawl
-    /* OBSOLETED by MirrorCrawl
+    limittotalfiles: 250,   // Maximum number of files to consider retrieving (will further filter if unchanged) //TODO-CRAWL move to CrawlManager
+    /* OBSOLETED by CrawlManager
     search: {
         itemsperpage: 10, // Optimum is probably around 100,
         pagespersearch: 1, // If want > 100 files per collection then increase this number
     },
     OBSOLETE*/
     file: {
-        maxFileSize: 100000000  //TODO-CRAWL move to MirrorCrawl
+        maxFileSize: 100000000  //TODO-CRAWL move to CrawlManager
     },
-    /*OBSOLETED BY MirrorCrawl
+    /*OBSOLETED BY CrawlManager
     item: {
         minimumForUi: true
     },

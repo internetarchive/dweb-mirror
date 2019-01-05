@@ -1,7 +1,7 @@
 const queue = require('async/queue');
 const waterfall = require('async/waterfall');
 //const eachSeries = require('async/eachSeries');
-const debug = require('debug')('dweb-mirror:MirrorCrawl');
+const debug = require('debug')('dweb-mirror:CrawlManager');
 
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util');
 const config = require('./config');
@@ -228,7 +228,7 @@ class CrawlItem extends Crawlable {
         }
     }
     process(cb) {
-        debug('MirrorCrawl: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
+        debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({itemid: this.identifier, query: this.query});
         if (this.isUniq()) {
             const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled

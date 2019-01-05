@@ -26,7 +26,7 @@ const ArchiveMember = require('./ArchiveMember');
 const ArchiveMemberSearch = require('./ArchiveMemberSearch');
 //Not used currently const config = require('./config');
 
-const CrawlManager = require('./MirrorCrawl');
+const CrawlManager = require('./CrawlManager');
 /*
     // Example crawl
 const testCrawl = [

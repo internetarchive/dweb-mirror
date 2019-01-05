@@ -1,5 +1,5 @@
 /*
-THIS IS OBSOLETED BY MirrorCrawl
+THIS IS OBSOLETED BY CrawlManager
 
 #!/usr/bin/env node
 // noinspection JSUnresolvedVariable

@@ -26,7 +26,7 @@ const MirrorFS = require('./MirrorFS');
 MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));
 */
 
-const CrawlManager = require('./MirrorCrawl');
+const CrawlManager = require('./CrawlManager');
 // Also worth testing: fav-brewster, fav-mitra, ""
 testCrawlEdgeCases = [
     { identifier: "ThePowerOfNightmares", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}},
