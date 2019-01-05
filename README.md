@@ -15,6 +15,12 @@ This project is part of our larger Dweb project, see also:
 Its goal is to allow people to mirror one or more collections (or individual items) 
 to their own disks, and then to serve them up via dweb tools such as IPFS or WebTorrent.
 
+## What is it
+TODO-DOCS - expand this
+### Crawler
+### Offline or Proxy Server
+### Javascript based UI
+
 ## Installation
  
 At the moment this is one set for developing, or use, later I'll split it when its more stable.
@@ -95,7 +101,6 @@ class|status|notes
 -----|-----|---
 Errors|Incrementally editing|Definitions of Error classes
 HashStore|Working|Generic store on top of "level", could equally well be on top of Redis.
-MirrorCollection|Stub|Wraps the remote collection in an API
 MirrorFS|Stub|Wraps the local disk in an API
 MirrorUIconfig|Stub|User Interface to configuration and actions
 MirrorUIviewer|needs stub|User Interface to view collections - based on, or using, archive.html in dweb-archive
@@ -104,8 +109,6 @@ Mirror|Stub|One class to rule them all
 #### Actual class hierarchy as built so far ...
 
 * collectionpressed.js and mirrored.js: applications using this
-* MirrorSearch - encapsulates an IA Search, keeps track of how many pages read etc
-    * MirrorCollection - sets up search queries for a IA Collection, 
 * stream.Transform
     * ParallelStream - a transform stream that can run tasks in a configurable parallel manner
     * _MirrorXxxStream - a set of StreamTools to allow array like functions on a stream    
@@ -127,11 +130,8 @@ this means it will use IPFS, Webtorrent etc via shims that allow them to serve f
 * [dweb-archive#require](https://github.com/internetarchive/dweb-archive#require) - knows about Archive structures (like Files & Items), (this branch uses require instead of import allowing use in node.)
 * Transports: js-ipfs, webtorrent, Yjs, gun, others to be added
 
-## API
-TODO - write this
-
 ## See also
-See [Dweb document index](https://github.com/internetarchive/dweb-transports/blob/master/DOCUMENTINDEX.md) for a list of the repos that make up the Internet Archive's Dweb project, and an index of other documents. 
-
-
+* [Dweb document index](https://github.com/internetarchive/dweb-transports/blob/master/DOCUMENTINDEX.md) for a list of the repos that make up the Internet Archive's Dweb project, and an index of other documents. 
+* [API.md](./API.md) API documenation for dweb-mirror
+ 
 

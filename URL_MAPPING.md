@@ -11,9 +11,9 @@ context|from|to|notes
 -------|----|-----|-----|
 mirrorHttp|/|/archive/html?mirror:localhost:4244&transport=HTTP|
 mirrorHttp|/arc/archive.org|/archive/archive.html|
-mirrorHttp|/arc/archive.org/advancedsearch?q=collection::COLL&sort=:SORT|MirrorCollection > fetch_metadata & fetch_query|
-mirrorHttp|/arc/archive.org/advancedsearch?q=identifier::ID1 OR ID2|MirrorSearch > fetch_metadata & fetch_query (expand)|
-mirrorHttp|/arc/archive.org/advancedsearch?q=:QUERY"|MirrorSearch > fetch_metadata & fetch_query|
+mirrorHttp|/arc/archive.org/advancedsearch?q=collection::COLL&sort=:SORT|ArchiveItem > fetch_metadata & fetch_query|
+mirrorHttp|/arc/archive.org/advancedsearch?q=identifier::ID1 OR ID2|ArchiveItem > fetch_metadata & fetch_query (expand)|
+mirrorHttp|/arc/archive.org/advancedsearch?q=:QUERY"|ArchiveItem > fetch_metadata & fetch_query|
 mirrorHttp|/arc/archive.org/details|/archive/archive.html|
 mirrorHttp|/arc/archive.org/details/:itemid|/archive/archive.html?item=:itemid|
 mirrorHttp|/arc/archive.org/download/:itemid/__ia_thumb.jpg|streamThumbnail|
@@ -41,7 +41,5 @@ mirrorHttp|ArchiveItem.fetch_query .members unexpanded|CACHEDIR/IDENTIFIER_membe
 dweb-archivecontroller|ArchiveItem.fetch_query .members unexpanded|dweb.me/arc/archive.org/advancedsearch|
 mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_iteminage.jpg}) or MirrorFS.cacheAndOrStream(item.metadata.thumbnaillinks)
 mirrorHtto|MirrorFS.cacheAndOrStream|CACHEDIR or urls|
-mirrorHttp|MirrorSearch.fetch_metadata|ArchiveItem.fetch_metadata|
-mirrorHttp|MirrorSearch.fetch_query|ArchiveItem.fetch_query|subclass|
 mirrorHttp|streamArchiveFile|loadedA;ArchiveFile(patched).cacheAndOrStream|
 mirrorHttp|streamThumbnail|loadedAI;ArchiveItem(patched).saveThumbnail|
