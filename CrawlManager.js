@@ -3,7 +3,7 @@ const waterfall = require('async/waterfall');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
 
-const AICUtil = require('@internetarchive/dweb-archivecontroller/Util');
+const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
 const config = require('./config');
 const ArchiveItem = require('./ArchiveItemPatched');
 const ArchiveFile = require('./ArchiveFilePatched');
@@ -40,12 +40,12 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 class CrawlManager {
 
-    constructor({skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+    constructor({debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
         this._uniqItems = {};
         this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
         this.concurrency = 10; // Max number of concurrent crawls TODO can increase this number
         this.errors = [];
-        this.setopts({skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
+        this.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
         this.completed = 0;
         this.pushedCount = 0;
         this._taskQ = queue((task, cb) => {
@@ -71,15 +71,15 @@ class CrawlManager {
         }
     }
     setopts(opts={}) {
-        Object.entries(opts).forEach(kv => this[kv[0]] = this[kv[1]]);
+        Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
-    static startCrawl(initialItemTaskList, {skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+    static startCrawl(initialItemTaskList, {debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
-        CM.setopts({skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
-        debug("Starting crawl %d tasks opts=%o", initialItemTaskList,
-            ["skipFetchFile", "skipCache", "maxFileSize", "concurrency"].filter(f => CM[f]) );
+        CM.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
+        debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
+            Object.filter(CM, (k,v) =>  v && ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks"].includes(k)));
         initialItemTaskList.forEach( task => {
             if (Array.isArray(task.identifier)) {
                 CM.push(task.identifier.map(identifier => new CrawlItem(Object.assign({},  task, {identifier}), parent)));
@@ -122,7 +122,7 @@ class CrawlFile extends Crawlable {
     }
     process(cb) {
         if (this.isUniq()) {
-            if (CrawlManager.cm.maxFileSize && (parseInt(this.file.metadata.size)) > CrawlManager.cm.maxFileSize) {
+            if (!(CrawlManager.cm.maxFileSize && (parseInt(this.file.metadata.size) > CrawlManager.cm.maxFileSize))) {
                 debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
                 const skipFetchFile = CrawlManager.cm.skipFetchFile;
                 const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled
@@ -142,7 +142,7 @@ class CrawlFile extends Crawlable {
         }
     }
     isUniq() {
-        const key = [this.file.identifier,this.file.name].join('/');
+        const key = [this.file.itemid,this.file.metadata.name].join('/');
         const prevTasks = CrawlManager.cm._uniqFiles[key];
         if (prevTasks) { return false; }
         else {
@@ -168,7 +168,8 @@ class CrawlItem extends Crawlable {
             if (!this.search)    this.search = CrawlManager.cm.defaults.details_search;
             if (!this.related)  this.related = CrawlManager.cm.defaults.details_related;
         }
-    }{skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks}={}
+    }
+
     static fromSearchMember(member, taskparms, parent) {
         // create a new CrawlItem and add to taskQ
         // Handles weird saved-searches in fav-xxx
@@ -302,6 +303,7 @@ class CrawlItem extends Crawlable {
                                 searchMembers.slice(start, start + queryPage.rows).forEach(sm =>
                                     CrawlManager.cm.push(
                                         CrawlItem.fromSearchMember(sm, queryPage, this.asParent()) ));
+                                start = start + queryPage.rows;
                             });
                             cb();
                         });

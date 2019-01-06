@@ -374,14 +374,13 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     }
 };
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false, wantObj=true} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
-    wantStream      true if want stream) alternative is nothing (e.g. when crawling and dont want to look at data)
-    cb(err, stream|buff|undefined)  Callback on completion with related items object
+    wantStream      true if want stream) alternative is obj
+    cb(err, stream|obj)  Callback on completion with related items object
     */
     console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
-    console.assert(!(wantStream && wantObj), "Cant have wantObj && wantStream");
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     if (itemid) {
         // noinspection JSUnresolvedVariable
@@ -389,12 +388,15 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
         const filepath = path.join(dirpath, this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
         MirrorFS.cacheAndOrStream({cacheDirectory, wantStream, filepath,
-            wantBuff: wantObj,
+            wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: config.archiveorg.related + "/" + itemid,
             debugname: itemid + "/" + itemid + "_related.json"
         }, (err, res) => {
-            if (wantObj) {
-                cb(null, canonicaljson.parse(res));
+            if (!wantStream && !err) {
+                try {
+                    o = canonicaljson.parse(res);
+                    cb(null, o);
+                } catch (err) { cb(err); } // Catch bad JSON
             } else {
                 cb(err, res)
             }

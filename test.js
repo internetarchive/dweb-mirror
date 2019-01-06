@@ -37,11 +37,11 @@ testCrawlEdgeCases = [
 testCrawl = [
     { identifier: "commute", level: "metadata" },
     { identifier: "prelinger", level: "details",
-        related: { rows: 10, level: "thumbnail"},
+        related: { rows: 6, level: "tile"},
         search: [                     // Fetch details for prelinger
-            { sort: "-downloads", rows: 1, level: "details" }   ,     // Query first 1 items and get their details - by default will then crawl thumbnails and related
-            { sort: "-downloads", rows: 2, level: "thumbnail" } ] },  // and next 2 items and get their thumbnails only
-    { query: "Byron Bay", search: {rows: 10, level: "thumbnail"}} // Note uses a bare query; doesnt crawl its thumbnail, and uses abbreviated search
+            { sort: "-downloads", rows: 5, level: "details" }   ,     // Query first 1 items and get their details - by default will then crawl thumbnails and related
+            { sort: "-downloads", rows: 100, level: "tile" } ] },  // and next 2 items and get their thumbnails only
+    { query: "Byron Bay", search: {rows: 10, level: "tile"}} // Note uses a bare query; doesnt crawl its thumbnail, and uses abbreviated search
 ];
 testBrewster = [
     { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, isDark, @brenton
@@ -71,6 +71,7 @@ DwebTransports.connect({
     //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
     DwebTransports.http().supportFunctions.push("createReadStream");
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
-    CrawlManager.startCrawl(testCrawlOne, {skipFetchFile: true, skipCache: true, maxFileSize: 1000000, concurrency: 1, limitTotalTasks: 100}); // TODO Want skipCache once implemented
+    CrawlManager.startCrawl(testCrawl,
+        {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300}); // TODO Want skipCache once implemented
 });
 

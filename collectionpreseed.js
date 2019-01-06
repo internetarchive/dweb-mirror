@@ -27,18 +27,6 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearch');
 //Not used currently const config = require('./config');
 
 const CrawlManager = require('./CrawlManager');
-/*
-    // Example crawl
-const testCrawl = [
-    { identifier: "commute", level: "metadata" },
-    { identifier: "prelinger", level: "details",
-        related: { rows: 10, level: "thumbnail"},
-        crawl: [                     // Fetch details for prelinger
-            { sort: "-downloads", rows: 1, level: "details" }   ,     // Query first 1 items and get their details - by default will then crawl thumbnails and related
-            { sort: "-downloads", rows: 2, level: "thumbnail" } ] },  // and next 2 items and get their thumbnails only
-    { query: "Byron Bay", crawl: {rows: 10, level: "thumbnail"}} // Note uses a bare query; doesnt crawl its thumbnail, and uses abbreviated crawl
-];
-*/
 
 const crawlPreseed = [ //skipFetchFile, skipcache, mediatype: collection
     // Get the tiles for the top 60 items on the top 100 collections of each supported media type
