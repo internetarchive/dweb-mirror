@@ -20,8 +20,8 @@ const CrawlManager = require('./CrawlManager');
 
 //TODO add command line processing to this
 
-const opts = getopts("--level tile --transport HTTP --transport IPFS commute".split(" "),{ // Just for testing different options
-//const opts = getopts(process.argv.slice(2),{
+//const opts = getopts("--level tile --transport HTTP --transport IPFS movies".split(" "),{ // Just for testing different options
+const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
