@@ -16,16 +16,22 @@ Its goal is to allow people to mirror one or more collections (or individual ite
 to their own disks, and then to serve them up via dweb tools such as IPFS or WebTorrent.
 
 ## What is it
-TODO-DOCS - expand this
-### Crawler
-### Offline or Proxy Server
-### Javascript based UI
+### Overall design
+
+* A process that crawls a IA collection, and writes files & metadata to a local cache, its uses a multithreaded task queue.
+* An HTTP server that runs against the local cache and can either be a proxy, or fully offline.
+* A Javascript based UI (the same as https://dweb.archive.org) 
+* TODO Installers to run on a variety of the platforms that are used in contexts with poor internet
+* TODO: A control UI that edits a configuration file (local or virtual) - very basic
+* TODO A set of tools that add mirrored material from disk, or incrementally on crawling, to transports including: IPFS, WebTorrent, GUN ...
+* TODO An API to allow extension and adaptation
+* TODO Some test harness to check it.
 
 ## Installation
  
 At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-#### Prelim - getting your machine ready.
+#### 1. Prelim - getting your machine ready.
 * You'll need git, node, npm, which should be on most Linux machines.
 * TODO Mac specific instructions to add these (need a clean machine to test on)
 * This is only tested on current versions, so I recommend updating before installing.
@@ -33,27 +39,41 @@ At the moment this is one set for developing, or use, later I'll split it when i
   * Npm: # sudo npm install npm@latest -g
   * Git: Try `git --version` and if its not installed then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
 
-#### Install dweb-mirror
-* From a command line:
+
+#### 2. Install any other dweb repos you plan on developing on
+
+If you don't plan on developing on dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports you can skip this step.
+
+For example to develop on dweb-archive:
+
+From a command line:
+
 * cd /path/to/install #  # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
-
-If you plan on developing on dweb-archive, dweb-archivecontroller, dweb-objects, dweb-transports; then for example to develop on dweb-archive:
-
 * `git clone “https://github.com/internetarchive/dweb-archive”`
 * `cd dweb-archive`
 * `npm install` # Expect this to take a while and generate error messages. 
 * `cd ..`       # Back to /path/to/install
 
-You can come back and do this again later. 
+Repeat for any of dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports if you plan on developing on them.
 
+Please check current versions of README.md in those packages, as they may have changed.
+
+You can come back and do this again later, but will need to rerun `cd /path/to/install/dweb-mirror; npm install` so that it recognizes the dev versions.
+
+#### 3. Install dweb-mirror
+
+From a command line:
+
+* cd /path/to/install #  # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
 * `git clone “https://github.com/internetarchive/dweb-mirror”`
 * `cd dweb-mirror`
 * `npm install` # Expect this to take a while and generate error messages. 
 * `npm install` # Second time will help understand if error messages are significant
 * `cd ..`
 
-`npm install` will run the script install.sh which can be safely run multiple times, it will
-* Add links to Javascript webpack-ed bundles into the dist directory, 
+`npm install` will run the script install.sh which can be safely run multiple times. 
+
+It will add links to Javascript webpack-ed bundles into the dist directory, 
 from the git cloned repos if you chose to install them above, 
 otherwise to those automatically brought in by `npm install`
 
@@ -65,34 +85,31 @@ TODO EDIT AND TEST FROM HERE DOWN
 
 * Edit dweb-mirror/config.js … **this location may change**
   * `config.js/directory`  should point at where you want the cache to store files 
-    * Make sure this directory exists - TODO-MIRROR make it fail informatively if it does not TODO handle multiple dirs
-  * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned, it will try a few locations and usually guess correctly.
-    * collections should be a dictionary of collections to download,  collections: `{ “fav-yourusername”: {} }` is a good simple example
+    * Make sure this directory exists - TODO-MIRROR make it fail informatively if it does not exist. 
+    * (TODO-MULTI will be changed in future to handle multiple dirs)
+  * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned, it will try a few locations and usually guesses correctly so you probably shouldnt change it.
+  * apps.crawl includes a structure that lists what collections are to be installed. The default is to get the first 5 movies from the `prelinger` collection and the tiles. This is good for testing and can be deleted later. 
+    * TODO-DOCS document apps.crawl its complex !
 
 #### Updating
 To update:
 * cd /path/to/install/dweb-mirror
 * npm update
-* npm run update # Note there is an intentional npm bug that doesnt run an "update" script automatically. 
+* npm run update # Note there is an intentional feature/bug, in npm in that it that doesnt automatically run an "update" script. 
 
 ## Testing
 Check mirroring with `cd dweb-mirror && crawl.js` then check in the cache directory for the files appearing. 
 
-* Run `cd dweb-mirror && node ./mirrorHttp.js &` to start the HTTP server
-* open `http://localhost:4244` in the browser should see the Archive URL
+* From a command line:
+* `cd dweb-mirror && ./mirrorHttp.js &` # starts the HTTP server
+* `open `http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
+
 If you don’t get a Archive UI then look at the server log (in console) to see for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
 * `Source Map URL: jquery-1.10.2.min.map` until we figure out how to build these min.maps 
 
-## Overall design
-
-* A process built on a pipeline of streams that crawls a IA collection, and writes it & its metadata to disk 
-* A control UI that edits a configuration file (local or virtual) - very basic
-* A set of tools that add mirrored material from disk, or incrementally on crawling, to transports including: IPFS, WebTorrent, GUN ...
-* An API to allow extension and adaptation
-* Some test harness to check it.
 
 ### Classes
 Rough idea, might not be like this
@@ -122,16 +139,15 @@ Ideally - though not initially - this could work in a scenario where access to I
 
 #### Local storage
 All the data is stored locally, once (except metadata etc), 
-this means it will use IPFS, Webtorrent etc via shims that allow them to serve files without replicating them.
+this means it will use IPFS, Webtorrent etc via shims that allow them to serve files without replicating them which would use too much disk
 
 ## Builds upon
 * [dweb-transport](https://github.com/internetarchive/dweb-transport) - Transport independent library
 * [dweb-objects](https://github.com/internetarchive/dweb-objects) - Object library, not heavily used (yet)
-* [dweb-archive#require](https://github.com/internetarchive/dweb-archive#require) - knows about Archive structures (like Files & Items), (this branch uses require instead of import allowing use in node.)
-* Transports: js-ipfs, webtorrent, Yjs, gun, others to be added
+* [dweb-archivecontroller](https://github.com/internetarchive/dweb-archivecontroller) - knows about Archive structures (like Files & Items)
+* [dweb-archive](https://github.com/internetarchive/dweb-archive) - javascript based UI
 
 ## See also
-* [Dweb document index](https://github.com/internetarchive/dweb-transports/blob/master/DOCUMENTINDEX.md) for a list of the repos that make up the Internet Archive's Dweb project, and an index of other documents. 
-* [API.md](./API.md) API documenation for dweb-mirror
+* [Dweb document index](https://github.com/internetarchive/dweb-transports/blob/master/DOCUMENTINDEX.md) for a list of the repos that make up the Internet Archive's Dweb project, and an index of other documents. Many of which are out of date! 
+* [API.md](./API.md) API documentation for dweb-mirror
  
-
