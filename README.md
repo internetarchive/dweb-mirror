@@ -76,7 +76,7 @@ To update:
 * npm run update # Note there is an intentional npm bug that doesnt run an "update" script automatically. 
 
 ## Testing
-Check mirroring with `cd dweb-mirror && ./mirroring.js` then check in the cache directory for the files appearing. 
+Check mirroring with `cd dweb-mirror && crawl.js` then check in the cache directory for the files appearing. 
 
 * Run `cd dweb-mirror && node ./mirrorHttp.js &` to start the HTTP server
 * open `http://localhost:4244` in the browser should see the Archive URL

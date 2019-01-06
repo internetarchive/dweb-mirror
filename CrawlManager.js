@@ -36,14 +36,13 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 //TODO-CRAWL TODO-API document this
 //TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
 //See collectionpreseed.js for example using this to do a nested crawl to force server to preseed.
-//TODO-CRAWL add command line arguments and build into crawl.js to replace mirroring.js
+//TODO-CRAWL add command line arguments and build into crawl.js
 
 class CrawlManager {
 
     constructor({debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
         this._uniqItems = {};
         this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
-        this.concurrency = 10; // Max number of concurrent crawls TODO can increase this number
         this.errors = [];
         this.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
         this.completed = 0;
@@ -56,11 +55,8 @@ class CrawlManager {
             }); //Task should be an instance of a class with a process method
         }, this.concurrency);
         this._taskQ.drain = () => this.drained.call(this);
-        this.defaults = { // TODO-CRAWL experimental - but need to document TODO-API
-            // Note its important that the level here is less than the level of the parent "details" else can infinitely recurse
-            details_search: { sort: "-downloads", rows: 40, level: "tile" },
-            details_related: { sort: "-downloads", rows: 6, level: "tile" }
-        }
+        this.defaultDetailsSearch = config.apps.crawl.defaultDetailsSearch;
+        this.defaultDetailsRelated = config.apps.crawl.defaultDetailsRelated;
     }
     push(task) {
         //TODO-CRAWL check completed count
@@ -74,12 +70,12 @@ class CrawlManager {
         Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
-    static startCrawl(initialItemTaskList, {debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+    static startCrawl(initialItemTaskList, {debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}, cb) {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
         CM.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
-            Object.filter(CM, (k,v) =>  v && ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks"].includes(k)));
+            Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         initialItemTaskList.forEach( task => {
             if (Array.isArray(task.identifier)) {
                 CM.push(task.identifier.map(identifier => new CrawlItem(Object.assign({},  task, {identifier}), parent)));
@@ -87,16 +83,18 @@ class CrawlManager {
                 CM.push(new CrawlItem(task, parent));
             }
         });
+        CM.drainedCb = cb;
     }
     drained() {
         debug("Crawl finished %d tasks with %d errors", this.completed, this.errors.length)
         this.errors.forEach(e => debug("ERR:%o %s %o %o %s",
             e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || "", e.task.related || "", e.error.message))
+        if (this.drainedCb) this.drainedCb()
     }
 }
 CrawlManager._levels = ["tile", "metadata", "details", "all"];
 CrawlManager.cm = new CrawlManager();   // For now there is only one CrawlManager, at some point might start passing as a parameter to tasks.
-
+CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks"];
 // q.drain = function() { console.log('all items have been processed'); }; // assign a callback *
 // q.push({name: 'foo'}, function(err) { console.log('finished processing foo'); }); // add some items to the queue
 // q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function(err) { console.log('finished processing item'); }); // add some items to the queue (batch-wise)
@@ -165,8 +163,8 @@ class CrawlItem extends Crawlable {
             this.identifier = ""; this.debugname = "HOME"; this.query = AICUtil.homeQuery;
         }
         if ( ["details","full"].includes(this.level)) {
-            if (!this.search)    this.search = CrawlManager.cm.defaults.details_search;
-            if (!this.related)  this.related = CrawlManager.cm.defaults.details_related;
+            if (!this.search)    this.search = CrawlManager.cm.defaultDetailsSearch;
+            if (!this.related)  this.related = CrawlManager.cm.defaultdetailsRelated;
         }
     }
 

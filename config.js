@@ -1,24 +1,55 @@
+// Standard repos
 const debug = require('debug')("dweb-mirror:config");
+const fs = require('fs');   // See https://nodejs.org/api/fs.html
+const path = require('path');
+const os = require('os')
+// Other files in this repo
 const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 const HashStore = require('./HashStore');
 
+// Note duplicates of this in config and crawl.js
+function firstExisting(...args) {
+    // Find the first of args that exists, args can be relative to the process directory .../dweb-mirror
+    // returns undefined if none found
+    // noinspection JSUnresolvedVariable
+    return args.map(p=> p.startsWith("~/") ? path.resolve(os.homedir(), p.slice(2)) : path.resolve(process.cwd(), p)).find(p=>fs.existsSync(p));
+}
+
 //TODO-CRAWL add concept of app specific overrides and default set
 const config = new MirrorConfig({
-    //hashstore: { file: "level_db" },
-    //ui: {},
-    //fs: {},
+    // Cache directory
+    directory: firstExisting("~/temp/mirrored"),
 
-    // All these are from mirroring.js
-    skipFetchFile: true, // Enable to stop it actually fetching the file - useful when testing
-    directory: "/Users/mitra/temp/mirrored",    // Used by mirroring and mirrorHTTP
+    // Where to find the ArchiveUI relative to this directory
     archiveui: {
-        directory: MirrorFS.firstExisting("../dweb-archive/dist", "node_modules/@internetarchive/dweb-archive/dist"),
+        directory: firstExisting(
+            "../dweb-archive/dist",    // Try a repo cloned to a directory parallel to this one, which is presumably for development
+            "node_modules/@internetarchive/dweb-archive/dist" // Or a repo cloned during 'npm install'
+        ),
     },
+    // The apps group include configuration only used by one application
     apps: {
+        // mirrorHttp.js uses these
         http: {
             port: 4244,
             morgan: ':method :url :req[range] :status :res[content-length] :response-time ms',
+        },
+        // crawl.js uses these
+        crawl: {
+            // Default crawls if either search &| related are not unspecified but crawling an item with level=detail||full
+            defaultDetailsSearch: {sort: "-downloads", rows: 40, level: "tile"},
+            defaultDetailsRelated: {sort: "-downloads", rows: 6, level: "tile"},
+            tasks: [
+                { identifier: "prelinger", level: "details", search: [   // Fetch details for prelinger
+                    {sort: "-downloads", rows: 3, level: "details"}, // Query first few items and get their details - by default will then crawl thumbnails and related
+                    {sort: "-downloads", rows: 100, level: "tile"} // and next 2 items and get their thumbnails only
+                    ] } ],
+            opts: {
+                maxFileSize: 200000000,
+                concurrency: 10,                // No more than 10 tasks at a time (typically 10 open file downloads or searches
+                limitTotalTasks: 300            // No more than 300 tasks total (typically one per item & file.
+            },
         }
     },
     // Information about specific URLs for services at archive.org,

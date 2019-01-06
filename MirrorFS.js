@@ -20,13 +20,6 @@ class MirrorFS {
     /*
     Utility subclass that knows about the file system.
      */
-    static firstExisting(...args) {
-        // Find the first of args that exists, args can be relative to the process directory .../dweb-mirror
-        // returns undefined if none found
-        // noinspection JSUnresolvedVariable
-        const here = process.cwd();
-        return args.map(p=>path.resolve(here, p)).find(p=>fs.existsSync(p));
-    }
 
     static _mkdir(dirname, cb) {
         /* Recursively make a directory
