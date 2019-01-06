@@ -48,7 +48,6 @@ const config = require('./config'); // Global configuration, will add app specif
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const MirrorCollection = require('./MirrorCollection');
-const MirrorSearch = require('./MirrorSearch');
 
 const app = express();
 // noinspection JSUnresolvedVariable
@@ -211,9 +210,9 @@ function streamQuery(req, res, next) {
     // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.limit}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
     if (req.query.q && req.query.q.startsWith("collection:") && (req.query.q.lastIndexOf(':') === 10)) { // Only interested in standardised q=collection:ITEMID
         const itemid = req.query.q.split(':').pop();
-        o = new MirrorCollection({sort: req.query.sort, itemid})
+        o = new XXX({sort: req.query.sort, itemid})
     } else {
-        o = new MirrorSearch({sort: req.query.sort, query: req.query.q});
+        o = new XXX({sort: req.query.sort, query: req.query.q});
     }
     o.limit = parseInt(req.query.rows, 10);
     o.page=parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point

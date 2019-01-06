@@ -50,8 +50,6 @@ const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadat
 const ArchiveMember = require('./ArchiveMemberPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
-//OBS const MirrorCollection = require('./MirrorCollection');
-//OBS const MirrorSearch = require('./MirrorSearch');
 
 const app = express();
 // noinspection JSUnresolvedVariable
@@ -215,12 +213,10 @@ function streamQuery(req, res, next) {
     } else if (req.query.q && req.query.q.startsWith("identifier:") && (req.query.q.lastIndexOf(':') === 10)) {
         // Special case: query just looking for fields on a list of identifiers
         const ids = req.query.q.slice(11).split(' OR '); // ["foo","bar"]
-        //o = new MirrorSearch();
         o = new ArchiveItem();
         o.members = ids.map(identifier => new ArchiveMember({identifier}));
         // The members will be expanded by fetch_query either from local cache or by querying upstream
     } else {
-        //o = new MirrorSearch({sort: req.query.sort, query: req.query.q});
         o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
     }
     o.limit = parseInt(req.query.rows, 10);
