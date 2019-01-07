@@ -59,7 +59,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
         const dirpath = this._dirpath(cacheDirectory);
 
-        if (!this.metadata) {
+        if (!(this.metadata || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
             this.fetch_metadata((err, data) => {
                 if (err) {
@@ -81,10 +81,10 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                 } else {
                     Util.forEach(   // TODO move to async.forEach which has same syntax
                         [
-                            ["meta", this.metadata],
+                            ["meta", this.metadata],    // Maybe empty if is_dark
                             ["members", this.members],
                             ["files", this.exportFiles()],
-                            ["extra", {collection_titles: this.collection_titles}],
+                            ["extra", {collection_titles: this.collection_titles, is_dark: this.is_dark}],
                             ["reviews", this.reviews]
                         ],
                         (i, cbInner) => { // [ part, obj ]
@@ -160,6 +160,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
                                 // Unavailable on archive.org but there on dweb.archive.org: collection_titles
                                 // Not relevant on dweb.archive.org, d1, d2, dir, item_size, server, uniq, workable_servers
                                 res.collection_titles = o && o.collection_titles;
+                                res.is_dark = o && o.is_dark;
                                 cb(null, res);
                             });
                         });
@@ -189,29 +190,32 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     // noinspection JSUnresolvedVariable
     const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
     if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
+    function errOrDark(err) {
+        return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
+    }
     function f(cb) {
-        if (this.itemid && !this.metadata) { // Check haven't already loaded or fetched metadata
+        if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
             if (cacheDirectory && !skipCache) { // We have a cache directory to look in
                 //TODO-CACHE-AGING need timing of how long use old metadata
                 this.read({cacheDirectory}, (err, metadata) => {
                     if (err) { // No cached version
-                        this._fetch_metadata((err, ai) => { // Process Fjords and load .metadata and .files etc
+                        this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
                             if (err) {
                                 cb(err); // Failed to read & failed to fetch
                             } else {
-                                ai.save({cacheDirectory}, cb);  // Save data fetched (de-fjorded)
-                            }
+                                ai.save({cacheDirectory}, (err, res) => cb(errOrDark(null), res));
+                            }  // Save data fetched (de-fjorded)
                         });    // resolves to this
                     } else {    // Local read succeeded.
                         this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-                        cb(null, this);
+                        cb( errOrDark(null), this);
                     }
                 })
             } else { // No cache Directory or skipCache telling us not to use it for read or save
-                this._fetch_metadata(cb); // Process Fjords and load .metadata and .files etc
+                this._fetch_metadata(opts, cb); // Process Fjords and load .metadata and .files etc - handles darkOk
             }
         } else {
-            cb(null, this);
+            cb(errOrDark(null), this);
         }
     }
 };

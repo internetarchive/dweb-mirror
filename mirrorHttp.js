@@ -89,7 +89,7 @@ function loadedAI({itemid=undefined, metaapi=undefined}={}, cb) {
                 debug("loadedAI: Unable to retrieve metadata for %s", itemid);
                 cb(err);
             } else {
-                debug("loadedAI: Retrieved metadata for %s", ai.metadata.identifier); // Combined data metadata/files/reviews
+                debug("loadedAI: Retrieved metadata for %s", ai.itemid); // Combined data metadata/files/reviews
                 cb(null, ai);
             }
         });
@@ -289,11 +289,7 @@ app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVar
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
     loadedAI({itemid: req.params.itemid}, (err, ai) => {
         if (err) {
-            if (err.name === "TransportError") {
-                res.status(404).send(err.message); // Its neither local, nor from server
-            } else {
-                next(err);
-            }
+            res.status(404).send(err.message); // Its neither local, nor from server
         } else {
             res.json(ai.exportMetadataAPI());
         }
