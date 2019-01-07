@@ -1,5 +1,6 @@
 const queue = require('async/queue');
 const waterfall = require('async/waterfall');
+const each = require('async/each');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
 
@@ -74,6 +75,7 @@ class CrawlManager {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
         CM.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
+        CM.debugidentifier = "AboutBan1935"; //used to trigger breakpoints in Mitra's IDE - should normally be commented out, but doesnt hurt if left.
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         initialItemTaskList.forEach( task => {
@@ -115,7 +117,7 @@ class Crawlable {
 
 class CrawlFile extends Crawlable {
     constructor({file}, parent) {
-        super(file.name, parent);
+        super(file.metadata.name, parent);
         this.file = file;
     }
     process(cb) {
@@ -164,7 +166,7 @@ class CrawlItem extends Crawlable {
         }
         if ( ["details","full"].includes(this.level)) {
             if (!this.search)    this.search = CrawlManager.cm.defaultDetailsSearch;
-            if (!this.related)  this.related = CrawlManager.cm.defaultdetailsRelated;
+            if (!this.related)  this.related = CrawlManager.cm.defaultDetailsRelated;
         }
     }
 
@@ -269,10 +271,12 @@ class CrawlItem extends Crawlable {
                                 ArchiveMemberSearch.expand(rels.hits.hits.map( r=>r._id), (err, searchmembersdict) => {
                                     if (err) { cb(err)}
                                     else {
-                                        Object.values(searchmembersdict).slice(0, this.related.rows)
-                                            .forEach(sm =>
-                                                CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, this.related, this.asParent())) );
-                                        cb(null);
+                                        each(Object.values(searchmembersdict), (sm,cb) => sm.save({cacheDirectory},cb), (unusederr) => { // Errors reported in save
+                                            Object.values(searchmembersdict).slice(0, this.related.rows)
+                                                .forEach(sm =>
+                                                    CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, this.related, this.asParent())) );
+                                            cb(null);
+                                        })
                                     }
                                 });
                             } else { // Note err not necessarily true here.
