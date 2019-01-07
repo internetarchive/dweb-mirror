@@ -51,7 +51,8 @@ const opts = getopts(process.argv.slice(2),{
         ? path.resolve(os.homedir(), opts[key].slice(2))
         : path.resolve(process.cwd(), opts[key]))});
 if (opts.directory) { console.log("directory option not supported yet"); process.exit(); }
-if (!config.directory) { console.log("Directory for the cache is not defined or doesnt exist")}
+if (!config.directory) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
+debug("Will use %s",config.directory,"for the crawl");
 
 [ "rows", "depth", "concurrency", "maxFileSize", "limitTotalTasks"]
     .forEach(key=> {

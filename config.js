@@ -18,7 +18,7 @@ function firstExisting(...args) {
 
 //TODO-CRAWL add concept of app specific overrides and default set
 const config = new MirrorConfig({
-    // Cache directory
+    // Cache directory - where you want to store files, this directory must already exist
     directory: firstExisting("~/temp/mirrored"),
 
     // Where to find the ArchiveUI relative to this directory
