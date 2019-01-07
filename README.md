@@ -122,6 +122,7 @@ Expect to see errors in the Browser log for
 #### Updating
 To update:
 * cd /path/to/install/dweb-mirror
+* git pull
 * npm update
 * npm run update # Note there is an intentional feature/bug, in npm in that it that doesnt automatically run an "update" script. 
 
