@@ -110,24 +110,20 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 
 * From a command line:
 * `cd dweb-mirror && ./mirrorHttp.js &` # starts the HTTP server
-* `open `http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
-
+  * the startup is a little slow but you'll see some debugging when its live.
+* `open http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
+* open [http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244] to see the test crawl if you didn't change 
 If you don’t get a Archive UI then look at the server log (in console) to see for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
-* `Source Map URL: jquery-1.10.2.min.map` until we figure out how to build these min.maps 
-
 
 #### Updating
 To update:
 * cd /path/to/install/dweb-mirror
-* git pull
+* git pull      # Unfortunately this step can muck with your config file, so make sure to save, or look if you get merge errors.
 * npm update
 * npm run update # Note there is an intentional feature/bug, in npm in that it that doesnt automatically run an "update" script. 
-
-## Testing
-
 
 ### Classes
 Rough idea, might not be like this
