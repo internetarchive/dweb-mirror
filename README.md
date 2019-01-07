@@ -18,7 +18,7 @@ to their own disks, and then to serve them up via dweb tools such as IPFS or Web
 ## What is it
 ### Overall design
 
-* A process that crawls a IA collection, and writes files & metadata to a local cache, its uses a multithreaded task queue.
+* A process that crawls IA items & collection, and writes files & metadata to a local cache, its uses a multithreaded task queue.
 * An HTTP server that runs against the local cache and can either be a proxy, or fully offline.
 * A Javascript based UI (the same as https://dweb.archive.org) 
 * TODO Installers to run on a variety of the platforms that are used in contexts with poor internet
@@ -37,7 +37,7 @@ At the moment this is one set for developing, or use, later I'll split it when i
 * This is only tested on current versions, so I recommend updating before installing.
   * Node: `https://nodejs.org` It should auto-detect your machine, and get the "recommended" version.
   * Npm: # sudo npm install npm@latest -g
-  * Git: Try `git --version` and if its not installed then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+  * Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
 
 
 #### 2. Install any other dweb repos you plan on developing on
@@ -65,40 +65,48 @@ You can come back and do this again later, but will need to rerun `cd /path/to/i
 From a command line:
 
 * cd /path/to/install #  # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
-* `git clone “https://github.com/internetarchive/dweb-mirror”`
+* `git clone "https://github.com/internetarchive/dweb-mirror"`
 * `cd dweb-mirror`
 * `npm install` # Expect this to take a while and generate error messages. 
+   * On MacOS Mojave you'll need to sudo mkdir ~/.npm; sudo chown <YOUR USER NAME> ~/.npm
+   If you see an issue with EACCESS on ~/.npm you'll need to create that directory possible via sudo
+   If npm finishes with a recommendation to update then follow them
 * `npm install` # Second time will help understand if error messages are significant
 * `cd ..`
 
-`npm install` will run the script install.sh which can be safely run multiple times. 
+(Note: `npm install` will run the script install.sh which can be safely run multiple times.)
 
 It will add links to Javascript webpack-ed bundles into the dist directory, 
-from the git cloned repos if you chose to install them above, 
+from the git cloned repos such as dweb-archive etc if you chose to install them above, 
 otherwise to those automatically brought in by `npm install`
 
 
 TODO Later versions will do other tasks like configuring IPFS
 
+#### 4. Edit configuration
 TODO EDIT AND TEST FROM HERE DOWN
 
-
-* Edit dweb-mirror/config.js … **this location may change**
-  * `config.js/directory`  should point at where you want the cache to store files 
+* Edit `dweb-mirror/config.js` … **this location may change**
+  * `directory`  should point at where you want the cache to store files 
     * Make sure this directory exists - TODO-MIRROR make it fail informatively if it does not exist. 
     * (TODO-MULTI will be changed in future to handle multiple dirs)
-  * `config.js/archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned, it will try a few locations and usually guesses correctly so you probably shouldnt change it.
-  * apps.crawl includes a structure that lists what collections are to be installed. The default is to get the first 5 movies from the `prelinger` collection and the tiles. This is good for testing and can be deleted later. 
+  * `archiveui/directory` should point at “dist” subdirectory of wherever dweb-archive is cloned, it will try a few locations and usually guesses correctly so you probably shouldnt change it.
+  * `apps.crawl` includes a structure that lists what collections are to be installed. The default is to get the first 5 movies from the `prelinger` collection and the tiles. This is good for testing and can be deleted later. 
     * TODO-DOCS document apps.crawl its complex !
+   
+Note that the directories can include "~/" or "../"
 
-#### Updating
-To update:
+#### 5. Test crawling
+
 * cd /path/to/install/dweb-mirror
-* npm update
-* npm run update # Note there is an intentional feature/bug, in npm in that it that doesnt automatically run an "update" script. 
+* ./crawl.js
 
-## Testing
-Check mirroring with `cd dweb-mirror && crawl.js` then check in the cache directory for the files appearing. 
+Look in the location configured in `config.js ... directory` and there should 
+be directories appearing for each item, with metadata and/or thumbnails.
+
+You can safely delete any of the crawled material and it will be re-fetched if needed.
+
+#### 6. Test browsing
 
 * From a command line:
 * `cd dweb-mirror && ./mirrorHttp.js &` # starts the HTTP server
@@ -109,6 +117,15 @@ If you don’t get a Archive UI then look at the server log (in console) to see 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
 * `Source Map URL: jquery-1.10.2.min.map` until we figure out how to build these min.maps 
+
+
+#### Updating
+To update:
+* cd /path/to/install/dweb-mirror
+* npm update
+* npm run update # Note there is an intentional feature/bug, in npm in that it that doesnt automatically run an "update" script. 
+
+## Testing
 
 
 ### Classes
