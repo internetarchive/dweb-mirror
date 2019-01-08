@@ -75,7 +75,6 @@ class CrawlManager {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
         CM.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
-        CM.debugidentifier = "AboutBan1935"; //used to trigger breakpoints in Mitra's IDE - should normally be commented out, but doesnt hurt if left.
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         initialItemTaskList.forEach( task => {

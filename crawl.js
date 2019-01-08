@@ -30,6 +30,41 @@ const opts = getopts(process.argv.slice(2),{
     "unknown": option => {console.log("Unknown option", option, "-h for help"); process.exit()}
 });
 
+const help = `
+usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
+    [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*
+    [--skipfetchfile] [--skipcache] [--dummy] [identifier]*
+
+    h : help print this text
+    v : verbose tell us which config being run (default is currently pretty verbose)
+    q : quiet (TODO implement this)
+    l level : Crawl the identifiers to a certain level, valid values are:
+                "tile"    for just enough to print a collection page, including the thumbnail image
+                "metadata" and the full metadata, which will be useful once local search is implemented
+                "details"  and enough to paint a page, including for example a lower bandwidth video
+                "full"     and all the files in the item - beware, this can get very big.
+    r rows           : overrides any (simple) search string to crawl this number of items
+    d depth          : crawl collections found in this collection to a depth,
+                       (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
+    --directory path : override the directory set in the configuration for the root of the cache
+    --search json    : override default search string, strict json syntax only
+    --related json   : override default settign for crawling related items, strict json syntax only
+    --debugidentifier identifier : identifier to do extra debugging on, only really valuable when using an IDE
+    --maxfilesize bytes : any file bigger than this will be ignored
+    --concurrency threads : how many files or searches to be happening concurrently - use 1 for debugging, otherwise 10 is about right
+    --limittotaltasks tasks : a maximum number of tasks to run, will be (approximately) the number of searches, plus the number of items crawled.
+    --transport TRANSPORT : The names of transport to use, by default its HTTP, but can currenrly add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
+    --skipfetchfile : Dont actually transfer the files (good for debugging)
+    --skipcache     : Ignore current contents of cache and always refetch
+    --dummy         : Just print the result of the options in the JSON format used for configuration
+
+   identifier       : Zero or more identifiers to crawl (if none, then it will use the default query from the configuration)
+
+    Running crawl with no options will run the default crawls in the configuration file with no modifications, which is good for example if running under cron.
+
+`
+if (opts.help) { console.log(help); process.exit(); }
+
 ["search", "related"]
     .forEach(key => {
         if (opts[key].length) {
