@@ -20,16 +20,19 @@ const CrawlManager = require('./CrawlManager');
 
 //TODO add command line processing to this
 
-//const opts = getopts("--concurrency 1 --level tile --transport HTTP --transport IPFS movies".split(" "),{ // Just for testing different options
-const opts = getopts(process.argv.slice(2),{
+const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getops, just documenting what aren't string or boolean
+const optsArray = ["level", "transport", "rows"];
+
+//XXX make depth max of depth, level-1, rows
+const opts = getopts("--rows 100 --depth 2 --dummy movies".split(" "),{ // Just for testing different options
+//const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
-    string: ["directory", "search", "related", "debugidentifier", "transport"],
-    //int: ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"], // Not part of getops, just documenting what aren't string or boolean
-    default: {l: "details", transport: "HTTP"},
-    "unknown": option => {console.log("Unknown option", option, "-h for help"); process.exit()}
+    string: ["directory", "search", "related", "debugidentifier", "transport", "level"],
+    default: {transport: "HTTP"},
+    "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
 });
 
 const help = `
@@ -61,11 +64,41 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
     --dummy         : Just print the result of the options in the JSON format used for configuration
 
    identifier       : Zero or more identifiers to crawl (if none, then it will use the default query from the configuration)
-
+   
+   Examples:
+    
+   crawl.js prelinger # Gets the default crawl for the prelinger collection, (details on prelinger, then tiles for top 40 items in the collection and 6 related items)
+   crawl.js --level details --rows 100 prelinger   # Would pull the top 100 items in prelinger (just the tiles)
+   crawl.js --level all commute  # Fetches all the files in the commute item 
+   
+   Specifying level, or rows more than once will apply that result to the searches, so for example: 
+   
+   crawl.js --level details --rows 10 --level details prelinger # Gets the movies for the first 10 movies in prelinger
+   crawl.js --level details --rows 100 --level tiles --rows 100 --level tiles movies # Gets the top 100 items in movies, and then crawls any of those items that are collections 
+   crawl.js --rows 100 --depth 2 movies # Is a shortcut to do the same thing
+   
     Running crawl with no options will run the default crawls in the configuration file with no modifications, which is good for example if running under cron.
-
 `
 if (opts.help) { console.log(help); process.exit(); }
+
+optsArray.forEach(key => {
+    if ((typeof opts[key] === "undefined") || (opts[key] === "")) {
+        opts[key] = [];
+    } else if (!Array.isArray(opts[key])) {
+        opts[key] = [ opts[key] ];
+    }
+})
+// code cares about case for these opts
+opts.transport = opts.transport.map(t=>t.toUpperCase());
+opts.level = opts.level.map(t=>t.toLowerCase());
+if (!opts.level.length) opts.level.push("details"); // Default is 1 level at details
+if (!opts.rows.length) {
+    opts.rows.push(
+        ( CrawlManager._levels.indexOf(opts.level[0]) >= CrawlManager._levels.indexOf("details")
+            ? ((config.apps.crawl.defaultDetailsSearch && config.apps.crawl.defaultDetailsSearch.rows) || 0)
+            : 0)
+    );
+} // Default is whatever specified in default search
 
 ["search", "related"]
     .forEach(key => {
@@ -97,32 +130,26 @@ debug("Will use %s",config.directory,"for the crawl");
         opts[key] = (opts[key] && opts[key].length) ? parseInt(opts[key]) : undefined;
     });
 */
-if (!Array.isArray(opts.transport)) {opts.transport = [opts.transport]; }
 //TODO-CRAWL pass directory to CrawlManager
-
 
 if (opts.search && (opts.rows || opts.depth)) { console.log("Cannot specify search with rows or depth argumenets"); process.exit(); }
 
-// Now handle some shortcuts
-if (opts.rows) {
-    if (!opts.search) opts.search = config.apps.crawl.defaultDetailsSearch;
-    opts.search.rows = opts.rows;
-}
-if (typeof opts.depth !== "undefined") { // --depth 0 would mean dont search Tiles even if level=detail
-    function f(depth) { // Recurses
-        if (depth) {
-            return Object.assign({}, opts.search || config.apps.crawl.defaultDetailsSearch, {search: f(depth -1)});
-        } else {
-            return undefined;
-        }
-    };
-    opts.search = f(opts.depth);
-}
+let taskTemplate = { level: opts.level[0], related: opts.related }
+function f(depthnow, depth) { // Recurses
+    if (depth) {
+        return Object.assign({}, opts.search || config.apps.crawl.defaultDetailsSearch,
+            {level: opts.level[Math.min(depthnow+1,opts.level.length-1)], rows: opts.rows[Math.min(depthnow,opts.rows.length-1)], search: f(depthnow+1, depth -1)});
+    } else {
+        return undefined;
+    }
+};
+
+taskTemplate.search = f(0, Math.max(opts.depth ||0, opts.level.length, opts.rows.length));
+
 
 let tasks;
 if (opts._.length) {
-    tasks = opts._.map( identifier => {
-        return { identifier, level: opts.level, search: opts.search, related: opts.related } });
+    tasks = opts._.map( identifier => Object.assign({}, taskTemplate, {identifier: identifier}));
 } else {
     if (opts.rows || opts.depth || opts.search || opts.related ) {
         console.log("If specifying options then should also specify identifiers to crawl"); process.exit();
