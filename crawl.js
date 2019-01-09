@@ -25,7 +25,9 @@ const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
-    string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
+    //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
+    string: ["directory", "search", "related", "debugidentifier", "transport"],
+    //int: ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"], // Not part of getops, just documenting what aren't string or boolean
     default: {l: "details", transport: "HTTP"},
     "unknown": option => {console.log("Unknown option", option, "-h for help"); process.exit()}
 });
@@ -89,11 +91,12 @@ if (opts.directory) { console.log("directory option not supported yet"); process
 if (!config.directory) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
 debug("Will use %s",config.directory,"for the crawl");
 
+/* Not needed, just removed these from strings
 [ "rows", "depth", "concurrency", "maxFileSize", "limitTotalTasks"]
     .forEach(key=> {
         opts[key] = (opts[key] && opts[key].length) ? parseInt(opts[key]) : undefined;
     });
-
+*/
 if (!Array.isArray(opts.transport)) {opts.transport = [opts.transport]; }
 //TODO-CRAWL pass directory to CrawlManager
 
@@ -108,7 +111,7 @@ if (opts.rows) {
 if (typeof opts.depth !== "undefined") { // --depth 0 would mean dont search Tiles even if level=detail
     function f(depth) { // Recurses
         if (depth) {
-            return Object.assign({}, config.apps.crawl.defaultDetailsSearch, {search: f(depth -1)});
+            return Object.assign({}, opts.search || config.apps.crawl.defaultDetailsSearch, {search: f(depth -1)});
         } else {
             return undefined;
         }
@@ -128,7 +131,7 @@ if (opts._.length) {
 }
 
 
-const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k)));
+const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
 
 if (opts.verbose || opts.dummy) {
     console.log( "Crawl configuration: tasks=", canonicaljson.stringify(tasks), "opts=", canonicaljson.stringify(crawlopts),
@@ -142,7 +145,7 @@ if (!opts.dummy) {
     }, (err, unused) => {
         //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
         DwebTransports.http().supportFunctions.push("createReadStream");
-        CrawlManager.startCrawl(tasks, config.apps.crawl.opts, (err, res) => {
+        CrawlManager.startCrawl(tasks, crawlopts, (err, res) => {
             DwebTransports.p_stop(t => debug("%s is stopped", t.name))});
             // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168
         });
