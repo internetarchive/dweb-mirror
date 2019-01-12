@@ -200,7 +200,7 @@ function streamArchiveFile(req, res, next) {
 
 function streamQuery(req, res, next) {
     let o;
-    // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.limit}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
+    // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
     if (req.query.q && req.query.q.startsWith("collection:") && (req.query.q.lastIndexOf(':') === 10)) { // Only interested in standardised q=collection:ITEMID
         // Special case: query just looking for members of a collection
         const itemid = req.query.q.split(':').pop();
@@ -214,7 +214,7 @@ function streamQuery(req, res, next) {
     } else {
         o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
     }
-    o.limit = parseInt(req.query.rows, 10);
+    o.rows = parseInt(req.query.rows, 10);
     o.page=parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
     o.and=req.query.and; // I dont believe this is used anywhere
     o.fetch_metadata((err, unused) => {

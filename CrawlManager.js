@@ -288,8 +288,7 @@ class CrawlItem extends Crawlable {
                         const ai = this.item;
                         if (typeof ai.page === "undefined") ai.page = 0;
                         const search = Array.isArray(this.search) ? this.search : [this.search];
-                        //TODO-REFACTOR rename limit as rows in dweb-archivecontroller, dweb-archive; dweb-mirror
-                        ai.limit = search.reduce((acc, queryPage) => acc + queryPage.rows, 0); // Single query all rows
+                        ai.rows = search.reduce((acc, queryPage) => acc + queryPage.rows, 0); // Single query all rows
                         ai.sort = search[0].sort;
                         ai.fetch_query({skipCache}, (err, searchMembers) => { // Needs to update start, but note opts can override start
                             let start = 0;
