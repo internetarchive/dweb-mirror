@@ -6,7 +6,8 @@
 
 // Enable a LOT of debugging as want to watch to diagnose failures.
 // noinspection JSUnresolvedVariable
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
+// TODO-MIRROR check using GUN for metadata
 
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
@@ -48,6 +49,6 @@ DwebTransports.connect({
     //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
     DwebTransports.http().supportFunctions.push("createReadStream");
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
-    CrawlManager.startCrawl(crawlPreseed, {skipFetchFile: true, skipCache: true}); // TODO Want skipCache once implemented
+    CrawlManager.startCrawl(crawlPreseed, {skipFetchFile: true, skipCache: true});
 });
 

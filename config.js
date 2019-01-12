@@ -16,7 +16,6 @@ function firstExisting(...args) {
     return args.map(p=> p.startsWith("~/") ? path.resolve(os.homedir(), p.slice(2)) : path.resolve(process.cwd(), p)).find(p=>fs.existsSync(p));
 }
 
-//TODO-CRAWL add concept of app specific overrides and default set
 const config = new MirrorConfig({
     // Cache directory - where you want to store files, this directory must already exist
     directory: firstExisting("~/temp/mirrored"),

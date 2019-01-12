@@ -37,7 +37,6 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 //TODO-CRAWL TODO-API document this
 //TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
 //See collectionpreseed.js for example using this to do a nested crawl to force server to preseed.
-//TODO-CRAWL add command line arguments and build into crawl.js
 
 class CrawlManager {
 
@@ -60,7 +59,6 @@ class CrawlManager {
         this.defaultDetailsRelated = config.apps.crawl.defaultDetailsRelated;
     }
     push(task) {
-        //TODO-CRAWL check completed count
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
             this._taskQ.push(task);
         } else {
@@ -101,8 +99,6 @@ CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "ma
 // q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function(err) { console.log('finished processing item'); }); // add some items to the queue (batch-wise)
 // q.unshift({name: 'bar'}, function (err) { console.log('finished processing bar'); });// add some items to the front of the queue
 
-//TODO-CRAWL - check existing config.js for anything no longer doing (e.g. maxFileSize still needed)
-
 class Crawlable {
     constructor(debugname, parent) {
         // Nothing done here at present
@@ -125,7 +121,7 @@ class CrawlFile extends Crawlable {
                 debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
                 const skipFetchFile = CrawlManager.cm.skipFetchFile;
                 const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled
-                this.file.cacheAndOrStream({ //TODO-CRAWL check if have access to size here, to compare to maxFileSize
+                this.file.cacheAndOrStream({
                     cacheDirectory,
                     skipFetchFile,
                     wantStream: false,
@@ -173,7 +169,7 @@ class CrawlItem extends Crawlable {
         // create a new CrawlItem and add to taskQ
         // Handles weird saved-searches in fav-xxx
         return new CrawlItem({
-            identifier: member.mediatype === "search" ? undefined : member.identifier,  //TODO these (see other copy as well) may fail on the saved search in fav-brewster ("united nations" I think)
+            identifier: member.mediatype === "search" ? undefined : member.identifier,
             member: member,
             level: taskparms.level,
             search: taskparms.search,
@@ -257,7 +253,7 @@ class CrawlItem extends Crawlable {
                     const asParent = this.asParent();
                     if (this.level === "details") { // Details
                         this.item.minimumForUI().forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
-                    } else if (this.level === "all") { // Details  TODO-CRAWL needs to watch max file size
+                    } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
                         this.item.files.forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
                     }
                     cb(null);

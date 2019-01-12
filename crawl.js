@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // noinspection JSUnresolvedVariable
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
+// TODO-MIRROR check using GUN for metadata
 
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:crawl");
@@ -18,8 +19,7 @@ const ArchiveItem = require('./ArchiveItemPatched');
 const ArchiveFile = require('./ArchiveFilePatched');
 const CrawlManager = require('./CrawlManager');
 
-//TODO add command line processing to this
-
+//TODO-DOCS TODO-API document command line and config file
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getops, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows"];
 

@@ -38,11 +38,11 @@ class HashStore {
         }
     }
     static async get(table, key, cb) {
-        if (cb) { return f.call(this, table, key, cb) } else { return new Promise((resolve, reject) => f.call(this, table, key, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere        const tab = this._db(table);
-        function f(table, key, cb) {
+        if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+        function f(cb) {
             // This is similar to level.get except not finding the value is not an error, it returns undefined.
             return this._db(table).get(key, function (err, val) {
-                if (err && !err.notFound) cb(null, undefined); // Undefined is not an error
+                if (err && (err.type === "NotFoundError")) cb(null, undefined); // Undefined is not an error
                 if (err) {
                     cb(err);
                 }
@@ -67,23 +67,19 @@ class HashStore {
             .createReadStream()
             .on('data', cb );
     }
-    static async keys(table) { //TODO would probably be useful to have a cb version of this (cb on resolve)
-        const keys=[];
-        const db = this._db(table);    //synchronous
-        return await new Promise(function(resolve, reject) {
-                try {
-                    db
-                        .createKeyStream()
-                        // Note close comes after End
-                        .on('data', (key) => keys.push(key))
-                        .on('end', ()  => {debug("%s keys = %o", table, keys); resolve(keys)})    // Gets to end of stream
-                        .on('close', () => resolve(keys))   // Gets to end of stream, or closed from outside
-                        .on('error', (err) => { console.error('Error in stream from',table); reject(err)});
-                } catch (err) {
-                    reject(err);
-                }
-            }
-        );
+    static async keys(table, cb) {
+        if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+        function f(cb) {
+            const keys=[];
+            const db = this._db(table);    //synchronous
+            db
+                .createKeyStream()
+                // Note close comes after End
+                .on('data', (key) => keys.push(key))
+                .on('end', ()  => {debug("%s keys on end = %o", table, keys); cb(null, keys)})    // Gets to end of stream
+                //.on('close', () =>  // Gets to end of stream, or closed from outside - not used as get "end" as well
+                .on('error', (err) => { console.error('Error in stream from',table); cb(err)});
+        }
     }
     // noinspection JSUnusedGlobalSymbols
     static async test() {
@@ -102,6 +98,10 @@ class HashStore {
             console.assert(res === undefined);
             res = await this.keys("Testtable");
             console.assert(res.length === 2);
+            // Test using callback
+            res = await this.keys("Testtable", (err, res)=>{
+                console.assert(res.length === 2);
+            });
             // Now test batches
             // Now test map
         } catch (err) {

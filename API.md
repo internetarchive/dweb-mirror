@@ -337,7 +337,7 @@ TODO-DOCS document API
 # Applications
 
 ## collectionpreseed.js
-TODO-DOCS obsoleted by CrawlManager which needs a crawl app
+TODO-DOCS special case of crawl
 
 Usage: `$> cd /path/to/install/dweb-mirror && ./collectionpreseed.js`
 

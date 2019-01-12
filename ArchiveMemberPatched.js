@@ -22,7 +22,7 @@ ArchiveMember.prototype._dirpath = function(directory) {
 
 // noinspection JSUnresolvedVariable
 ArchiveMember.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
-    console.assert(false, "Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch"); //TODO-ADVANCEDSEARCH remove once found examples
+    console.assert(false, "Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch");
 };
 
 ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefined}, cb) {

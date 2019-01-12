@@ -18,14 +18,15 @@ const config = require('./config');
 
 // noinspection JSUnusedLocalSymbols
 
-/*
-const HashStore = require('./HashStore');
-//HashStore.test();
-const MirrorFS = require('./MirrorFS');
-// noinspection JSUnresolvedVariable
-MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));
-*/
 
+const HashStore = require('./HashStore');
+HashStore.test();
+//const MirrorFS = require('./MirrorFS');
+// noinspection JSUnresolvedVariable
+//MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));
+
+
+/*
 const CrawlManager = require('./CrawlManager');
 // Also worth testing: fav-brewster, fav-mitra, ""
 testCrawlEdgeCases = [
@@ -72,6 +73,6 @@ DwebTransports.connect({
     DwebTransports.http().supportFunctions.push("createReadStream");
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
     CrawlManager.startCrawl(testCrawl,
-        {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300}); // TODO Want skipCache once implemented
+        {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300});
 });
-
+*/

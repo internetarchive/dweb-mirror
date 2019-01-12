@@ -13,12 +13,7 @@ DONE file, need pass on
 /arc/archive.org/download/:itemid/:filename|$ROOT/:itemid/:filename<br/>Domain($URI)|Look locally then try all dweb locations
 /arc/*|Domain($URI)|Should resolve name, load and return or redirect
 
-
-Summary of below:
-TODO-2SC update this summary
-/info:  config as JSON
-/arc/archive.org/metadata/:itemid > DIR/:itemid/(_meta,_files,_reviews) || (dweb:/arc/archive.org/metadata/:itemid > Transports >cache) > { files, files_count, metadata, reviews }
-/arc/archive.org/download/:itemid/:filename > DIR/:itemid/:filename || dweb:/arc/archive.org/download/:itemid/:filename > Transports FORK>cache
+See URL_MAPPING.md for summary of below rules plus what they call.
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
