@@ -189,7 +189,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     const skipCache = opts.skipCache;           // If set will not try and read cache
     // noinspection JSUnresolvedVariable
     const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
-    if (cb) { return f.call(this, cb) } else { return new Promise((resolve, reject) => f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} }))}        //NOTE this is PROMISIFY pattern used elsewhere
+    if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function errOrDark(err) {
         return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
     }
