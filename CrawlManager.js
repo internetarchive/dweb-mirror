@@ -261,21 +261,16 @@ class CrawlItem extends Crawlable {
                 //(cb) => { debug("XXX Finished fetching files for item %s", this.identifier); cb(); },
                 (cb) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     if (["details", "all"].includes(this.level) || this.related) {
-                        this.item.relatedItems({cacheDirectory, wantStream: false, wantObj: true}, (err, rels) => {
-                            if (!err && this.related && rels) { // Just going one page deep for now
-                                ArchiveMemberSearch.expand(rels.hits.hits.map( r=>r._id), (err, searchmembersdict) => {
-                                    if (err) { cb(err)}
-                                    else {
-                                        each(Object.values(searchmembersdict), (sm,cb) => sm.save({cacheDirectory},cb), (unusederr) => { // Errors reported in save
-                                            Object.values(searchmembersdict).slice(0, this.related.rows)
-                                                .forEach(sm =>
-                                                    CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, this.related, this.asParent())) );
-                                            cb(null);
-                                        })
-                                    }
-                                });
-                            } else { // Note err not necessarily true here.
+                        this.item.relatedItems({cacheDirectory, wantStream: false, wantMembers: true}, (err, searchmembers) => {
+                            if (err) {
                                 cb(err);
+                            } else {
+                                each(searchmembers, (sm, cb1) => sm.save({cacheDirectory}, cb1), (unusederr) => { // Errors reported in save
+                                    searchmembers.slice(0, this.related.rows)
+                                        .forEach(sm =>
+                                            CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, this.related, this.asParent())));
+                                    cb(null);
+                                });
                             }
                         });
                     } else {

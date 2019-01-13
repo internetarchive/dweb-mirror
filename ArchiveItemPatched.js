@@ -378,7 +378,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     }
 };
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false, wantMembers=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true if want stream) alternative is obj
@@ -396,10 +396,22 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
             urls: config.archiveorg.related + "/" + itemid,
             debugname: itemid + "/" + itemid + "_related.json"
         }, (err, res) => {
+            // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
             if (!wantStream && !err) {
                 try {
-                    o = canonicaljson.parse(res);
-                    cb(null, o);
+                    rels = canonicaljson.parse(res);
+                    if (wantMembers) {
+                        // Same code in ArchiveItem.relatedItems
+                        ArchiveMemberSearch.expand(rels.hits.hits.map(r => r._id), (err, searchmembersdict) => {
+                            if (err) {
+                                cb(err)
+                            } else {
+                                cb(null, rels.map(r => searchmembersdict[r._id])); // Can be undefined, but shouldnt see rels should all be valid
+                            }
+                        });
+                    } else {
+                        cb(null, o);
+                    }
                 } catch (err) { cb(err); } // Catch bad JSON
             } else {
                 cb(err, res)
