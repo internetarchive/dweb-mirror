@@ -5,10 +5,12 @@ This document covers the API for v0.1.0 of dweb-mirror which will be the first s
 #### Outline of APIs
 
 * Config file: Control the behavior of each of the apps in this package
-* Apps can be built on top of dweb-archivecontroller's classes:
-  ArchiveItem, ArchiveMember, ArchiveFile which are extended by this package.
+* dweb-archivecontroller - base level classes which are extended by this package:
+  ArchiveItem; ArchiveMember; ArchiveFile.
 * A set of classes that provide higher level support esp:
-  * TODO-DOC fill in here
+  CrawlManager; HashStore; MirrorFS;
+* A set of applications that use the APIs above, but which are themselves forkable:
+  crawl.js; mirrorHttp;
 
 #### Expected API changes
 
@@ -17,10 +19,25 @@ The API may change fairly frequently up until v1.0.0. Likely changes should be d
 # Config file
 
 #### Expected changes
-config.js is definately going to change to provide both generic control, and an ability to fine grain configuration 
-at the app; collection; and item; levels. 
+config.js is definately going to change as new features added
 
-For now - the file is (inadequate) self-documentation  TODO-DOCS
+If in doubt, check the file itself which should be self-documenting
+```
+{
+  directory: firstExisting( ... ); // List of places to look for the Cache directory, currently uses the first but (TODO-MULTI) will use all of them in future
+  archiveui: { // Anything relating to display of the Archive UI
+    directory: firstExisting( ... ); // Where to find the files for the Archive UI
+  }
+  apps: { // Each application can have its own configuration
+    http: { // Relating to mirrorHttp.js
+    crawl: { // Relating to crawl.js
+  }
+  // Dont edit anything below here
+  archiveorg: // Relate to the location of Archive services that will generally
+  upstream: // Where to find a generic upstream server that recognizes URLs like /arc or /contenthash
+}
+```
+
 
 # Files on disk
 
@@ -32,23 +49,29 @@ Metadata is stored in specially named files.
 |file|from|
 |----|----|
 |<IDENTIFIER>.meta.json|ArchiveItem.metadata|
-|<IDENTIFIER>.reviews.json|ArchiveItem.reviews|
+|<IDENTIFIER>.reviews.json|ArchiveItem.reviews|On disk is format returned by API
 |<IDENTIFIER>.files.json|ArchiveItem.files|
-|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles}|
-|<IDENTIFIER>.member.json|ArchiveItem.members|
+|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, is_dark}|
+|<IDENTIFIER>.member.json|ArchiveMemberSearch|As retrieved in a search
 |<IDENTIFIER>.members.json|List of members - this file is a normal ArchiveFile in fav-* collections|
-|<IDENTIFIER>.members_cached.json|ArchiveMemberSearch.*|
+|<IDENTIFIER>.members_cached.json|ArchiveMemberSearch.*|All the search results for this item retrieved so far
 |__ia_thumb.jpg|Image file ~10kbytes|
 
+TODO-SORT In future the different sorts will have their own caches
+
+TODO-THUMBNAILS The archive pattern for thumbnails is about to change (Jan2019) and will be reflected here.
 
 # Local classes
 #### Common features and parameters
 ```
-cacheDirectory  points at top level of a cache. TODO will allow multiple directories and/or get from config
+cacheDirectory  points at top level of a cache. TODO-MULTI will allow multiple directories and/or get from config
+skipCache       ignore anything in the cache - forces refetching and may cause upstream server to cache it
+skipFetchFile   as an argument causes file fetching to be supressed
+wantStream      Return results as a stream, just like received from the upstream.
 cb(err, res)    Unless otherwise documented callbacks return an error, (subclass of Error) or null, 
                 and optional return data.  
                 Some functions also support an absent cb as returning a Promise, otherwise cb is required 
-                feel free to add Promise support to any function lacking it.
+                feel free to add Promise support to any function lacking it, search for "Promise pattern v2" for examples of how to do this consistently.
 ```
 
 # ArchiveController and Extensions
@@ -62,7 +85,7 @@ only changes made in dweb-mirror appear here.
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
-See MirrorFS.cacheAndOrStream for arguments. TODO-link
+See MirrorFS.cacheAndOrStream for arguments.
 
 ## ArchiveItem
 
@@ -120,16 +143,13 @@ Strategy is:
 
 Save a thumbnail to the cache,
 ```
-wantStream      true if want stream instead of ArchiveItem returned
-skipFetchFile   true if should skip net retrieval - used for debugging
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
 ##### relatedItems({cacheDirectory = undefined, wantStream=false} = {}, cb)
 Save the related items to the cache
 ```
-wantStream      true if want stream instead of object returned
-cb(err, obj)  Callback on completion with related items object
+cb(err, obj)  Callback on completion with related items object or stream
 ```
 
 ## ArchiveMember 
@@ -141,7 +161,7 @@ identifier: Where to look - can be a real identifier or pseudo-one for a saved s
 cb(err, data structure from file)
 ```
 ##### read({cacheDirectory = undefined}, cb)
-Read member info for an item
+Read member info for an item from the cache.
 ```
 cb(err, data structure from file)
 ```
@@ -198,15 +218,15 @@ Creates a stream, that calls cb(key, value) for each key/value pair.
 return stream     So that further .on can be added 
 ```
 
-##### keys(table)
-Returns a promise that resolves to an array of keys. 
-
-TODO this will probably be improved to add a cb(err, keys) paramter
+##### keys(table, cb)
+Returns an array of keys via promise or cb(err, [key*])
 
 ## MirrorConfig
-TODO-DOCS document API
 
-## CrawlManager, CrawlFile TODO
+#### new MirrorConfig(config) 
+Create a new config structure. See config file for structure of config
+
+## CrawlManager, CrawlFile
 
 A set of related classes for managing crawling
 
@@ -215,20 +235,20 @@ The crawl is initialized from a datastructure, or indirectly from JSON syntax is
 ```
 config:     [ configtask ]
 configtask: { identifier, level, query, search, related}
-identifier: Archive identifier OR array of them OR `` for Home
-level:      any of _levels (e.g. "tile") How deep to fetch an item
-query:      Alternative to identifier, specify a query
-search:     searchopts  Apply to each search result (or member of a collection)
-related:    searchopts  Apply to each of the related items
-searchopts: { sort, rows, level, search, related } specify a search, and what to apply to each result.
-sort:       Sort order for search e.g. "-downloads"
-rows:       How many results to fetch
+  identifier: Archive identifier OR array of them OR `` for Home
+  level:      any of _levels (e.g. "tile") How deep to fetch an item
+  query:      Alternative to identifier, specify a query
+  search:     searchopts  Apply to each search result (or member of a collection)
+  related:    searchopts  Apply to each of the related items
+    searchopts: { sort, rows, level, search, related } specify a search, and what to apply to each result.
+      sort:       Sort order for search e.g. "-downloads"
+      rows:       How many results to fetch
 ```
 #### Configuration file example
 ```
   { identifier: "foo", level: "metadata" }
-  { identifier: "prelinger", level: "details", search: [                     // Fetch details for prelinger
-        { sort: "-downloads", rows: 100, level: "details" }        // Query first 100 items and get their details
+  { identifier: "prelinger", level: "details", search: [      // Fetch details for prelinger
+        { sort: "-downloads", rows: 100, level: "details" }   // Query first 100 items and get their details
         { sort: "-downloads", rows: 200, level: "tile" } ] }  // and next 200 items and get their thumbnails only
   ]
 ```
@@ -238,6 +258,8 @@ Currently (may change) one instance only - that has parameterisation for crawls.
 
 ##### Attributes
 ```
+CrawkManager.cm                         Points to single instance created (this may change) that has following attributes:
+
 _levels     ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
 _uniqItems  { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops (identifier also has pseudo-identifiers like _SEARCH_123abc
 _uniqItems  { identifier: [ task* ] } Dictionary of tasks carried out per file, used for checking uniqueness and avoiding loops
@@ -254,7 +276,6 @@ skipFetchFile bool||false               If true will just comment on file, not a
 maxFileSize int||undefined              If set, constrains maximum size of any one file
 concurrency int||1                      Sets the number of tasks that can be processed at a time
 limitTotalTasks:int||undefined          If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
-cm                                      Points to single instance created (this may change)
 ```
 #### new CrawlManager({skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks}={})
 
@@ -332,37 +353,136 @@ Process a task to crawl an item, complexity depends on its `.level` but can incl
 
 
 ## MirrorFS
-TODO-DOCS document API
+
+All the methods of MirrorFS are static, and it exists to encapsulate knowledge about the cache in one place. 
+
+#### common parameters
+```
+algorithm:  Hash algorithm to be used, defaults to 'sha1' and only tested on that
+cacheDirectory: Same as directory
+debugname:  Name to use in debug statements to help see which file/item it refers to.
+directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
+filepath:   Absolute path to file, normally must be in "directory"
+format:     Format of result, defaults to 'hex', alternative is 'multihash58'
+```
+Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz where refered to below
+
+#### static quickhash(str, options={})
+Synchronous calculation of hash
+```
+str     string to get the hash of
+options { algorithm, format }
+```
+#### static writeFile(filepath, data, cb)
+Like fs.writeFile but will mkdir the directory before writing the file
+```
+data    Anything that fs.writeFile accepts
+cb(err)
+```
+
+#### static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
+Complicated function to encapsulate in one place the logic around the cache.
+```
+Returns a stream from the cache, or the net if start/end unset cache it
+cacheDirectory: root directory of cache
+filepath:       Full path to file, should be inside cacheDirectory
+urls:           Single url or array to retrieve
+debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
+expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
+sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
+skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
+wantStream:     True if want an open stream to the contents, (set to false, when crawling)
+wantBuff:       True if want a buffer of data (not stream)
+start,end       First and last bytes wanted
+cb(err, s|undefined) if wantStream will call with a stream (see below)
+```
+TypicalUsages:
+* in mirroring    wantStream, start,end undefined
+* in browsing     wantStream=true, start & end may be set or be set to 0,undefined.
+
+cb behavior needs explanation !
+* If wantStream, then cb will call back as soon as a stream is ready from the net
+* If !wantStream, then cb will only call back (with undefined) when the file has been written to disk and the file renamed.
+* In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
+
+
+#### static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb)
+Load all the hashes in cacheDirectory into hashstore table='<algorithm>.filepath'
 
 # Applications
 
 ## collectionpreseed.js
-TODO-DOCS special case of crawl
+A special case of crawl that causes the upstream server to pre-cache Tile images for most popular or top two levels of collections below `image`, `movies`, `texts`, `audio` 
 
 Usage: `$> cd /path/to/install/dweb-mirror && ./collectionpreseed.js`
 
-This application uses the parallelStreams package to create a pipelined crawler
-to walk a configurable tree which is currently two levels deep from `image`, `movies`, `texts`, `audio` 
-and also the most popular collections. 
-
-By performing the search on each collection it ensures the thumbnails are in IPFS. 
-
 ## crawl
-TODO-DOCS TODO-API
+General purpose crawler for the Archive. 
+`crawl -h` for up to date arguments. 
+```
+usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
+    [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*
+    [--skipfetchfile] [--skipcache] [--dummy] [identifier]*
+
+    h : help print this text
+    v : verbose tell us which config being run (default is currently pretty verbose)
+    q : quiet (TODO implement this)
+    l level : Crawl the identifiers to a certain level, valid values are:
+                "tile"    for just enough to print a collection page, including the thumbnail image
+                "metadata" and the full metadata, which will be useful once local search is implemented
+                "details"  and enough to paint a page, including for example a lower bandwidth video
+                "full"     and all the files in the item - beware, this can get very big.
+    r rows           : overrides any (simple) search string to crawl this number of items
+    d depth          : crawl collections found in this collection to a depth,
+                       (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
+    --directory path : override the directory set in the configuration for the root of the cache
+    --search json    : override default search string, strict json syntax only
+    --related json   : override default settign for crawling related items, strict json syntax only
+    --debugidentifier identifier : identifier to do extra debugging on, only really valuable when using an IDE
+    --maxfilesize bytes : any file bigger than this will be ignored
+    --concurrency threads : how many files or searches to be happening concurrently - use 1 for debugging, otherwise 10 is about right
+    --limittotaltasks tasks : a maximum number of tasks to run, will be (approximately) the number of searches, plus the number of items crawled.
+    --transport TRANSPORT : The names of transport to use, by default its HTTP, but can currenrly add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
+    --skipfetchfile : Dont actually transfer the files (good for debugging)
+    --skipcache     : Ignore current contents of cache and always refetch
+    --dummy         : Just print the result of the options in the JSON format used for configuration
+
+   identifier       : Zero or more identifiers to crawl (if none, then it will use the default query from the configuration)
+   
+   Examples:
+    
+   crawl.js prelinger # Gets the default crawl for the prelinger collection, (details on prelinger, then tiles for top 40 items in the collection and 6 related items)
+   crawl.js --level details --rows 100 prelinger   # Would pull the top 100 items in prelinger (just the tiles)
+   crawl.js --level all commute  # Fetches all the files in the commute item 
+   
+   Specifying level, or rows more than once will apply that result to the searches, so for example: 
+   
+   crawl.js --level details --rows 10 --level details prelinger # Gets the movies for the first 10 movies in prelinger
+   crawl.js --level details --rows 100 --level tiles --rows 100 --level tiles movies # Gets the top 100 items in movies, and then crawls any of those items that are collections 
+   crawl.js --rows 100 --depth 2 movies # Is a shortcut to do the same thing
+   
+    Running crawl with no options will run the default crawls in the configuration file with no modifications, which is good for example if running under cron.
+```
+A useful hint is to experiment with arguments, but add the `--dummy` argument to output a JSON description of the search task(s) to be carried out.
 
 # Installation files
-TODO - update status of these at v0.1.x) 
 
-The following files are present in `dweb-mirror` but are still a work in progress and not yet defined and will probably change a lot. 
+The following files are present in `dweb-mirror` but, as of v0.1.0 are still a work in progress and not yet defined and will probably change a lot. 
 
 * Dockerfile - create  docker file of dweb-mirror (untested, probably doesnt work yet)
 * Dockerfile_ipfs - create a docker file for an IPFS instance - to go with the above Dockerfile (untested, probably doesnt work yet)
 * install.sh  - run during `npm install` or after `npm update` by `npm run update` - makes some links based on which other repos are installed. 
 * install_rachel.sh - variant of install.sh being built for Rachel platform (only partially complete)
+* run_dockers.sh - ???
 
 # Other files
 
 The following files are present in `dweb-mirror` but are still a work in progress and not yet defined and will probably change a lot. 
 
 * index.html - skeleton for UI, will most likely be entirely rewritten and doesn't yet work.
-* LICENCE - GNU Alfredo licence 
+* LICENCE - GNU Alfredo licence
+* mirrorHttp_rachel - a version of mirrorHttp edited to work on the Rachel platform (under construction)
+* README.md - main documentation
+* RELEASENOTES.md - history of releases
+* test.js - used to run test code against specific problems, not specified.
+* URL_MAPPING.md - how universal urls flow through the different mappings in mirrorHttp and elsewhere.

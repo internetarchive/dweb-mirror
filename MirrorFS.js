@@ -47,10 +47,10 @@ class MirrorFS {
         return  options.format === "multihash58" ? multihash58sha1(hash.digest()) : hash.digest('hex');
     }
 
-    static streamhash(s, options={}, cb) {
-        /*  Calculate hash on a stream,
+    static _streamhash(s, options={}, cb) {
+        /*  Calculate hash on a stream, which it consumes
             algorithm: Hash algorithm to be used, (only tested with sha1)
-            cb will be called once, when stream is done - note hashstream will call cb each time.
+            cb will be called once, when stream is done
         */
         if (typeof options === "function") { cb = options; options = {}; }
         const algorithm=options.algorithm || 'sha1';
@@ -61,9 +61,12 @@ class MirrorFS {
         .on('error', err =>   { if (!errState) cb(errState = err) }) // Just send errs once
         .on('data',  chunk => { if (!errState) hash.update(chunk)  })
         .on('end', () => { if (!errState) cb(null, options.format === "multihash58" ? multihash58sha1(hash.digest()) : hash.digest('hex'))});
-    }
+    }``
 
-    static hashstream({algorithm='sha1'}={}) {
+    static _hashstream({algorithm='sha1'}={}) {
+        /*
+        Return a hashstream which can be piped through, it stores the digest of the stream in ".actual" after its ._flush is called
+         */
         const hash = crypto.createHash(algorithm);
         const stream = new Transform();
         stream._transform = function (chunk, encoding, cb) {
@@ -138,6 +141,7 @@ class MirrorFS {
         }
     }
 
+    /* Not currently used
     // noinspection JSUnusedGlobalSymbols
     static writableStreamTo(directory, filepath, cb) {
         this._fileopenwrite(directory, filepath, (err, fd) => {
@@ -153,6 +157,7 @@ class MirrorFS {
             }
         });
     }
+    */
 
     static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined,
                                   expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
@@ -211,7 +216,7 @@ class MirrorFS {
              */
             if (digest) {
                 // noinspection JSPotentiallyInvalidUsageOfClassThis
-                this.streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
+                this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
                     if (err || (actual !== digest)) { cb(err || new Error(`multihash ${format} ${algorithm} ${actual} doesnt match ${digest}`)); }
                     else { cb(); }
                 });
@@ -250,7 +255,7 @@ class MirrorFS {
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
                                     // noinspection JSPotentiallyInvalidUsageOfClassThis
-                                    const hashstream = this.hashstream();
+                                    const hashstream = this._hashstream();
                                     const writable = fs.createWriteStream(null, {fd: fd});
                                     // Note at this point file is neither finished, nor closed, its a stream open for writing.
                                     //fs.close(fd); Should be auto closed when stream to it finishes
@@ -301,7 +306,7 @@ class MirrorFS {
 
     };
 
-    static streamOfCachedItemPaths({cacheDirectory = undefined}) {
+    static _streamOfCachedItemPaths({cacheDirectory = undefined}) {
         // Note returns s immediately, then asynchronous reads directories and pipes into s.
         let s = new ParallelStream({name: "Cached Item Paths"});
         fs.readdir(cacheDirectory, (err, files) => {
@@ -332,9 +337,10 @@ class MirrorFS {
 
     static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
+        // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
         const tablename = `${algorithm}.filepath`;
-        this.streamOfCachedItemPaths({cacheDirectory})
-            .map((filepath, cb) =>  this.streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
+        this._streamOfCachedItemPaths({cacheDirectory})
+            .map((filepath, cb) =>  this._streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
                     if (err) { debug("loadHashTable saw error: %s", err.message); }
                     else { this.hashstore.put(tablename, multiHash, filepath, cb); }
                 }),
