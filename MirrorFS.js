@@ -61,7 +61,7 @@ class MirrorFS {
         .on('error', err =>   { if (!errState) cb(errState = err) }) // Just send errs once
         .on('data',  chunk => { if (!errState) hash.update(chunk)  })
         .on('end', () => { if (!errState) cb(null, options.format === "multihash58" ? multihash58sha1(hash.digest()) : hash.digest('hex'))});
-    }``
+    }
 
     static _hashstream({algorithm='sha1'}={}) {
         /*
@@ -308,6 +308,7 @@ class MirrorFS {
 
     static _streamOfCachedItemPaths({cacheDirectory = undefined}) {
         // Note returns s immediately, then asynchronous reads directories and pipes into s.
+        // Runs in parallel 100 at a time,
         let s = new ParallelStream({name: "Cached Item Paths"});
         fs.readdir(cacheDirectory, (err, files) => {
             if (err) {
@@ -320,15 +321,15 @@ class MirrorFS {
                         (err, files) => {
                             if (err) { cb(null, pathstr) }      // Just pass on paths that aren't directories
                             else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>`${pathstr}/${f}`)) }} ),
-                        {name: "Read files dirs", async: true})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                        {name: "Read files dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
                     .flatten({name: "Flatten arrays"})                                                  //  /foo/mirrored/<item>/<file>
                     // Flatten once more to handle subdirs
                     .map((pathstr, cb) => fs.readdir(pathstr,
                         (err, files) => {
                             if (err) { cb(null,pathstr) }      // Just pass on paths that aren't directories
                             else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>`${pathstr}/${f}`)) }} ),
-                        {name: "Read files dirs", async: true})                                         //  [ /foo/mirrored/<item>/<file>* ]
-                    .flatten({name: "Flatten arrays"})                                                 //  /foo/mirrored/<item>/<file>
+                        {name: "Read files dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                    .flatten({name: "Flatten arrays level 2"})                                                 //  /foo/mirrored/<item>/<file>
                     .pipe(s);
             }
         });
@@ -338,13 +339,14 @@ class MirrorFS {
     static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
+        // Runs in parallel 100 at a time,
         const tablename = `${algorithm}.filepath`;
         this._streamOfCachedItemPaths({cacheDirectory})
             .map((filepath, cb) =>  this._streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
                     if (err) { debug("loadHashTable saw error: %s", err.message); }
                     else { this.hashstore.put(tablename, multiHash, filepath, cb); }
                 }),
-                {name: "Hashstore", async: true})
+                {name: "Hashstore", async: true, paralleloptions: {limit:100}})
             .reduce();
     }
 

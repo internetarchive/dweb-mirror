@@ -20,10 +20,10 @@ const config = require('./config');
 
 
 const HashStore = require('./HashStore');
-HashStore.test();
-//const MirrorFS = require('./MirrorFS');
+//HashStore.test();
+const MirrorFS = require('./MirrorFS');
 // noinspection JSUnresolvedVariable
-//MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));
+MirrorFS.loadHashTable({cacheDirectory: config.directory}, (err, res) => console.log(err, res));
 
 
 /*
