@@ -2,6 +2,11 @@
 
 # This is a work in progress for getting dweb-mirror onto a Rachel/Worldpossible box
 # Other places to look for the installation process include: TODO remove private references here
+
+
+
+
+
 # * gitlab / dweb / Dockerfile (internal to IA)
 # * ./install.sh
 # * ./README.md
@@ -10,6 +15,11 @@
 # Note this includes human readable as well as automatic steps
 
 # ssh into the box, if you have permission to do this then you'll know the id/password :-)
+# Press and hold power button till blue light comes on
+# Connect via WiFi to "Rachel"
+# ssh to 192.168.88.1
+# Plugging into ethernet might also work, also plugging into ethernet will be required for the Rachel box to download things.
+# TODO - figure out if can get Rachel to access internet via WiFi
 
 # I also had to ...
 # * navigate to admin / General settings, and turn off captive portal.
