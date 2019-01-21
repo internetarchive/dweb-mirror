@@ -16,11 +16,12 @@ const MirrorFS = require('./MirrorFS');
 
 
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveMemberSearch.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function f(cb) {
         const namepart = this.identifier; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-        const dirpath = this._dirpath(cacheDirectory);
+        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
         const savedkeys = Util.gateway.url_default_fl;
         // noinspection JSUnusedLocalSymbols
         const jsonToSave = canonicaljson.stringify(Object.filter(this, (k, v) => savedkeys.includes(k)));
@@ -37,6 +38,7 @@ ArchiveMemberSearch.prototype.save = function({cacheDirectory = undefined} = {},
                         cb(null, this);
 } }); }}); }};
 
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
@@ -48,7 +50,7 @@ ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefin
     function f(cb) {
         console.assert(cacheDirectory, "ArchiveMember needs a directory in order to saveThumbnail");
         const namepart = this.identifier; // Its also in this.metadata.identifier but only if done a fetch_metadata
-        const dirpath = this._dirpath(cacheDirectory);
+        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
 
         if (!namepart) {
             cb(null,this);
@@ -61,7 +63,7 @@ ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefin
                 } else {
                         // noinspection JSUnresolvedVariable
                         // DONT Include direct link to services as have https://dweb.me/arc/archive.org/thumbnail/IDENTIFIER which is same
-                        const dirpath = this._dirpath(cacheDirectory);
+                        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
                         const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                         const debugname = namepart + "/__ia_thumb.jpg";
                         MirrorFS.cacheAndOrStream({

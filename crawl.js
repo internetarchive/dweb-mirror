@@ -115,13 +115,16 @@ if (!opts.rows.length) {
     });
 
 // Support ~ and . in paths to directory TODO-MULTI handle arrays here
+// TODO-MULTI need to check and define a copy directory around here somewhere
 ["directory"].filter(k => opts[k])
     .forEach(key => {
         opts[key] = (opts[key].startsWith("~/")
         ? path.resolve(os.homedir(), opts[key].slice(2))
         : path.resolve(process.cwd(), opts[key]))});
 if (opts.directory) { console.log("directory option not supported yet"); process.exit(); }
+//TODO-MULTI
 if (!config.directory) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
+//TODO-MULTI
 debug("Will use %s",config.directory,"for the crawl");
 
 /* Not needed, just removed these from strings

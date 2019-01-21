@@ -227,6 +227,7 @@ class CrawlItem extends Crawlable {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({itemid: this.identifier, query: this.query});
         if (this.isUniq()) {
+            //TODO-MULTI and check usages of cacheDirectory
             const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled
             const skipFetchFile = CrawlManager.cm.skipFetchFile;
             const skipCache = CrawlManager.cm.skipCache;

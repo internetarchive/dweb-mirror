@@ -12,6 +12,7 @@ const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile
 const MirrorFS = require('./MirrorFS');
 
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments

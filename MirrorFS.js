@@ -159,6 +159,7 @@ class MirrorFS {
     }
     */
 
+    //TODO-MULTI and check usages of cacheDirectory
     static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined,
                                   expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
                                   start=0, end=undefined} = {}, cb) {
@@ -248,7 +249,7 @@ class MirrorFS {
                         } else {
                             // Now create a stream to the file
                             const filepathTemp = filepath + ".part";
-                            MirrorFS._fileopenwrite(cacheDirectory, filepathTemp, (err, fd) => {
+                            MirrorFS._fileopenwrite(cacheDirectory, filepathTemp, (err, fd) => { //TODO-MULTI and check pass though into _fileopenwrite
                                 if (err) {
                                     debug("Unable to write to %s: %s", filepath, err.message);
                                     cb(err);
@@ -306,6 +307,7 @@ class MirrorFS {
 
     };
 
+    //TODO-MULTI and check usages of cacheDirectory
     static _streamOfCachedItemPaths({cacheDirectory = undefined}) {
         // Note returns s immediately, then asynchronous reads directories and pipes into s.
         // Runs in parallel 100 at a time,
@@ -336,6 +338,7 @@ class MirrorFS {
         return s;
     }
 
+    //TODO-MULTI and check usages of cacheDirectory
     static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath

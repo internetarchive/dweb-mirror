@@ -80,7 +80,9 @@ const config = new MirrorConfig({
 
 
 });
+//TODO-MULTI
 MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
+//TODO-MULTI
 debug("config summary: directory:%s archiveui:%s", config.directory, config.archiveui.directory);
 
 exports = module.exports = config;

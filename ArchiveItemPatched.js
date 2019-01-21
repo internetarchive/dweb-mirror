@@ -31,12 +31,13 @@ ArchiveItem.prototype._namepart = function() {
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype._dirpath = function(directory) {
+ArchiveItem.prototype._dirpath = function(directory) { //TODO-MULTI may not be good as could be multiple dirpath*S*
     const namepart = this._namepart();
     return namepart ? path.join(directory, namepart) : undefined;
     };
 
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     /*
         Save metadata for this file as JSON in multiple files.
@@ -57,7 +58,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         cb(null, this);
     } else {
         const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-        const dirpath = this._dirpath(cacheDirectory);
+        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of _dirpath
 
         if (!(this.metadata || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
@@ -111,6 +112,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
 };
 // noinspection JSUnresolvedVariable
 // noinspection JSUnusedGlobalSymbols
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
@@ -120,7 +122,7 @@ ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     */
     const namepart = this.itemid;
     const res = {};
-    const dirpath = this._dirpath(cacheDirectory);  // Undefined if just members and neither query nor itemid
+    const dirpath = this._dirpath(cacheDirectory);  // Undefined if just members and neither query nor itemid //TODO-MULTI and check usages of dirpath
     function _parse(part, cb) {
         const filename = path.join(dirpath, `${namepart}_${part}.json`);
         fs.readFile(filename, (err, jsonstring) => {
@@ -188,7 +190,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache;           // If set will not try and read cache
     // noinspection JSUnresolvedVariable
-    const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
+    const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't //TODO-MULTI and trace usage
     if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function errOrDark(err) {
         return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
@@ -239,10 +241,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     function f(cb) {
         //TODO-CACHE-AGING
         // noinspection JSUnresolvedVariable
-        const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't
+        const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't //TODO-MULTI and trace usage
         const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
         if (cacheDirectory && !skipCache) {
-            const dirpath = namepart && this._dirpath(cacheDirectory);
+            const dirpath = namepart && this._dirpath(cacheDirectory); //TODO-MULTI dirpath > dirpaths and trace usage
             const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json");
             waterfall([
                 (cb) => { // Read from members_cached.json files from cache if available
@@ -300,6 +302,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
@@ -310,7 +313,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
 
     console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    const dirpath = this._dirpath(cacheDirectory);
+    const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
 
     if (!namepart) {
         cb(null,this);
@@ -357,7 +360,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid}`;
                     // Include direct link to services
                     if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
-                    const dirpath = this._dirpath(cacheDirectory);
+                    const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
                     const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                     const debugname = namepart + "/__ia_thumb.jpg";
                     MirrorFS.cacheAndOrStream({
@@ -378,6 +381,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     }
 };
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false, wantMembers=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING

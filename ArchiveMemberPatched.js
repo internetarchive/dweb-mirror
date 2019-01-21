@@ -21,10 +21,12 @@ ArchiveMember.prototype._dirpath = function(directory) {
 
 
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveMember.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
     console.assert(false, "Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch");
 };
 
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefined}, cb) {
     /*
         Read member info for an item
@@ -34,7 +36,7 @@ ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefine
         cb(err, data structure from file)
     */
     const namepart = identifier;
-    const dirpath = this._dirpath(cacheDirectory, namepart);
+    const dirpath = this._dirpath(cacheDirectory, namepart); //TODO-MULTI and check usages of dirpath
     const part = "member";
     const filename = path.join(dirpath, `${namepart}_${part}.json`);
     fs.readFile(filename, (err, jsonstring) => {
@@ -54,6 +56,7 @@ ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefine
     });
 };
 // noinspection JSUnresolvedVariable
+//TODO-MULTI and check usages of cacheDirectory
 ArchiveMember.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
     ArchiveMember.read({cacheDirectory, identifier: this.identifier}, cb);
 };
