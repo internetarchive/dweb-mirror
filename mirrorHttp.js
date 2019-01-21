@@ -205,7 +205,9 @@ function streamQuery(req, res, next) {
         // Special case: query just looking for members of a collection
         const itemid = req.query.q.split(':').pop();
         o = new ArchiveItem({sort: req.query.sort, itemid, query: `collection:${itemid}`})
-    } else if (req.query.q && req.query.q.startsWith("identifier:") && (req.query.q.lastIndexOf(':') === 10)) {
+    } else if (req.query.q && req.query.q.startsWith("identifier:")
+        && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
+        && (req.query.q.lastIndexOf(':') === 10)) {
         // Special case: query just looking for fields on a list of identifiers
         const ids = req.query.q.slice(11).split(' OR '); // ["foo","bar"]
         o = new ArchiveItem();
