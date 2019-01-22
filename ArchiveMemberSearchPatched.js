@@ -38,7 +38,7 @@ ArchiveMemberSearch.prototype.save = function({cacheDirectory = undefined} = {},
                         cb(null, this);
 } }); }}); }};
 
-//TODO-MULTI and check usages of cacheDirectory
+//TODO-MULTI and check usages of cacheDirectory - accept and pass copyDirectory TODO-API update
 ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
@@ -63,11 +63,11 @@ ArchiveMemberSearch.prototype.saveThumbnail = function({cacheDirectory = undefin
                 } else {
                         // noinspection JSUnresolvedVariable
                         // DONT Include direct link to services as have https://dweb.me/arc/archive.org/thumbnail/IDENTIFIER which is same
-                        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
-                        const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath maybe OBS
+                        const relFilePath = path.join(identifier, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                         const debugname = namepart + "/__ia_thumb.jpg";
                         MirrorFS.cacheAndOrStream({
-                            cacheDirectory, filepath, skipFetchFile, wantStream, debugname,
+                            relFilepath, skipFetchFile, wantStream, debugname,
                             urls: this.thumbnaillinks,
                         }, (err, streamOrUndefined) => {
                             if (err) {

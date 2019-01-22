@@ -7,11 +7,14 @@ const path = require('path');
 const Transform = require('stream').Transform || require('readable-stream').Transform;
 const debug = require('debug')('dweb-mirror:MirrorFS');
 const multihashes = require('multihashes');
+const detect = require('async/detect');
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
 
-// Note cant include config here
+// other packages in this repo
+const config = require('./config');
+const HashStore = require('./HashStore');
 
 function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
 
@@ -159,16 +162,42 @@ class MirrorFS {
     }
     */
 
-    //TODO-MULTI and check usages of cacheDirectory
-    static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined,
+    static maybeCheckSha(filepath, {digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API add this
+        /*
+        Check file is readable, or if digest offered check matches that of file
+        cb(err) If doesn't match
+         */
+        if (digest) {
+            // noinspection JSPotentiallyInvalidUsageOfClassThis
+            this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
+                if (err || (actual !== digest)) { cb(err || new Error(`multihash ${format} ${algorithm} ${actual} doesnt match ${digest}`)); }
+                else { cb(); }
+            });
+        } else { //
+            // noinspection JSUnresolvedVariable
+            fs.access(filepath, fs.constants.R_OK, cb);
+        }
+    }
+
+    static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API add this
+        // Return filepath to a file if it exists in one of the cache Directories.
+        config.directories.detect( d ,cb2 =>
+            this.maybeCheckSha(path.join(d, relFilePath),
+                                digest, format, algorithm},
+                                (err, unused) => cb2(null, !err)));
+    }
+
+
+    static cacheAndOrStream({copyDirectory = undefined, relFilePath=undefined,
+                                  debugname="UNDEFINED", urls=undefined,
                                   expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
                                   start=0, end=undefined} = {}, cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
 
         Returns a stream from the cache, or the net if start/end unset cache it
-        cacheDirectory: root directory of cache
-        filepath:       Full path to file, should be inside cacheDirectory
+        copyDirectory:  place to put a copy TODO-MULTI handle case of is cached but in wrong place
+        relFilePath:    Path, relative to  cache, to a file.
         urls:           Single url or array to retrieve
         debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
         expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
@@ -189,47 +218,31 @@ class MirrorFS {
             In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
         console.assert(urls);
-        // noinspection JSUnresolvedVariable
-        maybeCheckSha.call(this, filepath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err) => {
+        this.checkWhereValidFile(relFilePath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err, existingFilePath) => {
             if (err) { //Doesn't match
                 _notcached.call(this);
             } else { // sha1 matched, skip fetching, just stream from saved
                 if (wantStream) {
-                    debug("streaming from cached", filepath, "as sha1 matches");
-                    cb(null, fs.createReadStream(filepath, {start, end}));   // Already cached and want stream - read from file
+                    debug("streaming from cached", existingFilePath, "as sha1 matches");
+                    cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
                 } else {
-                    debug("Already cached", filepath, "with correct sha1");
-                    callbackEmptyOrData(filepath);
+                    debug("Already cached", existingFilePath, "with correct sha1");
+                    callbackEmptyOrData(existingFilePath);
                 }
             }
         });
-        function callbackEmptyOrData(filepath) {
+        function callbackEmptyOrData(existingFilePath) {
             if (wantBuff) {
-                fs.readFile(filepath, cb); //TODO check if its a string or a buffer or what
+                fs.readFile(existingFilePath, cb); //TODO check if its a string or a buffer or what
             } else {
                 cb();
             }
         }
-        function maybeCheckSha(filepath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
-            /*
-            Check file is readable, or if sha1 offered check sha matches
-            cb(err) If doesn't match
-             */
-            if (digest) {
-                // noinspection JSPotentiallyInvalidUsageOfClassThis
-                this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
-                    if (err || (actual !== digest)) { cb(err || new Error(`multihash ${format} ${algorithm} ${actual} doesnt match ${digest}`)); }
-                    else { cb(); }
-                });
-            } else { //
-                // noinspection JSUnresolvedVariable
-                fs.access(filepath, fs.constants.R_OK, cb);
-            }
-        }
+
         function _notcached() {
             /*
             Four possibilities - wantstream &&|| partialrange
-            ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; nonsense; !ws&!p caching
+            ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; unsupported, though could be in callbackEmptyOrData; !ws&!p caching
              */
             if (skipFetchFile) {
                 debug("skipFetchFile set (testing) would fetch: %s", debugname);
@@ -248,10 +261,12 @@ class MirrorFS {
                             // Dont try and write it
                         } else {
                             // Now create a stream to the file
-                            const filepathTemp = filepath + ".part";
-                            MirrorFS._fileopenwrite(cacheDirectory, filepathTemp, (err, fd) => { //TODO-MULTI and check pass though into _fileopenwrite
+                            const copyDir = copyDir || config.directories[0];
+                            const newFilePath = path.join(copyDir, relFilePath);
+                            const filepathTemp = newFilePath + ".part");
+                            MirrorFS._fileopenwrite(copyDir, filepathTemp, (err, fd) => {
                                 if (err) {
-                                    debug("Unable to write to %s: %s", filepath, err.message);
+                                    debug("Unable to write to %s: %s", filepathTemp, err.message);
                                     cb(err);
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
@@ -272,16 +287,17 @@ class MirrorFS {
                                                 if (!wantStream) cb(err); // Cant send err if not wantStream as already done it
                                             })
                                         } else {
-                                            fs.rename(filepathTemp, filepath, (err) => {
+                                            fs.rename(filepathTemp, newFilePath, (err) => {
                                                 if (err) {
-                                                    console.error(`Failed to rename ${filepathTemp} to ${filepath}`); // Shouldnt happen
+                                                    console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
-                                                    this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), filepath);
+                                                    //TODO-MULTI check right to correct hashstore, and then change to relative path
+                                                    this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), newFilePath);
                                                     // noinspection JSUnresolvedVariable
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
                                                     if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
-                                                        callbackEmptyOrData(filepath);
+                                                        callbackEmptyOrData(newFilePath);
                                                     }
                                                 }
                                             })
@@ -354,4 +370,7 @@ class MirrorFS {
     }
 
 }
+//TODO-MULTI - move so MirrorFS can depend on config
+MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
+
 exports = module.exports = MirrorFS;

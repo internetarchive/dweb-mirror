@@ -302,7 +302,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory
+//TODO-MULTI and check usages of cacheDirectory and add copyDirectory and pass to MirrorFS
 ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
@@ -361,11 +361,11 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
                     // Include direct link to services
                     if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
                     const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
-                    const filepath = path.join(dirpath, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
-                    const debugname = namepart + "/__ia_thumb.jpg";
-                    MirrorFS.cacheAndOrStream({
-                        cacheDirectory, filepath, skipFetchFile, wantStream, debugname,
+                    const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+                    const debugname = relFilePath;
+                    MirrorFS.cacheAndOrStream({ relFilePath, skipFetchFile, wantStream, debugname,
                         urls: this.metadata.thumbnaillinks,
+                        relFilePath:
                     }, (err, streamOrUndefined) => {
                         if (err) {
                             debug("Unable to cacheOrStream %s", debugname);
@@ -381,7 +381,7 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     }
 };
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory
+//TODO-MULTI and check usages of cacheDirectory - accept copyDirectpry & pass to MirrorFS
 ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false, wantMembers=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
@@ -392,10 +392,10 @@ ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantS
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     if (itemid) {
         // noinspection JSUnresolvedVariable
-        const dirpath = this._dirpath(cacheDirectory);
-        const filepath = path.join(dirpath, this._namepart()+"_related.json");
+        const dirpath = this._dirpath(cacheDirectory); // TODO-MULTI maybe dirpath obs
+        const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({cacheDirectory, wantStream, filepath,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: config.archiveorg.related + "/" + itemid,
             debugname: itemid + "/" + itemid + "_related.json"

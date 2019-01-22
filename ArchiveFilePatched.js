@@ -12,7 +12,7 @@ const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile
 const MirrorFS = require('./MirrorFS');
 
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory
+//TODO-MULTI and check usages of cacheDirectory, take and pass copyDirectory to MirrorFS
 ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
@@ -25,9 +25,9 @@ ArchiveFile.prototype.cacheAndOrStream = function({cacheDirectory = undefined,  
         } else {
             const debugname = [itemid, filename].join('/');
             MirrorFS.cacheAndOrStream({
-                urls, cacheDirectory, skipFetchFile, wantStream, start, end, debugname,
+                urls, skipFetchFile, wantStream, start, end, debugname,
                 sha1: this.metadata.sha1,
-                filepath: path.join(cacheDirectory, itemid, filename),
+                relFilepath: path.join(itemid, filename),
                 expectsize: this.metadata.size
             }, (err, streamOrUndefined)=> {
                 if (err) {

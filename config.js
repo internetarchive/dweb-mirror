@@ -5,8 +5,6 @@ const path = require('path');
 const os = require('os')
 // Other files in this repo
 const MirrorConfig = require('./MirrorConfig');
-const MirrorFS = require('./MirrorFS');
-const HashStore = require('./HashStore');
 
 // Note duplicates of this in config and crawl.js
 function firstExisting(...args) {
@@ -80,8 +78,6 @@ const config = new MirrorConfig({
 
 
 });
-//TODO-MULTI
-MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 //TODO-MULTI
 debug("config summary: directory:%s archiveui:%s", config.directory, config.archiveui.directory);
 

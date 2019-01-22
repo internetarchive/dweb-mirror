@@ -11,7 +11,7 @@ const canonicaljson = require('@stratumn/canonicaljson');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 // Other files in this repo
 
-ArchiveMember._dirpath = function(directory, identifier) {
+ArchiveMember._dirpath = function(directory, identifier) { //TOOD-MULTI check for usages, maybe be obsolete or used when want multiple paths
     return path.join(directory, identifier);
 };
 // noinspection JSUnresolvedVariable

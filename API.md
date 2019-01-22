@@ -384,8 +384,8 @@ cb(err)
 Complicated function to encapsulate in one place the logic around the cache.
 ```
 Returns a stream from the cache, or the net if start/end unset cache it
-cacheDirectory: root directory of cache
-filepath:       Full path to file, should be inside cacheDirectory
+copyDirectory:  root directory of cache to copy item to (otherwise uses first in config.directories)
+relFilePath:    Path to file relative to cache i.e. <IDENTIFIER>/<FILENAME>
 urls:           Single url or array to retrieve
 debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
 expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)

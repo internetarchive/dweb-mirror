@@ -35,11 +35,11 @@ mirrorHttp|/info|{config: CONFIG}|
 DwebTransports & p_resolveNames|dweb:/arc/archive.org/metadata/IDENTIFIER|gun:/gun/arc/archive.org/metadata/IDENTIFIER & https://dweb.me/arc/archive.org/metadata/IDENTIFIER|
 mirrorHttp|ArchiveFile(Patched).cacheAndOrStream|MirrorFS(CACHEDIR/IDENTIFIER/FILE, urls)|
 mirrorHttp|ArchiveItem(Patched).fetch_metadata|CACHEDIR/IDENTIFIER/{_meta.json, _reviews.json, _files.json etc} or ArchiveItem._fetch_metadata|
-mirrorHttp|ArchiveItem(Patched).relatedItems|MirrorFS.cacheAndOrStream(CACHEDIR/IDENTIFIER/IDENTIFIER_related.json, https://be-api.us.archive.org/mds/v1/get_related/all/IDENTIFIER| 
+mirrorHttp|ArchiveItem(Patched).relatedItems|MirrorFS.cacheAndOrStream(CACHEDIRS/IDENTIFIER/IDENTIFIER_related.json, https://be-api.us.archive.org/mds/v1/get_related/all/IDENTIFIER| 
 dweb-archivecontroller|ArchiveItem._fetch_metadata|dweb:/arc/archive.org/metadata/IDENTIFIER|
 mirrorHttp|ArchiveItem.fetch_query .members unexpanded|CACHEDIR/IDENTIFIER_member_cached.json|
 dweb-archivecontroller|ArchiveItem.fetch_query .members unexpanded|dweb.me/arc/archive.org/advancedsearch|
 mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_iteminage.jpg}) or MirrorFS.cacheAndOrStream(item.metadata.thumbnaillinks)
-mirrorHtto|MirrorFS.cacheAndOrStream|CACHEDIR or urls|
+mirrorHttp|MirrorFS.cacheAndOrStream|CACHEDIRS or urls|
 mirrorHttp|streamArchiveFile|loadedA;ArchiveFile(patched).cacheAndOrStream|
 mirrorHttp|streamThumbnail|loadedAI;ArchiveItem(patched).saveThumbnail|
