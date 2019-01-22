@@ -120,10 +120,8 @@ class CrawlFile extends Crawlable {
             if (!(CrawlManager.cm.maxFileSize && (parseInt(this.file.metadata.size) > CrawlManager.cm.maxFileSize))) {
                 debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
                 const skipFetchFile = CrawlManager.cm.skipFetchFile;
-                const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled
-                const copyDirectory = undefined; //TODO-MULTI add copyDirectory and pass to file.cahceAndOrStream
+                const copyDirectory = undefined; //TODO-MULTI add copyDirectory and pass to MirrorFS
                 this.file.cacheAndOrStream({
-                    copyDirectory,
                     skipFetchFile,
                     wantStream: false,
                     start: 0,
@@ -228,8 +226,6 @@ class CrawlItem extends Crawlable {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({itemid: this.identifier, query: this.query});
         if (this.isUniq()) {
-            //TODO-MULTI and check usages of cacheDirectory
-            const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled
             const skipFetchFile = CrawlManager.cm.skipFetchFile;
             const skipCache = CrawlManager.cm.skipCache;
             waterfall([
@@ -267,7 +263,7 @@ class CrawlItem extends Crawlable {
                             if (err) {
                                 cb(err);
                             } else {
-                                each(searchmembers, (sm, cb1) => sm.save({cacheDirectory}, cb1), (unusederr) => { // Errors reported in save
+                                each(searchmembers, (sm, cb1) => sm.save(cb1), (unusederr) => { // Errors reported in save
                                     searchmembers.slice(0, this.related.rows)
                                         .forEach(sm =>
                                             CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, this.related, this.asParent())));

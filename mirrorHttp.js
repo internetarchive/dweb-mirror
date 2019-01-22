@@ -48,7 +48,7 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const app = express();
 // noinspection JSUnresolvedVariable
-debug('Starting HTTP server on %d', config.apps.http.port);
+debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     transports: ["HTTP"],
@@ -91,7 +91,7 @@ function loadedAI({itemid=undefined, metaapi=undefined}={}, cb) {
 }
 
 // Serving static (e.g. UI) files
-//app.use('/arc/archive.org/download/', express.static(config.directory)); // Simplistic, better ...
+//app.use('/arc/archive.org/download/', express.static(dir)); // Simplistic, better ...
 
 function _sendFileFromDir(req, res, next, dir) {
     /* send a file, dropping through to next if it fails,
@@ -167,7 +167,6 @@ function streamArchiveFile(req, res, next) {
                     if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size) - 1}/${af.metadata.size}`);
                     // noinspection JSUnresolvedVariable
                     const opts = Object.assign({}, req.streamOpts, {
-                        // Note, not specifiying copyDirectory here as not applicable in mirrorHttp
                         wantStream: true
                     });
                     res.set("Content-Type", af.mimetype());   // Not sure what happens if doesn't find it.

@@ -83,7 +83,7 @@ only changes made in dweb-mirror appear here.
 
 ## ArchiveFile
 
-##### cacheAndOrStream({copyDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
+##### cacheAndOrStream({skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
@@ -91,7 +91,7 @@ See MirrorFS.cacheAndOrStream for arguments.
 
 ## ArchiveItem
 
-##### save({cacheDirectory = undefined} = {}, cb)
+##### save(opts = {}, cb)
 
 Save metadata for this file as JSON in multiple files (see File Outline)
 ```
@@ -100,7 +100,7 @@ cb(err, this)   Errors if cant fetch metadata, or save failed
 
 If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
 
-##### read({cacheDirectory = undefined} = {}, cb)
+##### read({}, cb)
 
 Read metadata, reviews, files and extra from corresponding files - see `Files on disk`
 ```
@@ -116,7 +116,7 @@ which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere t
 
 ```
 Alternatives:
-!cacheDirectory:    load from net
+!skipCache:    load from net
 cached:             return from cache
 !cached:            Load from net, save to cache
 
@@ -141,14 +141,14 @@ Strategy is:
 * Write the result back to `<IDENTIFIER>_members_cached.json`
 * Write each member to its own `<IDENTIFIER>_member.json`
 
-##### saveThumbnail({copyDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb)
+##### saveThumbnail({skipFetchFile=false, wantStream=false} = {}, cb)
 
 Save a thumbnail to the cache,
 ```
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
-##### relatedItems({copyDirectory = undefined, wantStream=false} = {}, cb)
+##### relatedItems({wantStream=false} = {}, cb)
 Save the related items to the cache
 ```
 cb(err, obj)  Callback on completion with related items object or stream
@@ -156,13 +156,13 @@ cb(err, obj)  Callback on completion with related items object or stream
 
 ## ArchiveMember 
 
-##### static read({cacheDirectory = undefined, identifier = undefined}, cb)
+##### static read({identifier = undefined}, cb)
 Read member info for an item
 ```
 identifier: Where to look - can be a real identifier or pseudo-one for a saved search
 cb(err, data structure from file)
 ```
-##### read({cacheDirectory = undefined}, cb)
+##### read({}, cb)
 Read member info for an item from the cache.
 ```
 cb(err, data structure from file)
@@ -170,7 +170,7 @@ cb(err, data structure from file)
 
 ## ArchiveMemberSearch
 
-##### save({cacheDirectory = undefined} = {}, cb)
+##### save(opts = {}, cb)
 Save the results of a search as a `<IDENTIFIER>_member.json` file
 ```
 cb(err, this)
@@ -382,11 +382,10 @@ data    Anything that fs.writeFile accepts
 cb(err)
 ```
 
-#### static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
+#### static cacheAndOrStream({filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
 Complicated function to encapsulate in one place the logic around the cache.
 ```
 Returns a stream from the cache, or the net if start/end unset cache it
-copyDirectory:  root directory of cache to copy item to (otherwise uses first in config.directories)
 relFilePath:    Path to file relative to cache i.e. <IDENTIFIER>/<FILENAME>
 urls:           Single url or array to retrieve
 debugname:      Name for this item to use in debugging typically ITEMID/FILENAME

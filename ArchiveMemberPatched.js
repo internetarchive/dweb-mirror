@@ -4,42 +4,27 @@
  */
 
 // Generic NPM modules
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 // Other files in this repo
 
-ArchiveMember._dirpath = function(directory, identifier) { //TOOD-MULTI check for usages, maybe be obsolete or used when want multiple paths
-    return path.join(directory, identifier);
-};
 // noinspection JSUnresolvedVariable
-ArchiveMember.prototype._dirpath = function(directory) {
-    return ArchiveMember._dirpath(directory, this.identifier);
-};
-
-
-// noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory
-ArchiveMember.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
+ArchiveMember.prototype.save = function({} = {}, cb) {
     console.assert(false, "Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch");
 };
 
-//TODO-MULTI and check usages of cacheDirectory
-ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefined}, cb) {
+ArchiveMember.read = function({identifier = undefined}, cb) {
     /*
         Read member info for an item
-        cacheDirectory: Top level of directory to look for data in
         identifier: Where to look - can be a real identifier or pseudo-one for a saved search
-        TODO-CACHE-MULTI allow cacheDirectory to be an array
         cb(err, data structure from file)
     */
     const namepart = identifier;
-    const dirpath = this._dirpath(cacheDirectory, namepart); //TODO-MULTI and check usages of dirpath
     const part = "member";
-    const filename = path.join(dirpath, `${namepart}_${part}.json`);
-    fs.readFile(filename, (err, jsonstring) => {
+    const relFilePath = path.join(namepart, `${namepart}_${part}.json`);
+    MirrorFS.readFile(relFilePath, (err, jsonstring) => {
         if (err) {
             cb(err);    // Not logging as not really an err for there to be no file, as will read
         } else {
@@ -56,9 +41,8 @@ ArchiveMember.read = function({cacheDirectory = undefined, identifier = undefine
     });
 };
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory
-ArchiveMember.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
-    ArchiveMember.read({cacheDirectory, identifier: this.identifier}, cb);
+ArchiveMember.prototype.read = function(unusedopts = {}, cb) {
+    ArchiveMember.read({identifier: this.identifier}, cb);
 };
 
 
