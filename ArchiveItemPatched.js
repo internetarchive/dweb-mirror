@@ -29,7 +29,6 @@ ArchiveItem.prototype._namepart = function() {
     }
 };
 
-// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.save = function(opts = {}, cb) {
     /*
         Save metadata for this file as JSON in multiple files.
