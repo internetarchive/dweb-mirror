@@ -115,10 +115,8 @@ function sendRelated(req, res, next) {
         if (err) { next(err);}
         else {
             // noinspection JSUnresolvedVariable
-            archiveitem.relatedItems({
-                cacheDirectory: config.directory, //TODO-MULTI
-                wantStream: true
-            }, (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"}));
+            archiveitem.relatedItems({ wantStream: true}, (err, s) =>
+                _proxy(req, res, next, err, s, {"Content-Type": "application/json"}));
         }
     })
 }
@@ -169,7 +167,7 @@ function streamArchiveFile(req, res, next) {
                     if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size) - 1}/${af.metadata.size}`);
                     // noinspection JSUnresolvedVariable
                     const opts = Object.assign({}, req.streamOpts, {
-                        cacheDirectory: config.directory, //TODO-MULTI
+                        // Note, not specifiying copyDirectory here as not applicable in mirrorHttp
                         wantStream: true
                     });
                     res.set("Content-Type", af.mimetype());   // Not sure what happens if doesn't find it.
@@ -247,7 +245,7 @@ function streamThumbnail(req, res, next) {
             next(err);
         } else {
             // noinspection JSUnresolvedVariable
-            archiveitem.saveThumbnail({cacheDirectory: config.directory, wantStream: true}, (err, s) => { //TODO-MULTI
+            archiveitem.saveThumbnail({wantStream: true}, (err, s) => {
                 if (err) {
                     debug("item %s.saveThumbnail failed: %s", itemid, err.message);
                     next(err);

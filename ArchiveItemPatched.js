@@ -302,8 +302,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory and add copyDirectory and pass to MirrorFS
-ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.saveThumbnail = function({copyDirectory=undefined, skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
@@ -311,91 +310,79 @@ ArchiveItem.prototype.saveThumbnail = function({cacheDirectory = undefined,  ski
     cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
     */
 
-    console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
 
     if (!namepart) {
         cb(null,this);
     } else {
-        MirrorFS._mkdir(dirpath, (err) => { // Will almost certainly exist since typically comes after .save
-            //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
-            if (err) {
-                console.error(`Cannot mkdir ${dirpath} so cant save thumbnail for ${namepart}`, err);
-                cb(err);
-            } else {
-                const self = this; // this not available inside recursable or probably in writable('on)
-                const thumbnailFiles = this.files.filter(af =>
-                    af.metadata.name === "__ia_thumb.jpg"
-                    || af.metadata.name.endsWith("_itemimage.jpg")
-                );
-                if (thumbnailFiles.length) {//TODO-THUMBNAIL if more than 1, select smallest (or closest to 10k)
-                    // noinspection JSUnusedLocalSymbols
-                    // Loop through files using recursion (list is always short)
-                    const recursable = function (err, streamOrUndefined) {
-                        if (err) {
-                            debug(`saveThumbnail: failed in cacheAndOrStream for ${namepart}: %s`, err.message);
-                            if (cb && (thumbnailFiles.length === 0)) {   // cb will be undefined if cleared after calling with a stream
-                                cb(err);
-                                return; // Failed as no other files, (and didn't start another stream else cb would be undefined)
-                            }
-                            // Otherwise intentionally drops through after error and tries next file
-                        }
-                        if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
-                            cb(null, streamOrUndefined);
-                            cb = undefined;
-                        } // Clear cb so not called when complete
-                        let af;
-                        if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
-                            af.cacheAndOrStream({cacheDirectory, skipFetchFile, wantStream}, recursable); // Recurse
-                            // Exits, allowing recursable to recurse with next iteration
-                        } else { // Completed loop
-                            // cb will be set except in the case of wantStream in which case will have been called with first stream
-                            if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
-                        }
-                    };
-                    recursable(null, null);
-                } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
-                    // noinspection JSUnresolvedVariable
-                    const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid}`;
-                    // Include direct link to services
-                    if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
-                    const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of dirpath
-                    const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
-                    const debugname = relFilePath;
-                    MirrorFS.cacheAndOrStream({ relFilePath, skipFetchFile, wantStream, debugname,
-                        urls: this.metadata.thumbnaillinks,
-                        relFilePath:
-                    }, (err, streamOrUndefined) => {
-                        if (err) {
-                            debug("Unable to cacheOrStream %s", debugname);
-                            cb(err);
-                        } else {
-                            cb(null, wantStream ? streamOrUndefined : this);
-                        }
-
-                    });
+        //MirrorFS._mkdir(dirpath, (err) => { // No longer making since a) comes after .save and b) mirrorFS.cacheAndOrStream does so
+        //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
+        const self = this; // this not available inside recursable or probably in writable('on)
+        const thumbnailFiles = this.files.filter(af =>
+            af.metadata.name === "__ia_thumb.jpg"
+            || af.metadata.name.endsWith("_itemimage.jpg")
+        );
+        if (thumbnailFiles.length) {//TODO-THUMBNAIL if more than 1, select smallest (or closest to 10k)
+            // noinspection JSUnusedLocalSymbols
+            // Loop through files using recursion (list is always short)
+            const recursable = function (err, streamOrUndefined) {
+                if (err) {
+                    debug(`saveThumbnail: failed in cacheAndOrStream for ${namepart}: %s`, err.message);
+                    if (cb && (thumbnailFiles.length === 0)) {   // cb will be undefined if cleared after calling with a stream
+                        cb(err);
+                        return; // Failed as no other files, (and didn't start another stream else cb would be undefined)
+                    }
+                    // Otherwise intentionally drops through after error and tries next file
                 }
-            }
-        });
+                if (wantStream && streamOrUndefined && cb) { // Passed back from first call to cacheOrStream if wantStream is set
+                    cb(null, streamOrUndefined);
+                    cb = undefined;
+                } // Clear cb so not called when complete
+                let af;
+                if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
+                    af.cacheAndOrStream({copyDirectory, skipFetchFile, wantStream}, recursable); // Recurse
+                    // Exits, allowing recursable to recurse with next iteration
+                } else { // Completed loop
+                    // cb will be set except in the case of wantStream in which case will have been called with first stream
+                    if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+                }
+            };
+            recursable(null, null);
+        } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
+            // noinspection JSUnresolvedVariable
+            const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid}`;
+            // Include direct link to services
+            if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
+            const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+            const debugname = relFilePath;
+            MirrorFS.cacheAndOrStream({copyDirectory, relFilePath, skipFetchFile, wantStream, debugname,
+                urls: this.metadata.thumbnaillinks,
+                relFilePath:
+            }, (err, streamOrUndefined) => {
+                if (err) {
+                    debug("Unable to cacheOrStream %s", debugname);
+                    cb(err);
+                } else {
+                    cb(null, wantStream ? streamOrUndefined : this);
+                }
+
+            });
+        }
     }
 };
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory - accept copyDirectpry & pass to MirrorFS
-ArchiveItem.prototype.relatedItems = function({cacheDirectory = undefined, wantStream=false, wantMembers=false} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({copyDirectory=undefined, wantStream=false, wantMembers=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true if want stream) alternative is obj
     cb(err, stream|obj)  Callback on completion with related items object
     */
-    console.assert(cacheDirectory, "relatedItems needs a directory in order to save");
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     if (itemid) {
         // noinspection JSUnresolvedVariable
-        const dirpath = this._dirpath(cacheDirectory); // TODO-MULTI maybe dirpath obs
         const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({wantStream, relFilePath,
+        MirrorFS.cacheAndOrStream({copyDirectory, wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: config.archiveorg.related + "/" + itemid,
             debugname: itemid + "/" + itemid + "_related.json"

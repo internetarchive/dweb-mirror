@@ -33,7 +33,7 @@ mirrorHttp|/favicon.ico|ARCHIVEUIDIR/favicon.ico|
 mirrorHttp|/images/*|ARCHIVEUIDIR/images|
 mirrorHttp|/info|{config: CONFIG}|
 DwebTransports & p_resolveNames|dweb:/arc/archive.org/metadata/IDENTIFIER|gun:/gun/arc/archive.org/metadata/IDENTIFIER & https://dweb.me/arc/archive.org/metadata/IDENTIFIER|
-mirrorHttp|ArchiveFile(Patched).cacheAndOrStream|MirrorFS(CACHEDIR/IDENTIFIER/FILE, urls)|
+mirrorHttp|ArchiveFile(Patched).cacheAndOrStream|MirrorFS(CACHEDIRS/IDENTIFIER/FILE, urls)|
 mirrorHttp|ArchiveItem(Patched).fetch_metadata|CACHEDIR/IDENTIFIER/{_meta.json, _reviews.json, _files.json etc} or ArchiveItem._fetch_metadata|
 mirrorHttp|ArchiveItem(Patched).relatedItems|MirrorFS.cacheAndOrStream(CACHEDIRS/IDENTIFIER/IDENTIFIER_related.json, https://be-api.us.archive.org/mds/v1/get_related/all/IDENTIFIER| 
 dweb-archivecontroller|ArchiveItem._fetch_metadata|dweb:/arc/archive.org/metadata/IDENTIFIER|

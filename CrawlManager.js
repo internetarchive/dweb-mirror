@@ -121,8 +121,9 @@ class CrawlFile extends Crawlable {
                 debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
                 const skipFetchFile = CrawlManager.cm.skipFetchFile;
                 const cacheDirectory = config.directory; //TODO-MULTI TODO-CRAWL this becomes part of the config for each subset to be crawled
+                const copyDirectory = undefined; //TODO-MULTI add copyDirectory and pass to file.cahceAndOrStream
                 this.file.cacheAndOrStream({
-                    cacheDirectory,
+                    copyDirectory,
                     skipFetchFile,
                     wantStream: false,
                     start: 0,
@@ -242,9 +243,9 @@ class CrawlItem extends Crawlable {
                 (ai, cb) => { // Save tile if level is set.
                     if (["tile", "metadata", "details", "all"].includes(this.level)) {
                         if (this.member && this.member.thumbnaillinks) {
-                            this.member.saveThumbnail({cacheDirectory, skipFetchFile, wantStream: false}, cb);
+                            this.member.saveThumbnail({skipFetchFile, wantStream: false}, cb); //TODO-MULTI add copyDirectory
                         } else {
-                            this.item.saveThumbnail({cacheDirectory, skipFetchFile, wantStream: false}, cb);
+                            this.item.saveThumbnail({skipFetchFile, wantStream: false}, cb); //TODO-MULTI add copyDirectory
                         }
                     } else {
                         cb(null, this.item);
@@ -262,7 +263,7 @@ class CrawlItem extends Crawlable {
                 //(cb) => { debug("XXX Finished fetching files for item %s", this.identifier); cb(); },
                 (cb) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     if (["details", "all"].includes(this.level) || this.related) {
-                        this.item.relatedItems({cacheDirectory, wantStream: false, wantMembers: true}, (err, searchmembers) => {
+                        this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => { //TODO-MULTI add copyDirectory
                             if (err) {
                                 cb(err);
                             } else {

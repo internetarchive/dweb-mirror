@@ -264,7 +264,7 @@ class MirrorFS {
                             const copyDir = copyDir || config.directories[0];
                             const newFilePath = path.join(copyDir, relFilePath);
                             const filepathTemp = newFilePath + ".part");
-                            MirrorFS._fileopenwrite(copyDir, filepathTemp, (err, fd) => {
+                            MirrorFS._fileopenwrite(copyDir, filepathTemp, (err, fd) => { // Will make directory if reqd
                                 if (err) {
                                     debug("Unable to write to %s: %s", filepathTemp, err.message);
                                     cb(err);

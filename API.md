@@ -64,7 +64,9 @@ TODO-THUMBNAILS The archive pattern for thumbnails is about to change (Jan2019) 
 # Local classes
 #### Common features and parameters
 ```
-cacheDirectory  points at top level of a cache. TODO-MULTI will allow multiple directories and/or get from config
+cacheDirectory  points at top level of a cache. TODO-MULTI will allow multiple directories and/or get from config (TODO-MULTI being obsoleted)
+copyDirectory   points at top level of a cache where want a copy
+relFilePath     path to file or item inside a cache <IDENTIFIER>/<FILENAME>
 skipCache       ignore anything in the cache - forces refetching and may cause upstream server to cache it
 skipFetchFile   as an argument causes file fetching to be supressed
 wantStream      Return results as a stream, just like received from the upstream.
@@ -81,7 +83,7 @@ only changes made in dweb-mirror appear here.
 
 ## ArchiveFile
 
-##### cacheAndOrStream({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
+##### cacheAndOrStream({copyDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
@@ -139,14 +141,14 @@ Strategy is:
 * Write the result back to `<IDENTIFIER>_members_cached.json`
 * Write each member to its own `<IDENTIFIER>_member.json`
 
-##### saveThumbnail({cacheDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb)
+##### saveThumbnail({copyDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb)
 
 Save a thumbnail to the cache,
 ```
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
-##### relatedItems({cacheDirectory = undefined, wantStream=false} = {}, cb)
+##### relatedItems({copyDirectory = undefined, wantStream=false} = {}, cb)
 Save the related items to the cache
 ```
 cb(err, obj)  Callback on completion with related items object or stream
