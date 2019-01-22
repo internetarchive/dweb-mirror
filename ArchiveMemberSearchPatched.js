@@ -25,20 +25,16 @@ ArchiveMemberSearch.prototype.save = function({cacheDirectory = undefined} = {},
         const savedkeys = Util.gateway.url_default_fl;
         // noinspection JSUnusedLocalSymbols
         const jsonToSave = canonicaljson.stringify(Object.filter(this, (k, v) => savedkeys.includes(k)));
-        MirrorFS._mkdir(dirpath, (err) => {
-            if (err) {
-                debug("ArchiveMember.save: Cannot mkdir %s so cant save %s: %s", dirpath, namepart, err.message);
-                cb(err);
-            } else {
-                const filepath = path.join(dirpath, namepart + "_member.json");
-                fs.writeFile(filepath, jsonToSave, (err) => {
+        //MirrorFS._mkdir(dirpath, (err) => { //Not mkdir any more
+                const relFilePath = path.join(namepart, namepart + "_member.json");
+                MirrorFS.writeFile(relFilePath, jsonToSave, (err) => {
                     if (err) {
-                        debug("Unable to write %s metadata to %s: %s", namepart, filepath, err.message); cb(err);
+                        debug("Unable to write metadata to %s: %s", relFilePath, err.message); cb(err);
                     } else {
                         cb(null, this);
-} }); }}); }};
+}}); }};
 
-ArchiveMemberSearch.prototype.saveThumbnail = function({copyDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb) {
+ArchiveMemberSearch.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     //TODO-API seems to be missing from API.md
     Save a thumbnail to the cache, note must be called after fetch_metadata
@@ -60,7 +56,7 @@ ArchiveMemberSearch.prototype.saveThumbnail = function({copyDirectory = undefine
                         const relFilePath = path.join(identifier, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
                         const debugname = namepart + "/__ia_thumb.jpg";
                         MirrorFS.cacheAndOrStream({
-                            copyDirectory, relFilepath, skipFetchFile, wantStream, debugname,
+                            relFilepath, skipFetchFile, wantStream, debugname,
                             urls: this.thumbnaillinks,
                         }, (err, streamOrUndefined) => {
                             if (err) {

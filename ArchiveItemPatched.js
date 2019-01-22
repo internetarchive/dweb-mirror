@@ -37,8 +37,7 @@ ArchiveItem.prototype._dirpath = function(directory) { //TODO-MULTI may not be g
     };
 
 // noinspection JSUnresolvedVariable
-//TODO-MULTI and check usages of cacheDirectory
-ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
+ArchiveItem.prototype.save = function(opts = {}, cb) {
     /*
         Save metadata for this file as JSON in multiple files.
         .metadata -> <IDENTIFIER>.meta.json
@@ -51,14 +50,13 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
 
     */
-    console.assert(cacheDirectory, "ArchiveItem needs a directory in order to save");
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     if (!this.itemid) {
         // Must be a Search so dont try and save files - might save members
         debug("Search so not saving");
         cb(null, this);
     } else {
         const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-        const dirpath = this._dirpath(cacheDirectory); //TODO-MULTI and check usages of _dirpath
 
         if (!(this.metadata || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
@@ -75,11 +73,7 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
         }
 
         function f() {
-            MirrorFS._mkdir(dirpath, (err) => {
-                if (err) {
-                    console.error(`Cannot mkdir ${dirpath} so cant save item ${namepart} %s`, err.message);
-                    cb(err);
-                } else {
+            // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
                     Util.forEach(   // TODO move to async.forEach which has same syntax
                         [
                             ["meta", this.metadata],    // Maybe empty if is_dark
@@ -89,13 +83,13 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                             ["reviews", this.reviews]
                         ],
                         (i, cbInner) => { // [ part, obj ]
-                            const filepath = path.join(dirpath, `${namepart}_${i[0]}.json`);
+                            const relFilePath = path.join(namepart, `${namepart}_${i[0]}.json`);
                             if (typeof i[1] === "undefined") {
                                 cbInner(null);
                             } else {
-                                fs.writeFile(filepath, canonicaljson.stringify(i[1]), (err) => {
+                                MirrorFS.writeFile(relFilePath, canonicaljson.stringify(i[1]), (err) => {
                                     if (err) {
-                                        console.error(`Unable to write ${i[0]} to ${filepath}`);
+                                        console.error(`Unable to write ${i[0]} to ${relFilePath}`);
                                         cbInner(err);
                                     } else {
                                         cbInner(null);
@@ -104,28 +98,26 @@ ArchiveItem.prototype.save = function({cacheDirectory = undefined} = {}, cb) {
                             }
                         },
                         (err)=>{if (err) { cb(err) } else { cb(null, this);}});
-                }
-            });
         }
     }
 
 };
 // noinspection JSUnresolvedVariable
 // noinspection JSUnusedGlobalSymbols
-//TODO-MULTI and check usages of cacheDirectory
-ArchiveItem.prototype.read = function({cacheDirectory = undefined} = {}, cb) {
+//TODO-MULTI and check usages of cacheDirectory and TODO-API
+ArchiveItem.prototype.read = function(opts = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
         cacheDirectory: Top level of directory to look for data in
         TODO-CACHE-MULTI allow cacheDirectory to be an array
         cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
     */
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
     const res = {};
-    const dirpath = this._dirpath(cacheDirectory);  // Undefined if just members and neither query nor itemid //TODO-MULTI and check usages of dirpath
     function _parse(part, cb) {
-        const filename = path.join(dirpath, `${namepart}_${part}.json`);
-        fs.readFile(filename, (err, jsonstring) => {
+        const relFilePath = path.join(${namepart}, `${namepart}_${part}.json` )
+        MirrorFS.readFile(relFilePath, (err, jsonstring) => {
             if (err) {
                 cb(err);    // Not logging as not really an err for there to be no file, as will read
             } else {
@@ -180,7 +172,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     More flexible version than dweb-archive.ArchiveItem
     Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
     Alternatives:
-    !cacheDirectory:    load from net
+    skipCache:          load from net
     cached:             return from cache
     !cached:            Load from net, save to cache
 
@@ -190,22 +182,21 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache;           // If set will not try and read cache
     // noinspection JSUnresolvedVariable
-    const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't //TODO-MULTI and trace usage
     if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function errOrDark(err) {
         return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
     }
     function f(cb) {
         if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
-            if (cacheDirectory && !skipCache) { // We have a cache directory to look in
+            if (!skipCache) { // We have a cache directory to look in
                 //TODO-CACHE-AGING need timing of how long use old metadata
-                this.read({cacheDirectory}, (err, metadata) => {
+                this.read((err, metadata) => {
                     if (err) { // No cached version
                         this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
                             if (err) {
                                 cb(err); // Failed to read & failed to fetch
                             } else {
-                                ai.save({cacheDirectory}, (err, res) => cb(errOrDark(null), res));
+                                ai.save({}, (err, res) => cb(errOrDark(null), res));
                             }  // Save data fetched (de-fjorded)
                         });    // resolves to this
                     } else {    // Local read succeeded.
@@ -244,14 +235,13 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         const cacheDirectory = config.directory;    // Cant pass as a parameter because things like "more" won't //TODO-MULTI and trace usage
         const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
         if (cacheDirectory && !skipCache) {
-            const dirpath = namepart && this._dirpath(cacheDirectory); //TODO-MULTI dirpath > dirpaths and trace usage
-            const filepath = dirpath && namepart && path.join(dirpath, namepart + "_members_cached.json");
+            const relPath = namepart && path.join(namepart, namepart + "_members_cached.json");
             waterfall([
                 (cb) => { // Read from members_cached.json files from cache if available
-                    if (!filepath) {
+                    if (!relPath) {
                         cb();
                     } else {
-                        fs.readFile(filepath, (err, jsonstring) => {
+                        MirrorFS.readFile(relPath, (err, jsonstring) => {
                             if (!err) {
                                 this.members = canonicaljson.parse(jsonstring)
                                     .map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
@@ -266,8 +256,8 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     if (this.members) {
                         Util.asyncMap(this.members,
                             (am,cb2) => {
-                                if (am instanceof ArchiveMemberSearch) { cb2(null, am) }
-                                else { am.read({cacheDirectory}, (err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : am)); }}   ,
+                                if (ams instanceof ArchiveMemberSearch) { cb2(null, ams) }
+                                else { ams.read({cacheDirectory}, (err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
                             (err, arr) => {this.members=arr; cb() }); // Expand where possible
                     } else {
                         cb();
@@ -280,8 +270,8 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                 (arr, cb) => {
                     // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
                     // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
-                    if (this.members && filepath) {
-                        MirrorFS.writeFile(filepath, canonicaljson.stringify(this.members), (err) => cb(err, arr))
+                    if (this.members && relFilePath) {
+                        MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.members), (err) => cb(err, arr))
                     } else {
                         cb(null, arr);
                     }
@@ -302,7 +292,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.saveThumbnail = function({copyDirectory=undefined, skipFetchFile=false, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
@@ -340,7 +330,7 @@ ArchiveItem.prototype.saveThumbnail = function({copyDirectory=undefined, skipFet
                 } // Clear cb so not called when complete
                 let af;
                 if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
-                    af.cacheAndOrStream({copyDirectory, skipFetchFile, wantStream}, recursable); // Recurse
+                    af.cacheAndOrStream({skipFetchFile, wantStream}, recursable); // Recurse
                     // Exits, allowing recursable to recurse with next iteration
                 } else { // Completed loop
                     // cb will be set except in the case of wantStream in which case will have been called with first stream
@@ -355,7 +345,7 @@ ArchiveItem.prototype.saveThumbnail = function({copyDirectory=undefined, skipFet
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = relFilePath;
-            MirrorFS.cacheAndOrStream({copyDirectory, relFilePath, skipFetchFile, wantStream, debugname,
+            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, debugname,
                 urls: this.metadata.thumbnaillinks,
                 relFilePath:
             }, (err, streamOrUndefined) => {
@@ -371,7 +361,7 @@ ArchiveItem.prototype.saveThumbnail = function({copyDirectory=undefined, skipFet
     }
 };
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.relatedItems = function({copyDirectory=undefined, wantStream=false, wantMembers=false} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true if want stream) alternative is obj
@@ -382,7 +372,7 @@ ArchiveItem.prototype.relatedItems = function({copyDirectory=undefined, wantStre
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({copyDirectory, wantStream, relFilePath,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: config.archiveorg.related + "/" + itemid,
             debugname: itemid + "/" + itemid + "_related.json"

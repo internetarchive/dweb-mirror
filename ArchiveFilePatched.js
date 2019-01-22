@@ -12,7 +12,7 @@ const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile
 const MirrorFS = require('./MirrorFS');
 
 // noinspection JSUnresolvedVariable
-ArchiveFile.prototype.cacheAndOrStream = function({copyDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
+ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
      */
@@ -24,7 +24,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({copyDirectory = undefined,  s
         } else {
             const debugname = [itemid, filename].join('/');
             MirrorFS.cacheAndOrStream({
-                copyDirectory, urls, skipFetchFile, wantStream, start, end, debugname,
+                urls, skipFetchFile, wantStream, start, end, debugname,
                 sha1: this.metadata.sha1,
                 relFilepath: path.join(itemid, filename),
                 expectsize: this.metadata.size

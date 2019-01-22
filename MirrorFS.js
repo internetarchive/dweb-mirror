@@ -22,7 +22,16 @@ function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encod
 class MirrorFS {
     /*
     Utility subclass that knows about the file system.
+
+    properties:
+      copyDirectory:  place to put a copy TODO-MULTI handle case of is cached but in wrong place
+      hashstore:      mappings esp sha1.filestore
+
      */
+
+    static _copyDirectory() {
+        return this.copyDirectory || config.directories[0];
+    }
 
     static _mkdir(dirname, cb) {
         /* Recursively make a directory
@@ -84,8 +93,15 @@ class MirrorFS {
         return stream
     }
 
-    static writeFile(filepath, data, cb) {
+    static readFile(relFilePath, cb) {
+        // like fs.readFile, but checks relevant places first
+        checkWhereValidFile(relFilePath, {}, (err, existingFilePath) => {
+            fs.readFile(existingFilePath, cb);
+        });
+    }
+    static writeFile(relFilePath, data, cb) { //TODO-MULTI TODO-API
         // Like fs.writeFile but will mkdir the directory before writing the file
+        const filepath = path.join(this._copyDirectory(), relFilePath);
         const dirpath = path.dirname(filepath);
         MirrorFS._mkdir(dirpath, (err) => {
             if (err) {
@@ -188,7 +204,7 @@ class MirrorFS {
     }
 
 
-    static cacheAndOrStream({copyDirectory = undefined, relFilePath=undefined,
+    static cacheAndOrStream({relFilePath=undefined,
                                   debugname="UNDEFINED", urls=undefined,
                                   expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
                                   start=0, end=undefined} = {}, cb) {
@@ -196,7 +212,6 @@ class MirrorFS {
         Complicated function to encapsulate in one place the logic around the cache.
 
         Returns a stream from the cache, or the net if start/end unset cache it
-        copyDirectory:  place to put a copy TODO-MULTI handle case of is cached but in wrong place
         relFilePath:    Path, relative to  cache, to a file.
         urls:           Single url or array to retrieve
         debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
@@ -261,8 +276,7 @@ class MirrorFS {
                             // Dont try and write it
                         } else {
                             // Now create a stream to the file
-                            const copyDir = copyDir || config.directories[0];
-                            const newFilePath = path.join(copyDir, relFilePath);
+                            const newFilePath = path.join(this._copyDirectory(), relFilePath);
                             const filepathTemp = newFilePath + ".part");
                             MirrorFS._fileopenwrite(copyDir, filepathTemp, (err, fd) => { // Will make directory if reqd
                                 if (err) {

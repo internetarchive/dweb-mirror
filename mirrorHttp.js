@@ -167,7 +167,6 @@ function streamArchiveFile(req, res, next) {
                     if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size) - 1}/${af.metadata.size}`);
                     // noinspection JSUnresolvedVariable
                     const opts = Object.assign({}, req.streamOpts, {
-                        // Note, not specifiying copyDirectory here as not applicable in mirrorHttp
                         wantStream: true
                     });
                     res.set("Content-Type", af.mimetype());   // Not sure what happens if doesn't find it.

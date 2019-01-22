@@ -83,7 +83,7 @@ only changes made in dweb-mirror appear here.
 
 ## ArchiveFile
 
-##### cacheAndOrStream({copyDirectory = undefined,  skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
+##### cacheAndOrStream({skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
@@ -91,7 +91,7 @@ See MirrorFS.cacheAndOrStream for arguments.
 
 ## ArchiveItem
 
-##### save({cacheDirectory = undefined} = {}, cb)
+##### save(opts = {}, cb)
 
 Save metadata for this file as JSON in multiple files (see File Outline)
 ```
@@ -141,14 +141,14 @@ Strategy is:
 * Write the result back to `<IDENTIFIER>_members_cached.json`
 * Write each member to its own `<IDENTIFIER>_member.json`
 
-##### saveThumbnail({copyDirectory = undefined,  skipFetchFile=false, wantStream=false} = {}, cb)
+##### saveThumbnail({skipFetchFile=false, wantStream=false} = {}, cb)
 
 Save a thumbnail to the cache,
 ```
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
-##### relatedItems({copyDirectory = undefined, wantStream=false} = {}, cb)
+##### relatedItems({wantStream=false} = {}, cb)
 Save the related items to the cache
 ```
 cb(err, obj)  Callback on completion with related items object or stream
@@ -382,11 +382,10 @@ data    Anything that fs.writeFile accepts
 cb(err)
 ```
 
-#### static cacheAndOrStream({cacheDirectory = undefined, filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
+#### static cacheAndOrStream({filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
 Complicated function to encapsulate in one place the logic around the cache.
 ```
 Returns a stream from the cache, or the net if start/end unset cache it
-copyDirectory:  root directory of cache to copy item to (otherwise uses first in config.directories)
 relFilePath:    Path to file relative to cache i.e. <IDENTIFIER>/<FILENAME>
 urls:           Single url or array to retrieve
 debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
