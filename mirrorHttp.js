@@ -311,7 +311,7 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 // noinspection JSUnresolvedVariable
 app.get('/contenthash/:contenthash', (req, res, next) =>
-    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => { if (err) next()})));
+    MirrorFS.hashstore.get('sha1.filepath', req.params['contenthash'], (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => { if (err) next()}))); //TODO-MULTI check many via MirrorFS ?
 app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
 // noinspection JSUnresolvedVariable

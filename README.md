@@ -87,12 +87,10 @@ TODO Later versions will do other tasks like configuring IPFS
 TODO EDIT AND TEST FROM HERE DOWN
 
 * Edit `dweb-mirror/config.js` … **this location may change**
-  * `directory`  should point at where you want the cache to store files 
-    * Make sure this directory exists - TODO-MIRROR make it fail informatively if it does not exist. 
-    * (TODO-MULTI will be changed in future to handle multiple dirs)
-  * `archiveui/directory` you probably dont need to change this as it will usually guess right, but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
+  * `directories`  should point at places you want the cache to store and look for files - at least one of these should exist
+  * `archiveui/directories` you probably dont need to change this as it will usually guess right, but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
   * `apps.crawl` includes a structure that lists what collections are to be installed. The default is to get the first 5 movies from the `prelinger` collection and the tiles. This is good for testing and can be deleted later. 
-    * TODO-DOCS document apps.crawl its complex !
+    * for now see config.js for documentation
    
 Note that directories specified in the config file can be written using with shell / unix conventions such as "~/" or "../".
 

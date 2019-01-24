@@ -24,9 +24,9 @@ config.js is definately going to change as new features added
 If in doubt, check the file itself which should be self-documenting
 ```
 {
-  directory: firstExisting( ... ); // List of places to look for the Cache directory, currently uses the first but (TODO-MULTI) will use all of them in future
+  directories: [ path* ]; // List of places to look for the Cache directory - expands ~/xx and ./xx
   archiveui: { // Anything relating to display of the Archive UI
-    directory: firstExisting( ... ); // Where to find the files for the Archive UI
+    directory: [ ... ]; // Where to look for the files for the Archive UI - uses first - expands ~/xx and ./xx
   }
   apps: { // Each application can have its own configuration
     http: { // Relating to mirrorHttp.js
@@ -64,7 +64,6 @@ TODO-THUMBNAILS The archive pattern for thumbnails is about to change (Jan2019) 
 # Local classes
 #### Common features and parameters
 ```
-cacheDirectory  points at top level of a cache. TODO-MULTI will allow multiple directories and/or get from config (TODO-MULTI being obsoleted)
 copyDirectory   points at top level of a cache where want a copy
 relFilePath     path to file or item inside a cache <IDENTIFIER>/<FILENAME>
 skipCache       ignore anything in the cache - forces refetching and may cause upstream server to cache it
@@ -183,7 +182,7 @@ A generic hashstore, table/key/value triples.
 
 Note this is similar to that in dweb-gateway but its usage does a different mapping for data stored.
 
-Note - it is all static functions since there is no meaningful instance. 
+Note - it is all static functions since there is no meaningful instance.  //TODO-MULTI no longer static
 
 ##### properties
 ```
@@ -375,8 +374,8 @@ Synchronous calculation of hash
 str     string to get the hash of
 options { algorithm, format }
 ```
-#### static writeFile(filepath, data, cb)
-Like fs.writeFile but will mkdir the directory before writing the file
+#### static writeFile(relFilePath, data, cb)
+Like fs.writeFile but will mkdir the directory in copyDirectory or first configured before writing the file
 ```
 data    Anything that fs.writeFile accepts
 cb(err)
@@ -408,7 +407,7 @@ cb behavior needs explanation !
 
 
 #### static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb)
-Load all the hashes in cacheDirectory into hashstore table='<algorithm>.filepath'
+Load all the hashes in cacheDirectory into hashstores table='<algorithm>.filepath'
 
 # Applications
 

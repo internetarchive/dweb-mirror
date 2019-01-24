@@ -40,7 +40,8 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 class CrawlManager {
 
-    constructor({debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+    constructor({copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
+                    maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
         this._uniqItems = {};
         this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
         this.errors = [];
@@ -57,6 +58,7 @@ class CrawlManager {
         this._taskQ.drain = () => this.drained.call(this);
         this.defaultDetailsSearch = config.apps.crawl.defaultDetailsSearch;
         this.defaultDetailsRelated = config.apps.crawl.defaultDetailsRelated;
+        MirrorFS.copyDirectory = copyDirectory; # If Crawling to a directory, tell MirrorFS - will resolve ~ and .
     }
     push(task) {
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
@@ -69,12 +71,18 @@ class CrawlManager {
         Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
-    static startCrawl(initialItemTaskList, {debugidentifier=undefined, skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}, cb) {
+    static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
+        maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}, cb) {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
-        CM.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
+        CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
+        if (MirrorFS.copyDirectory) {
+            debug("Will use %s for the crawl and %o as a cache",MirrorFS.copyDirectory, config.directories);
+        } else {
+            debug("Will use %o "as the cache for the crawl (storing in the first, unless item exists in another"), config.directories;
+        }
         initialItemTaskList.forEach( task => {
             if (Array.isArray(task.identifier)) {
                 CM.push(task.identifier.map(identifier => new CrawlItem(Object.assign({},  task, {identifier}), parent)));
@@ -93,7 +101,7 @@ class CrawlManager {
 }
 CrawlManager._levels = ["tile", "metadata", "details", "all"];
 CrawlManager.cm = new CrawlManager();   // For now there is only one CrawlManager, at some point might start passing as a parameter to tasks.
-CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks"];
+CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory"];
 // q.drain = function() { console.log('all items have been processed'); }; // assign a callback *
 // q.push({name: 'foo'}, function(err) { console.log('finished processing foo'); }); // add some items to the queue
 // q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function(err) { console.log('finished processing item'); }); // add some items to the queue (batch-wise)
@@ -120,7 +128,6 @@ class CrawlFile extends Crawlable {
             if (!(CrawlManager.cm.maxFileSize && (parseInt(this.file.metadata.size) > CrawlManager.cm.maxFileSize))) {
                 debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
                 const skipFetchFile = CrawlManager.cm.skipFetchFile;
-                const copyDirectory = undefined; //TODO-MULTI add copyDirectory and pass to MirrorFS
                 this.file.cacheAndOrStream({
                     skipFetchFile,
                     wantStream: false,
@@ -239,9 +246,9 @@ class CrawlItem extends Crawlable {
                 (ai, cb) => { // Save tile if level is set.
                     if (["tile", "metadata", "details", "all"].includes(this.level)) {
                         if (this.member && this.member.thumbnaillinks) {
-                            this.member.saveThumbnail({skipFetchFile, wantStream: false}, cb); //TODO-MULTI add copyDirectory
+                            this.member.saveThumbnail({skipFetchFile, wantStream: false}, cb);
                         } else {
-                            this.item.saveThumbnail({skipFetchFile, wantStream: false}, cb); //TODO-MULTI add copyDirectory
+                            this.item.saveThumbnail({skipFetchFile, wantStream: false}, cb);
                         }
                     } else {
                         cb(null, this.item);
@@ -259,7 +266,7 @@ class CrawlItem extends Crawlable {
                 //(cb) => { debug("XXX Finished fetching files for item %s", this.identifier); cb(); },
                 (cb) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     if (["details", "all"].includes(this.level) || this.related) {
-                        this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => { //TODO-MULTI add copyDirectory
+                        this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => {
                             if (err) {
                                 cb(err);
                             } else {

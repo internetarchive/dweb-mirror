@@ -12,6 +12,7 @@ const each = require('async/each');
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
+const ACUtil = require("dweb-archivecontroller/Util.js")
 
 // other packages in this repo
 const config = require('./config');
@@ -26,7 +27,7 @@ class MirrorFS {
 
     properties:
       copyDirectory:  place to put a copy TODO-MULTI handle case of is cached but in wrong place
-      hashstore:      mappings esp sha1.filestore
+      hashstore:      mappings esp sha1.filestore TODO-MULTI one per directory
 
      */
 
@@ -100,8 +101,9 @@ class MirrorFS {
             fs.readFile(existingFilePath, cb);
         });
     }
-    static writeFile(relFilePath, data, cb) { //TODO-MULTI TODO-API
+    static writeFile(relFilePath, data, cb) {
         // Like fs.writeFile but will mkdir the directory before writing the file
+        //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; config.directories[0]
         const filepath = path.join(this._copyDirectory(), relFilePath);
         const dirpath = path.dirname(filepath);
         MirrorFS._mkdir(dirpath, (err) => {
@@ -307,7 +309,7 @@ class MirrorFS {
                                                     console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
-                                                    //TODO-MULTI check right to correct hashstore, and then change to relative path
+                                                    //TODO-MULTI check write to correct hashstore, and then change to relative path
                                                     this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), newFilePath);
                                                     // noinspection JSUnresolvedVariable
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
@@ -338,9 +340,8 @@ class MirrorFS {
 
     };
 
-    //TODO-MULTI and check usages of cacheDirectory
     static _streamOfCachedItemPaths({cacheDirectory = undefined}) {
-        // Note returns s immediately, then asynchronous reads directories and pipes into s.
+        // Note returns stream 's' immediately, then asynchronous reads directories and pipes into s.
         // Runs in parallel 100 at a time,
         let s = new ParallelStream({name: "Cached Item Paths"});
         fs.readdir(cacheDirectory, (err, files) => {
@@ -369,8 +370,8 @@ class MirrorFS {
         return s;
     }
 
-    //TODO-MULTI - redo to use async.each etc and multiple hashstores
-    static loadHashTable({cacheDirectories = undefined, algorithm = 'sha1'}, cb) {
+    //TODO-MULTI - redo to use async.each etc and multiple hashstores //TODO-API
+    static loadHashTables({cacheDirectories = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
         // Runs in parallel 100 at a time,
@@ -380,7 +381,7 @@ class MirrorFS {
                 MirrorFS._streamOfCachedItemPaths({cacheDirectory})
                 .map((filepath, cb2) =>  this._streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
                         if (err) { debug("loadHashTable saw error: %s", err.message); cb2(); }
-                        else { this.hashstore.put(tablename, multiHash, filepath, cb2); }
+                        else { this.hashstore.put(tablename, multiHash, filepath, cb2); } //TODO-MULTI
                     }),
                     {name: "Hashstore", async: true, paralleloptions: {limit:100}})
                 .reduce(undefined, undefined, cb1);
@@ -388,7 +389,10 @@ class MirrorFS {
     }
 
 }
-//TODO-MULTI - move so MirrorFS can depend on config
-MirrorFS.hashstore = HashStore.init({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 
+MirrorFS.hashstore = new HashStore({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename> //TODO-MULTI need many
+MirrorFS.hashstores = ACUtil.fromEntries(               // Mapping
+    config.directories.map(d =>                         // of each config.directories
+        [d,new HashStore({dir: d+"/.hashStore."})]))    // to a hashstore
+//TODO-MULTI add copyDirectory if exists
 exports = module.exports = MirrorFS;

@@ -27,7 +27,7 @@ const optsArray = ["level", "transport", "rows"];
 //const opts = getopts("--rows 100 --depth 2 --dummy movies".split(" "),{ // Just for testing different options
 const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth",
-        "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks"},
+        "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
     string: ["directory", "search", "related", "debugidentifier", "transport", "level"],
@@ -51,6 +51,7 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
     r rows           : overrides any (simple) search string to crawl this number of items
     d depth          : crawl collections found in this collection to a depth,
                        (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
+    --copydirectory path : Store a copy of the crawl in this directory (often used for a removable drive)
     --directory path : override the directory set in the configuration for the root of the cache
     --search json    : override default search string, strict json syntax only
     --related json   : override default settign for crawling related items, strict json syntax only
@@ -114,19 +115,10 @@ if (!opts.rows.length) {
         }
     });
 
-// Support ~ and . in paths to directory TODO-MULTI handle arrays here
-// TODO-MULTI need to check and define a copy directory around here somewhere
-["directory"].filter(k => opts[k])
-    .forEach(key => {
-        opts[key] = (opts[key].startsWith("~/")
-        ? path.resolve(os.homedir(), opts[key].slice(2))
-        : path.resolve(process.cwd(), opts[key]))});
-if (opts.directory) { console.log("directory option not supported yet"); process.exit(); }
-//TODO-MULTI
-if (!config.directory) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
-//TODO-MULTI
-debug("Will use %s",config.directory,"for the crawl");
-
+if (opts.directory) {
+    config.setOpts(Array.isArray(opts.directory) ? opts.directory : [opts.directory])
+}
+if (!config.directories.length) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
 /* Not needed, just removed these from strings
 [ "rows", "depth", "concurrency", "maxFileSize", "limitTotalTasks"]
     .forEach(key=> {
@@ -135,8 +127,9 @@ debug("Will use %s",config.directory,"for the crawl");
 */
 //TODO-CRAWL pass directory to CrawlManager
 
-if (opts.search && (opts.rows || opts.depth)) { console.log("Cannot specify search with rows or depth argumenets"); process.exit(); }
-
+if (opts.search && (opts.rows || opts.depth)) {
+    console.log("Cannot specify search with rows or depth argumenets"); process.exit();
+}
 let taskTemplate = { level: opts.level[0], related: opts.related }
 function f(depthnow, depth) { // Recurses
     if (depth) {

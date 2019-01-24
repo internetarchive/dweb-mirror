@@ -23,7 +23,7 @@ const HashStore = require('./HashStore');
 //HashStore.test();
 const MirrorFS = require('./MirrorFS');
 // noinspection JSUnresolvedVariable
-MirrorFS.loadHashTable({}, (err, res) => console.log(err, res)); //TODO-MULTI
+MirrorFS.loadHashTables({}, (err, res) => console.log(err, res));
 
 
 /*

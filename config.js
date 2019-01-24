@@ -7,27 +7,21 @@ const os = require('os')
 const MirrorConfig = require('./MirrorConfig');
 
 // Note duplicates of this in config and crawl.js
-function firstExisting(...args) {
-    // Find the first of args that exists, args can be relative to the process directory .../dweb-mirror
-    // returns undefined if none found
-    // noinspection JSUnresolvedVariable
-    return args.map(p=> p.startsWith("~/") ? path.resolve(os.homedir(), p.slice(2)) : path.resolve(process.cwd(), p)).find(p=>fs.existsSync(p));
-}
 
 const config = new MirrorConfig({
 
 //============== Dont edit anything above here ============================
     // Cache directory - where you want to store files, this directory must already exist
-    // List of places to look for the Cache directory, currently uses the first but (TODO-MULTI) will use all of them in future
-    directory: firstExisting("~/temp/mirrored"),
+    // List of places to look for the Cache directory - will check all of them, and they don't need to exist
+    directories: ["~/temp/mirrored"], // TODO-MULTI expand things like /Volumes/*/internetarchive
 
 
     archiveui: {
         // Where to find the ArchiveUI relative to the directory this file and the code resides in
-        directory: firstExisting(
+        directories: [  // Note code uses "directory" which is first of these to exist.
             "../dweb-archive/dist",    // Try a repo cloned to a directory parallel to this one, which is presumably for development
             "node_modules/@internetarchive/dweb-archive/dist" // Or a repo cloned during 'npm install'
-        ),
+        ],
     },
     // The apps group include configuration only used by one application
     apps: {
@@ -78,7 +72,6 @@ const config = new MirrorConfig({
 
 
 });
-//TODO-MULTI
-debug("config summary: directory:%s archiveui:%s", config.directory, config.archiveui.directory);
+debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
 
 exports = module.exports = config;
