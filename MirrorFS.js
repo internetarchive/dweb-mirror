@@ -183,29 +183,41 @@ class MirrorFS {
     }
     */
 
-    static maybeCheckSha(filepath, {digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API add this
+    static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API remove this
         /*
-        Check file is readable, or if digest offered check matches that of file
-        cb(err) If doesn't match
+            Checks if file or digest exists in one of the cache Directories.
+            If digest,format,algorithm && !relFilePath provided then can locate file in hashstore
+            Checks file is readable
+            If digest offered check matches that of file
+            cb(err, filepath)
          */
-        if (digest) {
-            // noinspection JSPotentiallyInvalidUsageOfClassThis
-            this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
-                if (err || (actual !== digest)) { cb(err || new Error(`multihash ${format} ${algorithm} ${actual} doesnt match ${digest}`)); }
-                else { cb(); }
+        config.directories.detect( cacheDirectory, cb2 => {
+            waterfall([
+                (cb3) => { // if no relFilePath check the hashstore
+                    if (relFilePath) {
+                            cb(null, relFilePath);
+                    } else {
+                        this.hashstores[cacheDirectory].get(algorithm + ".relfilepath", digest, cb3);
+                    }
+                },
+                (cb4) => { // Check file readable
+                    fs.access(path.join(cacheDirectory, relFilePath), fs.constants.R_OK, cb4);
+                },
+                (cb5) => { // if digest, then test its correct
+                    if (!digest) {
+                        cb5();
+                    } else {
+                        this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {format, algorithm}, (err, actual) => {
+                            if (err) debug("Error from streamhash for dir %d path %s: %s", cacheDirectory, relFilePath, err.message); // log as error lost in waterfall
+                            if (actual !== digest) { debug("multihash %s %s %s doesnt match %s", format, algorithm, actual, digest); err=true} // Just test boolean anyway
+                            cb(err);
+                        });
+                    }
+                }
+            ], (err, res) => cb2(null, !err)) // Did the detect find one
+        }, (err, res) => {
+            cb(err, path.join(res, relFilePath)); // relFilePath should have been set by time get here
             });
-        } else { //
-            // noinspection JSUnresolvedVariable
-            fs.access(filepath, fs.constants.R_OK, cb);
-        }
-    }
-
-    static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API add this
-        // Return filepath to a file if it exists in one of the cache Directories.
-        config.directories.detect( d ,cb2 =>
-            this.maybeCheckSha(path.join(d, relFilePath),
-                                digest, format, algorithm},
-                                (err, unused) => cb2(null, !err)));
     }
 
 
@@ -251,7 +263,8 @@ class MirrorFS {
                 }
             }
         });
-        function callbackEmptyOrData(existingFilePath) {
+
+       function callbackEmptyOrData(existingFilePath) {
             if (wantBuff) {
                 fs.readFile(existingFilePath, cb); //TODO check if its a string or a buffer or what
             } else {
@@ -378,7 +391,7 @@ class MirrorFS {
         // Normally before running this, will delete the old hashstore
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
         // Runs in parallel 100 at a time,
-        const tablename = `${algorithm}.filepath`;
+        const tablename = `${algorithm}.relfilepath`;
         each( cacheDirectories.length ? cacheDirectories : config.directories,
             (cacheDirectory,cb1) => {
                 MirrorFS._streamOfCachedItemPaths({cacheDirectory})

@@ -182,7 +182,7 @@ A generic hashstore, table/key/value triples.
 
 Note this is similar to that in dweb-gateway but its usage does a different mapping for data stored.
 
-Note - it is all static functions since there is no meaningful instance.  //TODO-MULTI no longer static
+There is one of thee at the top directory of each cache directory. 
 
 ##### properties
 ```
@@ -201,10 +201,10 @@ val     value to store
 
 ```
 
-##### static init(config)
+##### new Hashstore(config)
 Save configuration (see `properties`)
 
-##### static put(table, key, val, cb(err, unused))
+##### put(table, key, val, cb(err, unused))
 Store value to key
 
 ##### get(table, key, cb(err, value)) 
