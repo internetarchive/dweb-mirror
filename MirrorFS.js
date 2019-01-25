@@ -9,10 +9,11 @@ const debug = require('debug')('dweb-mirror:MirrorFS');
 const multihashes = require('multihashes');
 const detect = require('async/detect');
 const each = require('async/each');
+const waterfall = require('async/waterfall');
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
-const ACUtil = require("dweb-archivecontroller/Util.js")
+const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js");
 
 // other packages in this repo
 const config = require('./config');
@@ -33,6 +34,10 @@ class MirrorFS {
 
     static _copyDirectory() {
         return this.copyDirectory || config.directories[0];
+    }
+    static setCopyDirectory(dir) {
+        this.copyDirectory = dir;
+        this.hashstores[dir] = new Hashstore({dir: dir+"/.hashStore."}); // Note trailing "." is intentional"
     }
 
     static _mkdir(dirname, cb) {
@@ -191,7 +196,7 @@ class MirrorFS {
             If digest offered check matches that of file
             cb(err, filepath)
          */
-        config.directories.detect( cacheDirectory, cb2 => {
+        config.directories.detect( config.directories, (cacheDirectory, cb2) => {
             waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
@@ -367,7 +372,7 @@ class MirrorFS {
                 return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories"}) // Can exclude other non hashables here
                     .map((identifier, cb) => fs.readdir(path.join(cacheDirectory, identifier),
                         (err, files) => {
-                            if (err) { cb(null, pathstr) }      // Just pass on relPaths (identifiers) that aren't directories
+                            if (err) { cb(null, path.join(cacheDirectory, identifier) );}      // Just pass on relPaths (identifiers) that aren't directories
                             else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>path.join(identifier, f))) }} ),
                         {name: "Read files dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
                     // Stream of <filename> (unlikely) and [<identifier>/<filename||subdirname>*]
@@ -395,7 +400,8 @@ class MirrorFS {
         each( cacheDirectories.length ? cacheDirectories : config.directories,
             (cacheDirectory,cb1) => {
                 MirrorFS._streamOfCachedItemPaths({cacheDirectory})
-                .map((relFilePath, cb2) =>  this._streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
+                .map((relFilePath, cb2) =>  this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {format: 'multihash58', algorithm},
+                    (err, multiHash) => {
                         if (err) { debug("loadHashTable saw error: %s", err.message); cb2(); }
                         else { this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, cb2); }
                     }),
@@ -408,6 +414,5 @@ class MirrorFS {
 
 MirrorFS.hashstores = ACUtil.fromEntries(               // Mapping
     config.directories.map(d =>                         // of each config.directories
-        [d,new HashStore({dir: d+"/.hashStore."})]))    // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
-//TODO-MULTI add copyDirectory if exists - but when ...
+        [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 exports = module.exports = MirrorFS;

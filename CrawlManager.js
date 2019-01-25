@@ -6,10 +6,12 @@ const debug = require('debug')('dweb-mirror:CrawlManager');
 
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
 const config = require('./config');
+// Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveMember = require('./ArchiveMemberPatched');
 const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
+const MirrorFS = require('./MirrorFS');
 /*
   Manage crawls
 
@@ -58,7 +60,7 @@ class CrawlManager {
         this._taskQ.drain = () => this.drained.call(this);
         this.defaultDetailsSearch = config.apps.crawl.defaultDetailsSearch;
         this.defaultDetailsRelated = config.apps.crawl.defaultDetailsRelated;
-        MirrorFS.copyDirectory = copyDirectory; # If Crawling to a directory, tell MirrorFS - will resolve ~ and .
+        MirrorFS.setCopyDirectory(copyDirectory); // If Crawling to a directory, tell MirrorFS - will resolve ~ and .
     }
     push(task) {
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
@@ -75,13 +77,13 @@ class CrawlManager {
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}, cb) {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
-        CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks})
+        CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (MirrorFS.copyDirectory) {
             debug("Will use %s for the crawl and %o as a cache",MirrorFS.copyDirectory, config.directories);
         } else {
-            debug("Will use %o "as the cache for the crawl (storing in the first, unless item exists in another"), config.directories;
+            debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", config.directories);
         }
         initialItemTaskList.forEach( task => {
             if (Array.isArray(task.identifier)) {
@@ -93,9 +95,9 @@ class CrawlManager {
         CM.drainedCb = cb;
     }
     drained() {
-        debug("Crawl finished %d tasks with %d errors", this.completed, this.errors.length)
+        debug("Crawl finished %d tasks with %d errors", this.completed, this.errors.length);
         this.errors.forEach(e => debug("ERR:%o %s %o %o %s",
-            e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || "", e.task.related || "", e.error.message))
+            e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || "", e.task.related || "", e.error.message));
         if (this.drainedCb) this.drainedCb()
     }
 }
@@ -196,7 +198,7 @@ class CrawlItem extends Crawlable {
     _relatedLessThanOrEqual(rel1, rel2) {
         return !rel1 ||
             ( rel2
-                && page1.rows <= page2.rows
+                && rel1.rows <= rel2.rows
                 && CrawlManager._levels.indexOf(rel1.level) <= CrawlManager._levels.indexOf(rel2.level)
                 && this._searchLessThanOrEqual(rel1.search, rel2.search)
                 && this._relatedLessThanOrEqual(rel1.related, rel2.related)
@@ -215,7 +217,7 @@ class CrawlItem extends Crawlable {
         && this._relatedLessThanOrEqual(this.related, task.related)
     }
     isUniq() {
-        const key = this.item._namepart()
+        const key = this.item._namepart();
         const prevTasks = CrawlManager.cm._uniqItems[key];
         if (prevTasks) {
             if (prevTasks.some(task => this._lessThanOrEqual(task))) { // At least one task covered all material in this task

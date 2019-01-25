@@ -38,7 +38,7 @@ const crawlPreseed = [ //skipFetchFile, skipcache, mediatype: collection
     { query: "mediatype:collection AND NOT _exists_:access-restricted",
         crawl: { rows: 300, level: "details", sort: "-downloads",
             crawl: { rows: 100, level: "tile", sort: "-downloads" }}}
-]
+];
 
 
 DwebTransports.connect({

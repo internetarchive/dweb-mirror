@@ -311,7 +311,7 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 
 // noinspection JSUnresolvedVariable
 app.get('/contenthash/:contenthash', (req, res, next) =>
-    MirrorFS.checkWhereValidFile(undefined, {digest=req.params['contenthash'], format='multihash58', algorithm="sha1"},
+    MirrorFS.checkWhereValidFile(undefined, {digest: req.params['contenthash'], format: 'multihash58', algorithm: "sha1"},
         (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => { if (err) next()})));
 app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 

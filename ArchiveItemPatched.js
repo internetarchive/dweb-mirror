@@ -105,7 +105,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
     const namepart = this.itemid;
     const res = {};
     function _parse(part, cb) {
-        const relFilePath = path.join(${namepart}, `${namepart}_${part}.json` )
+        const relFilePath = path.join(namepart, `${namepart}_${part}.json` );
         MirrorFS.readFile(relFilePath, (err, jsonstring) => {
             if (err) {
                 cb(err);    // Not logging as not really an err for there to be no file, as will read
@@ -223,13 +223,13 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         // noinspection JSUnresolvedVariable
         const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
         if (!skipCache) {
-            const relPath = namepart && path.join(namepart, namepart + "_members_cached.json");
+            const relFilePath = namepart && path.join(namepart, namepart + "_members_cached.json");
             waterfall([
                 (cb) => { // Read from members_cached.json files from cache if available
-                    if (!relPath) {
+                    if (!relFilePath) {
                         cb();
                     } else {
-                        MirrorFS.readFile(relPath, (err, jsonstring) => {
+                        MirrorFS.readFile(relFilePath, (err, jsonstring) => {
                             if (!err) {
                                 this.members = canonicaljson.parse(jsonstring)
                                     .map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
@@ -243,7 +243,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     // or for identifier=fav-* when members loaded with unexpanded
                     if (this.members) {
                         Util.asyncMap(this.members,
-                            (am,cb2) => {
+                            (ams,cb2) => {
                                 if (ams instanceof ArchiveMemberSearch) { cb2(null, ams) }
                                 else { ams.read((err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
                             (err, arr) => {this.members=arr; cb() }); // Expand where possible
@@ -367,7 +367,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
             // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
             if (!wantStream && !err) {
                 try {
-                    rels = canonicaljson.parse(res);
+                    const rels = canonicaljson.parse(res);
                     if (wantMembers) {
                         // Same code in ArchiveItem.relatedItems
                         ArchiveMemberSearch.expand(rels.hits.hits.map(r => r._id), (err, searchmembersdict) => {
@@ -378,7 +378,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
                             }
                         });
                     } else {
-                        cb(null, o);
+                        cb(null, rels);
                     }
                 } catch (err) { cb(err); } // Catch bad JSON
             } else {

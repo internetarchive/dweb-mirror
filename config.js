@@ -1,8 +1,5 @@
 // Standard repos
 const debug = require('debug')("dweb-mirror:config");
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const path = require('path');
-const os = require('os')
 // Other files in this repo
 const MirrorConfig = require('./MirrorConfig');
 

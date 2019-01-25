@@ -10,6 +10,7 @@ const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
+// noinspection JSUnusedLocalSymbols
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
 //This Repo
 const config = require('./config');
@@ -79,7 +80,7 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
    crawl.js --rows 100 --depth 2 movies # Is a shortcut to do the same thing
    
     Running crawl with no options will run the default crawls in the configuration file with no modifications, which is good for example if running under cron.
-`
+`;
 if (opts.help) { console.log(help); process.exit(); }
 
 optsArray.forEach(key => {
@@ -88,7 +89,7 @@ optsArray.forEach(key => {
     } else if (!Array.isArray(opts[key])) {
         opts[key] = [ opts[key] ];
     }
-})
+});
 // code cares about case for these opts
 opts.transport = opts.transport.map(t=>t.toUpperCase());
 opts.level = opts.level.map(t=>t.toLowerCase());
@@ -130,7 +131,7 @@ if (!config.directories.length) { console.log("Directory for the cache is not de
 if (opts.search && (opts.rows || opts.depth)) {
     console.log("Cannot specify search with rows or depth argumenets"); process.exit();
 }
-let taskTemplate = { level: opts.level[0], related: opts.related }
+let taskTemplate = { level: opts.level[0], related: opts.related };
 function f(depthnow, depth) { // Recurses
     if (depth) {
         return Object.assign({}, opts.search || config.apps.crawl.defaultDetailsSearch,
@@ -138,7 +139,7 @@ function f(depthnow, depth) { // Recurses
     } else {
         return undefined;
     }
-};
+}
 
 taskTemplate.search = f(0, Math.max(opts.depth ||0, opts.level.length, opts.rows.length));
 
@@ -165,10 +166,10 @@ if (!opts.dummy) {
         //transports: ["HTTP", "WEBTORRENT", "IPFS"],
         transports: opts.transport,
         //webtorrent: {tracker: { wrtc }}, //TODO-CRAWL TODO-TRANSPORTS see if this is needed / useful
-    }, (err, unused) => {
+    }, (unusederr, unused) => {
         //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
         DwebTransports.http().supportFunctions.push("createReadStream");
-        CrawlManager.startCrawl(tasks, crawlopts, (err, res) => {
+        CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
             DwebTransports.p_stop(t => debug("%s is stopped", t.name))});
             // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168
         });

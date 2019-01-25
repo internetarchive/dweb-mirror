@@ -9,10 +9,11 @@ const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 // Other files in this repo
+const MirrorFS = require('./MirrorFS.js');
 
 // noinspection JSUnresolvedVariable
 ArchiveMember.prototype.save = function({} = {}, cb) {
-    console.assert(false, "Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch");
+    cb(new Error("Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch"));
 };
 
 ArchiveMember.read = function({identifier = undefined}, cb) {

@@ -1,5 +1,5 @@
-const ArchiveFile  = require("@internetarchive/dweb-archivecontroller/ArchiveFile");
-const ArchiveItem  = require("@internetarchive/dweb-archivecontroller/ArchiveItem");
+const os = require('os');
+const fs = require('fs');
 
 class MirrorConfig {
     /*
