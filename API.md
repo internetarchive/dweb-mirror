@@ -406,8 +406,8 @@ cb behavior needs explanation !
 * In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
 
 
-#### static loadHashTable({cacheDirectory = undefined, algorithm = 'sha1'}, cb)
-Load all the hashes in cacheDirectory into hashstores table='<algorithm>.filepath'
+#### static loadHashTables({cacheDirectories = undefined, algorithm = 'sha1'}, cb)
+Load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'
 
 # Applications
 

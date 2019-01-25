@@ -27,7 +27,7 @@ class MirrorFS {
 
     properties:
       copyDirectory:  place to put a copy TODO-MULTI handle case of is cached but in wrong place
-      hashstore:      mappings esp sha1.filestore TODO-MULTI one per directory
+      hashstores: { directory: hashstore }  esp sha1.filestore
 
      */
 
@@ -121,7 +121,7 @@ class MirrorFS {
             }});
     }
 
-    static _fileopenwrite(directory, filepath, cb) {  // cb(err, fd)
+    static _fileopenwrite(relFilePath, cb) {
         /*
         directory top level directory of cache - must exist
         filepath path to file (rooted preferably)
@@ -129,6 +129,8 @@ class MirrorFS {
         cb(err, fd)     Open file descriptor
          */
         try {
+            const directory = this._copyDirectory();
+            const filepath = path.join(directory, relFilePath);
             fs.open(filepath, 'w', (err, fd) => {
                 if (err) {
                     if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
@@ -166,7 +168,7 @@ class MirrorFS {
     /* Not currently used
     // noinspection JSUnusedGlobalSymbols
     static writableStreamTo(directory, filepath, cb) {
-        this._fileopenwrite(directory, filepath, (err, fd) => {
+        this._fileopenwrite(relFilepath, (err, fd) => {
             if (err) {
                 debug("Unable to write to %s: %s", filepath, err.message);
                 cb(err);
@@ -280,8 +282,9 @@ class MirrorFS {
                         } else {
                             // Now create a stream to the file
                             const newFilePath = path.join(this._copyDirectory(), relFilePath);
-                            const filepathTemp = newFilePath + ".part");
-                            MirrorFS._fileopenwrite(copyDir, filepathTemp, (err, fd) => { // Will make directory if reqd
+                            const relFilePathTemp = relFilePath + ".part";
+                            const filepathTemp = path.join(this._copyDirectory(), relFilePathTemp);
+                            MirrorFS._fileopenwrite(relFilePathTemp, (err, fd) => { // Will make directory if reqd
                                 if (err) {
                                     debug("Unable to write to %s: %s", filepathTemp, err.message);
                                     cb(err);
@@ -309,8 +312,7 @@ class MirrorFS {
                                                     console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
-                                                    //TODO-MULTI check write to correct hashstore, and then change to relative path
-                                                    this.hashstore.put("sha1.filepath", multihash58sha1(hashstream.actual), newFilePath);
+                                                    this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath);
                                                     // noinspection JSUnresolvedVariable
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
                                                     if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
@@ -341,7 +343,7 @@ class MirrorFS {
     };
 
     static _streamOfCachedItemPaths({cacheDirectory = undefined}) {
-        // Note returns stream 's' immediately, then asynchronous reads directories and pipes into s.
+        // Note returns stream 's' immediately, then asynchronous reads directories and pipes relFilePath <item>/<file> or <item>/<subdir>/<file> into s.
         // Runs in parallel 100 at a time,
         let s = new ParallelStream({name: "Cached Item Paths"});
         fs.readdir(cacheDirectory, (err, files) => {
@@ -349,28 +351,29 @@ class MirrorFS {
                 debug("Failed to read directory %s", cacheDirectory);
                 cb(err); // Just pass up to caller
             } else {
-                return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories"})
-                    .map(filename => `${cacheDirectory}/${filename}`, {name: "build filename"})       //   /foo/mirrored/<item>
-                    .map((pathstr, cb) => fs.readdir(pathstr,
+                return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories"}) // Can exclude other non hashables here
+                    .map((identifier, cb) => fs.readdir(path.join(cacheDirectory, identifier),
                         (err, files) => {
-                            if (err) { cb(null, pathstr) }      // Just pass on paths that aren't directories
-                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>`${pathstr}/${f}`)) }} ),
+                            if (err) { cb(null, pathstr) }      // Just pass on relPaths (identifiers) that aren't directories
+                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>path.join(identifier, f))) }} ),
                         {name: "Read files dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                    // Stream of <filename> (unlikely) and [<identifier>/<filename||subdirname>*]
                     .flatten({name: "Flatten arrays"})                                                  //  /foo/mirrored/<item>/<file>
+                    // Stream of <filename> (unlikely) and <identifier>/<filename||subdirname>
                     // Flatten once more to handle subdirs
-                    .map((pathstr, cb) => fs.readdir(pathstr,
+                    .map((relFilePath, cb) => fs.readdir(path.join(cacheDirectory, relFilePath),
                         (err, files) => {
-                            if (err) { cb(null,pathstr) }      // Just pass on paths that aren't directories
-                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>`${pathstr}/${f}`)) }} ),
-                        {name: "Read files dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
-                    .flatten({name: "Flatten arrays level 2"})                                                 //  /foo/mirrored/<item>/<file>
+                            if (err) { cb(null,relFilePath) }      // Just pass on paths that aren't directories (should all be hashable files)
+                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=> path.join(cacheDirectory, f))) }} ),
+                        {name: "Read files sub dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                    .flatten({name: "Flatten arrays level 2"})                                                 //  <item>/<file> & <item>/<subdir>/<file>
                     .pipe(s);
             }
         });
         return s;
     }
 
-    //TODO-MULTI - redo to use async.each etc and multiple hashstores //TODO-API
+    //maybe redo to use async.each etc
     static loadHashTables({cacheDirectories = undefined, algorithm = 'sha1'}, cb) {
         // Normally before running this, will delete the old hashstore
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
@@ -379,9 +382,9 @@ class MirrorFS {
         each( cacheDirectories.length ? cacheDirectories : config.directories,
             (cacheDirectory,cb1) => {
                 MirrorFS._streamOfCachedItemPaths({cacheDirectory})
-                .map((filepath, cb2) =>  this._streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
+                .map((relFilePath, cb2) =>  this._streamhash(fs.createReadStream(filepath), {format: 'multihash58', algorithm}, (err, multiHash) => {
                         if (err) { debug("loadHashTable saw error: %s", err.message); cb2(); }
-                        else { this.hashstore.put(tablename, multiHash, filepath, cb2); } //TODO-MULTI
+                        else { this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, cb2); }
                     }),
                     {name: "Hashstore", async: true, paralleloptions: {limit:100}})
                 .reduce(undefined, undefined, cb1);
@@ -390,9 +393,8 @@ class MirrorFS {
 
 }
 
-MirrorFS.hashstore = new HashStore({dir: `${config.directory}/.hashStore.`}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename> //TODO-MULTI need many
 MirrorFS.hashstores = ACUtil.fromEntries(               // Mapping
     config.directories.map(d =>                         // of each config.directories
-        [d,new HashStore({dir: d+"/.hashStore."})]))    // to a hashstore
-//TODO-MULTI add copyDirectory if exists
+        [d,new HashStore({dir: d+"/.hashStore."})]))    // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
+//TODO-MULTI add copyDirectory if exists - but when ...
 exports = module.exports = MirrorFS;
