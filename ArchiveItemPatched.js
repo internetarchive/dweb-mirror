@@ -374,7 +374,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
                             if (err) {
                                 cb(err)
                             } else {
-                                cb(null, rels.map(r => searchmembersdict[r._id])); // Can be undefined, but shouldnt see rels should all be valid
+                                cb(null, rels.hits.hits.map(r => searchmembersdict[r._id])); // Can be undefined, but shouldnt see rels should all be valid
                             }
                         });
                     } else {

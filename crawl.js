@@ -148,7 +148,7 @@ let tasks;
 if (opts._.length) {
     tasks = opts._.map( identifier => Object.assign({}, taskTemplate, {identifier: identifier}));
 } else {
-    if (opts.rows || opts.depth || opts.search || opts.related ) {
+    if (opts.depth || opts.search || opts.related ) {
         console.log("If specifying options then should also specify identifiers to crawl"); process.exit();
     }
     tasks = config.apps.crawl.tasks; // Default or configured tasks

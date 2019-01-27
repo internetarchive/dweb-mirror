@@ -47,7 +47,7 @@ class CrawlManager {
         this._uniqItems = {};
         this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
         this.errors = [];
-        this.setopts({debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
+        this.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
         this.completed = 0;
         this.pushedCount = 0;
         this._taskQ = queue((task, cb) => {
@@ -60,7 +60,6 @@ class CrawlManager {
         this._taskQ.drain = () => this.drained.call(this);
         this.defaultDetailsSearch = config.apps.crawl.defaultDetailsSearch;
         this.defaultDetailsRelated = config.apps.crawl.defaultDetailsRelated;
-        MirrorFS.setCopyDirectory(copyDirectory); // If Crawling to a directory, tell MirrorFS - will resolve ~ and .
     }
     push(task) {
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
@@ -71,6 +70,7 @@ class CrawlManager {
     }
     setopts(opts={}) {
         Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
+        if (opts.copyDirectory) MirrorFS.setCopyDirectory(opts.copyDirectory);  // If Crawling to a directory, tell MirrorFS - will resolve ~ and .
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,

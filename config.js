@@ -52,6 +52,7 @@ const config = new MirrorConfig({
                 maxFileSize: 200000000,         // Maximum size of any file retrieved
                 skipCache: false,               // Set to true to ignore current cache contents, this is used to force the upstream server to look at each item and cache it
                 skipFetchFile: false,           // Set to true to ignore actually fething files, most often used for debugging
+                copyDirectory: "/Volumes/Transcend/test2", // Testing only
             },
         }
     },

@@ -13,7 +13,7 @@ const waterfall = require('async/waterfall');
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
-const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js");
+const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
 
 // other packages in this repo
 const config = require('./config');
@@ -37,7 +37,7 @@ class MirrorFS {
     }
     static setCopyDirectory(dir) {
         this.copyDirectory = dir;
-        this.hashstores[dir] = new Hashstore({dir: dir+"/.hashStore."}); // Note trailing "." is intentional"
+        this.hashstores[dir] = new HashStore({dir: dir+"/.hashStore."}); // Note trailing "." is intentional"
     }
 
     static _mkdir(dirname, cb) {
@@ -102,8 +102,9 @@ class MirrorFS {
 
     static readFile(relFilePath, cb) {
         // like fs.readFile, but checks relevant places first
-        checkWhereValidFile(relFilePath, {}, (err, existingFilePath) => {
-            fs.readFile(existingFilePath, cb);
+        this.checkWhereValidFile(relFilePath, {}, (err, existingFilePath) => {
+            if (err) cb(err)
+            else fs.readFile(existingFilePath, cb);
         });
     }
     static writeFile(relFilePath, data, cb) {
@@ -173,7 +174,7 @@ class MirrorFS {
     /* Not currently used
     // noinspection JSUnusedGlobalSymbols
     static writableStreamTo(directory, filepath, cb) {
-        this._fileopenwrite(relFilepath, (err, fd) => {
+        this._fileopenwrite(relFilePath, (err, fd) => {
             if (err) {
                 debug("Unable to write to %s: %s", filepath, err.message);
                 cb(err);
@@ -200,9 +201,12 @@ class MirrorFS {
             waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
-                            cb(null, relFilePath);
+                            cb3(null);
                     } else {
-                        this.hashstores[cacheDirectory].get(algorithm + ".relfilepath", digest, cb3);
+                        this.hashstores[cacheDirectory].get(algorithm + ".relfilepath", digest, (err,res) => {
+                            relFilePath = res; // poss undefined - saving over relFilePath parameter which is undefined
+                            cb3(err || !relFilePath); // Shouldnt be error but fail this waterfall if didn't find hash in this cache.
+                        });
                     }
                 },
                 (cb4) => { // Check file readable
@@ -213,19 +217,25 @@ class MirrorFS {
                     if (!digest) {
                         cb5();
                     } else {
-                        this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {format, algorithm}, (err, actual) => {
-                            if (err) debug("Error from streamhash for dir %d path %s: %s", cacheDirectory, relFilePath, err.message); // log as error lost in waterfall
-                            if (actual !== digest) { debug("multihash %s %s %s doesnt match %s", format, algorithm, actual, digest); err=true} // Just test boolean anyway
-                            cb(err);
+                        const filepath = path.join(cacheDirectory, relFilePath);
+                        this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
+                            if (err) debug("Error from streamhash for %s: %s", filepath, err.message); // log as error lost in waterfall
+                            if (actual !== digest) { debug("multihash %s %s %s doesnt match %s %s", format, algorithm, digest, filepath, digest); err=true} // Just test boolean anyway
+                            cb5(err);
                         });
                     }
                 }
             ], (err, unused) => cb2(null, !err)) // Did the detect find one
         }, (err, res) => {
-            cb(err, path.join(res, relFilePath)); // relFilePath should have been set by time get here
-            });
+            // Three possibilities - err (something failed) res (found) !err && !res (not found)
+            if (err)
+                cb(err)
+            else if (!res)
+                cb (new Error(`${relFilePath} not found in caches`))
+            else
+                cb(null, path.join(res, relFilePath)); // relFilePath should have been set by time get here
+        });
     }
-
 
     static cacheAndOrStream({relFilePath=undefined,
                                   debugname="UNDEFINED", urls=undefined,
@@ -260,6 +270,9 @@ class MirrorFS {
             if (err) { //Doesn't match
                 _notcached.call(this);
             } else { // sha1 matched, skip fetching, just stream from saved
+                if (this.copyDirectory && !this.existingFilePath.startsWith(this.copyDirectory)) {
+                    copy ....
+                }
                 if (wantStream) {
                     debug("streaming from cached", existingFilePath, "as sha1 matches");
                     cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
@@ -413,7 +426,7 @@ class MirrorFS {
 
 }
 
-MirrorFS.hashstores = ACUtil.fromEntries(               // Mapping
+MirrorFS.hashstores = Object.fromEntries(               // Mapping
     config.directories.map(d =>                         // of each config.directories
         [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 exports = module.exports = MirrorFS;

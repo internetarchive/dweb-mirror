@@ -26,7 +26,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStre
             MirrorFS.cacheAndOrStream({
                 urls, skipFetchFile, wantStream, start, end, debugname,
                 sha1: this.metadata.sha1,
-                relFilepath: path.join(itemid, filename),
+                relFilePath: path.join(itemid, filename),
                 expectsize: this.metadata.size
             }, (err, streamOrUndefined)=> {
                 if (err) {

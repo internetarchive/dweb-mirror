@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const path = require('path');
 
 class MirrorConfig {
     /*
@@ -16,14 +17,14 @@ class MirrorConfig {
             // Find the first of arr that exists, args can be relative to the process directory .../dweb-mirror
             // returns undefined if none found
             // noinspection JSUnresolvedVariable
-            return arr.map(v=> _res[v]).find(p=>fs.existsSync(p));
+            return arr.map(v=> _res(v)).find(p=>fs.existsSync(p));
         }
         Object.keys(opts).forEach(f => {
-            this[f] = init[f];
-            delete init[f];
-            this.directories = this.directories.map(v => _res(v));
-            this.archiveui.directory = firstExisting(this.archiveui.directories);
+            this[f] = opts[f];
+            delete opts[f];
         });
+        this.directories = this.directories.map(v => _res(v));
+        this.archiveui.directory = firstExisting(this.archiveui.directories);
     }
 
 }

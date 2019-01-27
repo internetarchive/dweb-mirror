@@ -42,9 +42,10 @@ class HashStore {
                 if (err && (err.type === "NotFoundError")) cb(null, undefined); // Undefined is not an error
                 if (err) {
                     cb(err);
+                } else {
+                    debug("%s.%s -> %o", table, key, val);
+                    cb(null, val);
                 }
-                debug("%s.%s -> %o", table, key, val);
-                cb(null, val);
             });
         }
     }

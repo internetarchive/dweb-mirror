@@ -6,6 +6,7 @@
 // Generic NPM modules
 const path = require('path');
 const canonicaljson = require('@stratumn/canonicaljson');
+const debug = require('debug')('dweb-mirror:ArchiveMemberSearch');
 // Other IA repos
 const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
 const Util = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
