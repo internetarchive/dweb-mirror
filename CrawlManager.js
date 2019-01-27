@@ -8,9 +8,9 @@ const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // incl
 const config = require('./config');
 // Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
-const ArchiveFile = require('./ArchiveFilePatched');
-const ArchiveMember = require('./ArchiveMemberPatched');
-const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
+require('./ArchiveFilePatched');
+require('./ArchiveMemberPatched');
+require('./ArchiveMemberSearchPatched');
 const MirrorFS = require('./MirrorFS');
 /*
   Manage crawls

@@ -12,7 +12,7 @@ class HashStore {
         this.tables = {};
         return this;
     }
-    _tablepath(table) {  // Return the file systeem path to where we have, or will create, a table
+    _tablepath(table) {  // Return the file system path to where we have, or will create, a table
         return `${this.config.dir}${table}`;
     }
     _db(table) {
@@ -56,6 +56,7 @@ class HashStore {
             await this._db(table).del(key);
         }
     }
+    // noinspection JSUnusedLocalSymbols
     async map(table, cb, {end=undefined}={}) {
         // cb(data) => data.key, data.value
         // Returns a stream so can add further .on

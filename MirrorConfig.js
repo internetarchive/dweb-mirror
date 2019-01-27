@@ -18,7 +18,7 @@ class MirrorConfig {
             // noinspection JSUnresolvedVariable
             return arr.map(v=> _res[v]).find(p=>fs.existsSync(p));
         }
-        Object.keys(init).forEach(f => {
+        Object.keys(opts).forEach(f => {
             this[f] = init[f];
             delete init[f];
             this.directories = this.directories.map(v => _res(v));

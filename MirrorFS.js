@@ -196,7 +196,7 @@ class MirrorFS {
             If digest offered check matches that of file
             cb(err, filepath)
          */
-        config.directories.detect( config.directories, (cacheDirectory, cb2) => {
+        detect( config.directories, (cacheDirectory, cb2) => {
             waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
@@ -206,6 +206,7 @@ class MirrorFS {
                     }
                 },
                 (cb4) => { // Check file readable
+                    // noinspection JSUnresolvedVariable
                     fs.access(path.join(cacheDirectory, relFilePath), fs.constants.R_OK, cb4);
                 },
                 (cb5) => { // if digest, then test its correct
@@ -219,7 +220,7 @@ class MirrorFS {
                         });
                     }
                 }
-            ], (err, res) => cb2(null, !err)) // Did the detect find one
+            ], (err, unused) => cb2(null, !err)) // Did the detect find one
         }, (err, res) => {
             cb(err, path.join(res, relFilePath)); // relFilePath should have been set by time get here
             });
@@ -314,7 +315,7 @@ class MirrorFS {
                                     // Note at this point file is neither finished, nor closed, its a stream open for writing.
                                     //fs.close(fd); Should be auto closed when stream to it finishes
                                     writable.on('close', () => {
-                                        // noinspection EqualityComparisonWithCoercionJS
+                                        // noinspection JSCheckFunctionSignatures
                                         const hexhash = hashstream.actual.toString('hex');
                                         // noinspection EqualityComparisonWithCoercionJS
                                         if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== "undefined") && (hexhash !== sha1))) { // Intentionally != as metadata is a string
@@ -407,7 +408,7 @@ class MirrorFS {
                     }),
                     {name: "Hashstore", async: true, paralleloptions: {limit:100}})
                 .reduce(undefined, undefined, cb1);
-            })
+            }, cb)
     }
 
 }

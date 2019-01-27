@@ -2,7 +2,7 @@
 //global.window = {}; // Target for things like window.onpopstate in Nav.js
 // noinspection JSUnresolvedVariable
 
-// NOTE THERE WAS A VERSION OF THIS USING ParralelStream WHICH WAS OBSOLETED EARLY JAN 2018.
+// NOTE THERE WAS A VERSION OF THIS USING ParallelStream WHICH WAS OBSOLETED EARLY JAN 2018.
 
 // Enable a LOT of debugging as want to watch to diagnose failures.
 // noinspection JSUnresolvedVariable
@@ -22,9 +22,9 @@ const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 // noinspection JSUnusedLocalSymbols
-const ArchiveMember = require('./ArchiveMember');
+const ArchiveMember = require('./ArchiveMemberPatched');
 // noinspection JSUnusedLocalSymbols
-const ArchiveMemberSearch = require('./ArchiveMemberSearch');
+const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 //Not used currently const config = require('./config');
 
 const CrawlManager = require('./CrawlManager');
@@ -45,7 +45,7 @@ DwebTransports.connect({
     //transports: ["HTTP", "WEBTORRENT", "IPFS"],
     transports: ["HTTP"],
     //webtorrent: {tracker: { wrtc }},
-}, (err, unused) => {
+}, (unusederr, unused) => {
     //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
     DwebTransports.http().supportFunctions.push("createReadStream");
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
