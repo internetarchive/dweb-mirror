@@ -2,8 +2,16 @@
 
 ## Known issues - and features for next release or two
 
-* TODO
-* configuration file revisions - this needs to improved
+(See [https://github.com/internetarchive/dweb-mirror/issues] for more detail)
+* configuration file revisions - this needs to improved [https://github.com/internetarchive/dweb-mirror/issues/88](#88)(minor)
+* support collection sort order in caching (minor) [https://github.com/internetarchive/dweb-mirror/issues/32](#32)
+* better integration with IAUX library (mostly this will be in dweb-archive) [https://github.com/internetarchive/dweb-mirror/issues/66](#66)
+* Video caching [https://github.com/internetarchive/dweb-mirror/issues/67](#67) (major)
+* Add support for at least one other box e.g. Rachel or RaspberryPi/Internet-in-a-Box (major)
+* Support UX for adding collections to crawl etc [https://github.com/internetarchive/dweb-mirror/issues/55](#55) (major)
+* Support for adding and retrieving files from IPFS, WebTorrent [https://github.com/internetarchive/dweb-mirror/issues/16](#16) & Gun
+* Support for Text files (major)
+* Support for Wayback Machine (major)
 
 ## Release 0.1.0
 
