@@ -189,13 +189,19 @@ class MirrorFS {
     }
     */
 
-    static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API remove this
+    static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
         /*
-            Checks if file or digest exists in one of the cache Directories.
-            If digest,format,algorithm && !relFilePath provided then can locate file in hashstore
-            Checks file is readable
-            If digest offered check matches that of file
-            cb(err, filepath)
+        digest      Digest of file to find
+        format      hex or multihash - how hash formated
+        algorithm   e.g. 'sha1'
+        relFilePath <Identifier>/<Filename>
+
+        Note - either relFilePath or digest/format/algorithm can be omitted,
+        If relFilePath && !digest it just checks the cache directories
+        If digest && !relFilePath it will try and locate file in hashstores
+        if relPath && digest the hash will be recalculated and checked.
+
+        cb(err, filepath)
          */
         detect( config.directories, (cacheDirectory, cb2) => {
             waterfall([

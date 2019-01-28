@@ -36,7 +36,6 @@ const MirrorFS = require('./MirrorFS');
 
  */
 
-//TODO-CRAWL TODO-API document this
 //TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
 //See collectionpreseed.js for example using this to do a nested crawl to force server to preseed.
 

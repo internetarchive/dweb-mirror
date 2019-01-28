@@ -175,6 +175,14 @@ Save the results of a search as a `<IDENTIFIER>_member.json` file
 cb(err, this)
 ```
 
+##### saveThumbnail({skipFetchFile=false, wantStream=false} = {}, cb)
+Save a thumbnail to the cache, note must be called after fetch_metadata
+```
+wantStream      true if want stream instead of ArchiveItem returned
+skipFetchFile   true if should skip net retrieval - used for debugging
+resolve or cb(err, res)  this on completion or stream on opening
+```
+
 # Other classes
 
 ## HashStore
@@ -381,6 +389,22 @@ data    Anything that fs.writeFile accepts
 cb(err)
 ```
 
+#### static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb)
+Checks if file or digest exists in one of the cache Directories.
+```
+digest      Digest of file to find 
+format      hex or multihash - how hash formated
+algorithm   e.g. 'sha1'
+relFilePath <Identifier>/<Filename>
+
+Note - either relFilePath or digest/format/algorithm can be omitted, 
+If relFilePath && !digest it just checks the cache directories
+If digest && !relFilePath it will try and locate file in hashstores
+if relPath && digest the hash will be recalculated and checked.
+
+cb(err, filepath)
+```
+    
 #### static cacheAndOrStream({filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
 Complicated function to encapsulate in one place the logic around the cache.
 ```

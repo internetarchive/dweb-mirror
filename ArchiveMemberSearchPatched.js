@@ -35,7 +35,6 @@ ArchiveMemberSearch.prototype.save = function(opts = {}, cb) {
 
 ArchiveMemberSearch.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=false} = {}, cb) {
     /*
-    //TODO-API seems to be missing from API.md
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
     skipFetchFile   true if should skip net retrieval - used for debugging

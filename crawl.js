@@ -20,7 +20,6 @@ const ArchiveItem = require('./ArchiveItemPatched');
 const ArchiveFile = require('./ArchiveFilePatched');
 const CrawlManager = require('./CrawlManager');
 
-//TODO-DOCS TODO-API document command line and config file
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows"];
 
