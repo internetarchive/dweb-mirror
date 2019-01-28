@@ -13,3 +13,9 @@ but has some hopefully useful functionality, in particular.
 See [Milestone v0.1.0 on Github](https://github.com/internetarchive/dweb-mirror/milestone/3) for the up to date list of what needs completing
 
 * Crawler first release - see [README.md](./README.md)
+
+### Minor releases
+
+* 0.1.1: Added support for multiple cache directories
+* 0.1.1: Added support for "copyDirectory" to support cloning to a USB for example. 
+* 0.1.1: Support for search collections that have "identifier:xxx*" as the query.  
