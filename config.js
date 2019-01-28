@@ -10,8 +10,9 @@ const config = new MirrorConfig({
 //============== Dont edit anything above here ============================
     // Cache directory - where you want to store files, this directory must already exist
     // List of places to look for the Cache directory - will check all of them, and they don't need to exist
-    directories: ["~/temp/mirrored"], // TODO-MULTI expand things like /Volumes/*/internetarchive
-
+    // Paths can include unix conventions like ~ * . .. etc
+    // Default is to look in home directory and root of any device (for example a USB) for directories "archiveorg"
+    directories: ["~/archiveorg", "/Volumes/*/archiveorg"],
 
     archiveui: {
         // Where to find the ArchiveUI relative to the directory this file and the code resides in

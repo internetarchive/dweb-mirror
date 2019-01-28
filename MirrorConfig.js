@@ -1,6 +1,7 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const glob = require('glob');
 
 class MirrorConfig {
     /*
@@ -23,7 +24,10 @@ class MirrorConfig {
             this[f] = opts[f];
             delete opts[f];
         });
-        this.directories = this.directories.map(v => _res(v));
+        // Support relative paths, and then glob, which returns an array per pattern, so flatten that with concat
+        this.directories = [].concat(... // flatten the result
+            this.directories.map(v => _res(v))  // Handle ~ or . or ..
+                .map(p => glob.sync(p)));        // And expand patterns like * etc
         this.archiveui.directory = firstExisting(this.archiveui.directories);
     }
 

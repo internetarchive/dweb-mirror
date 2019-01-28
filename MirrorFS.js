@@ -27,7 +27,7 @@ class MirrorFS {
     Utility subclass that knows about the file system.
 
     properties:
-      copyDirectory:  place to put a copy TODO-MULTI handle case of is cached but in wrong place
+      copyDirectory:  place to put a copy
       hashstores: { directory: hashstore }  esp sha1.filestore
 
      */
@@ -270,15 +270,18 @@ class MirrorFS {
             if (err) { //Doesn't match
                 _notcached.call(this);
             } else { // sha1 matched, skip fetching, just stream from saved
-                if (this.copyDirectory && !this.existingFilePath.startsWith(this.copyDirectory)) {
-                    copy ....
-                }
-                if (wantStream) {
-                    debug("streaming from cached", existingFilePath, "as sha1 matches");
-                    cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
+                if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
+                    const copyFilePath = path.join(this.copyDirectory, relFilePath)
+                    fs.copyFile(existingFilePath, copyFilePath , (err) => {
+                        if (err) {
+                            debug("Failed to copy %s to %s", relFilePath, copyFilePath);
+                        } else {
+                            debug("copied cached file to %s", copyFilePath);
+                        }
+                        callbackEmptyOrDataOrStream(existingFilePath);
+                    })
                 } else {
-                    debug("Already cached", existingFilePath, "with correct sha1");
-                    callbackEmptyOrData(existingFilePath);
+                    callbackEmptyOrDataOrStream(existingFilePath);
                 }
             }
         });
@@ -290,7 +293,15 @@ class MirrorFS {
                 cb();
             }
         }
-
+        function callbackEmptyOrDataOrStream(existingFilePath) {
+            if (wantStream) {
+                debug("streaming from cached", existingFilePath, "as sha1 matches");
+                cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
+            } else {
+                debug("Already cached", existingFilePath, "with correct sha1");
+                callbackEmptyOrData(existingFilePath);
+            }
+        }
         function _notcached() {
             /*
             Four possibilities - wantstream &&|| partialrange

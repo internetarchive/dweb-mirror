@@ -190,7 +190,11 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
                         });    // resolves to this
                     } else {    // Local read succeeded.
                         this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-                        cb( errOrDark(null), this);
+                        if (MirrorFS.copyDirectory) { // If copyDirectory explicitly specified then save to it.
+                            this.save({}, (err, res) => cb(errOrDark(null), res));
+                        } else {
+                            cb(errOrDark(null), this);
+                        }
                     }
                 })
             } else { // No cache Directory or skipCache telling us not to use it for read or save
