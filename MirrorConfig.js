@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const glob = require('glob');
 
-class MirrorConfig {
+class MirrorConfig { //TODO-CONFIG TODO-API
     /*
     A set of tools to manage and work on configuration data structures and to map to storage or UI
 

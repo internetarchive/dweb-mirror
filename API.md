@@ -230,7 +230,7 @@ return stream     So that further .on can be added
 ##### keys(table, cb)
 Returns an array of keys via promise or cb(err, [key*])
 
-## MirrorConfig
+## MirrorConfig  TODO-CONFIG TODO-API its moving
 
 #### new MirrorConfig(config) 
 Create a new config structure. See config file for structure of config
