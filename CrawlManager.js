@@ -237,54 +237,55 @@ class CrawlItem extends Crawlable {
             const skipFetchFile = CrawlManager.cm.skipFetchFile;
             const skipCache = CrawlManager.cm.skipCache;
             waterfall([
-                (cb) => {
+                (cb2) => {
                     if (["metadata", "details", "all"].includes(this.level) || (this.level === "tile" && !(this.member && this.member.thumbnaillinks) )) {
-                        this.item.fetch_metadata(cb);
+                        this.item.fetch_metadata(cb2);
                     } else {
-                        cb(null, this.item);
+                        cb2(null, this.item);
                     }
                 },
-                (ai, cb) => { // Save tile if level is set.
+                (ai, cb3) => { // Save tile if level is set.
                     if (["tile", "metadata", "details", "all"].includes(this.level)) {
                         if (this.member && this.member.thumbnaillinks) {
-                            this.member.saveThumbnail({skipFetchFile, wantStream: false}, cb);
+                            this.member.saveThumbnail({skipFetchFile, wantStream: false}, cb3);
                         } else {
-                            this.item.saveThumbnail({skipFetchFile, wantStream: false}, cb);
+                            this.item.saveThumbnail({skipFetchFile, wantStream: false}, cb3);
                         }
                     } else {
-                        cb(null, this.item);
+                        cb3(null, this.item);
                     }
                 },
-                (unused, cb) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
+                (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     const asParent = this.asParent();
                     if (this.level === "details") { // Details
                         this.item.minimumForUI().forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
                     } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
                         this.item.files.forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
                     }
-                    cb(null);
+                    cb4(null);
                 },
                 //(cb) => { debug("XXX Finished fetching files for item %s", this.identifier); cb(); },
-                (cb) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
+                (cb5) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     if (["details", "all"].includes(this.level) || this.related) {
+                        const taskparms = this.related || CrawlManager.cm.defaultDetailsRelated;
                         this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => {
                             if (err) {
-                                cb(err);
+                                cb5(err);
                             } else {
                                 each(searchmembers, (sm, cb1) => sm.save(cb1), (unusederr) => { // Errors reported in save
-                                    searchmembers.slice(0, this.related.rows)
+                                    searchmembers.slice(0, taskparms.rows)
                                         .forEach(sm =>
-                                            CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, this.related, this.asParent())));
-                                    cb(null);
+                                            CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, taskparms, this.asParent())));
+                                    cb5(null);
                                 });
                             }
                         });
                     } else {
-                        cb(null);
+                        cb5(null);
                     }
                 },
                 //(cb) => { debug("XXX Finished related items for item %s", this.identifier); cb(); },
-                (cb) => {
+                (cb6) => {
                     if (this.search && (this.query || (this.item && this.item.metadata && (this.item.metadata.mediatype === "collection")))) {
                         const ai = this.item;
                         if (typeof ai.page === "undefined") ai.page = 0;
@@ -302,10 +303,10 @@ class CrawlItem extends Crawlable {
                                         CrawlItem.fromSearchMember(sm, queryPage, this.asParent()) ));
                                 start = start + queryPage.rows;
                             });
-                            cb();
+                            cb6();
                         });
                     } else {
-                        cb();
+                        cb6();
                     }
                 },
                 //(cb) => { debug("XXX Finished processing item %s", this.identifier); cb(); }

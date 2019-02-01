@@ -30,7 +30,7 @@ const opts = getopts(process.argv.slice(2),{
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
-    string: ["directory", "search", "related", "debugidentifier", "transport", "level"],
+    string: ["directory", "search", "related", "transport", "level"], // Not debugidentifier because undefined and "" are not the same.
     default: {transport: "HTTP"},
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
 });

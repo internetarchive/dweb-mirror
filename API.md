@@ -232,8 +232,29 @@ Returns an array of keys via promise or cb(err, [key*])
 
 ## MirrorConfig  TODO-CONFIG TODO-API its moving
 
-#### new MirrorConfig(config) 
-Create a new config structure. See config file for structure of config
+##### new MirrorConfig(...config) 
+Create a new config structure from one or more config objects. 
+
+The fields in later arguments (at the root, or nested levels) over-write the previous ones.
+
+See config file for structure of config
+
+##### setopts(config)
+Set some fields of configuration from passed object,
+it expands paths such as ~/foo and ./foo where appropriate.
+
+Note this currently overwrites anything at the path, but may be modified to use Object.deeperassign in future. 
+
+##### static readYamlSync(filename)
+
+Read an return YAML from filename
+
+Throws errors on failure to read, or failure to parse.
+
+##### static readYaml(filename, cb)
+
+Read YAML from filename and return via cb(err, res), 
+or return error if unable to read or parse.
 
 ## CrawlManager, CrawlFile
 

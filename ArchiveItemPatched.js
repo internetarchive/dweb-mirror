@@ -171,7 +171,9 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache;           // If set will not try and read cache
     // noinspection JSUnresolvedVariable
-    if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+    if (cb) { try { f.call(this, cb) } catch(err) {
+        cb(err)}}
+    else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function errOrDark(err) {
         return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
     }
@@ -356,7 +358,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true if want stream) alternative is obj
-    cb(err, stream|obj)  Callback on completion with related items object
+    cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
     if (itemid) {
@@ -390,7 +392,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
             }
         });
     } else {
-        cb(null, undefined);
+        cb(null, wantMembers ? [] : undefined);
     }
 };
 
