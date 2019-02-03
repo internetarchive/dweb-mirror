@@ -16,7 +16,6 @@ const ParallelStream = require('parallel-streams');
 const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
 
 // other packages in this repo
-const config = require('./config');
 const HashStore = require('./HashStore');
 
 function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
@@ -32,8 +31,14 @@ class MirrorFS {
 
      */
 
+    static init({directories}) { // Not a constructor, all methods are static
+        this.directories = directories;
+        this.hashstores = Object.fromEntries(               // Mapping
+            this.directories.map(d =>                         // of each config.directories
+                [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
+    }
     static _copyDirectory() {
-        return this.copyDirectory || config.directories[0];
+        return this.copyDirectory || this.directories[0];
     }
     static setCopyDirectory(dir) {
         this.copyDirectory = dir;
@@ -109,7 +114,7 @@ class MirrorFS {
     }
     static writeFile(relFilePath, data, cb) {
         // Like fs.writeFile but will mkdir the directory before writing the file
-        //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; config.directories[0]
+        //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; this.directories[0] (which comes from config.directories)
         const filepath = path.join(this._copyDirectory(), relFilePath);
         const dirpath = path.dirname(filepath);
         MirrorFS._mkdir(dirpath, (err) => {
@@ -203,7 +208,7 @@ class MirrorFS {
 
         cb(err, filepath)
          */
-        detect( config.directories, (cacheDirectory, cb2) => {
+        detect( this.directories, (cacheDirectory, cb2) => {
             waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
@@ -428,7 +433,7 @@ class MirrorFS {
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
         // Runs in parallel 100 at a time,
         const tablename = `${algorithm}.relfilepath`;
-        each( cacheDirectories.length ? cacheDirectories : config.directories,
+        each( cacheDirectories.length ? cacheDirectories : this.directories,
             (cacheDirectory,cb1) => {
                 MirrorFS._streamOfCachedItemPaths({cacheDirectory})
                 .map((relFilePath, cb2) =>  this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {format: 'multihash58', algorithm},
@@ -443,7 +448,4 @@ class MirrorFS {
 
 }
 
-MirrorFS.hashstores = Object.fromEntries(               // Mapping
-    config.directories.map(d =>                         // of each config.directories
-        [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
 exports = module.exports = MirrorFS;

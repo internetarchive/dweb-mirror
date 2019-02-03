@@ -34,6 +34,7 @@ const ParallelStream = require('parallel-streams');
 // IA packages
 global.DwebTransports = require('@internetarchive/dweb-transports');
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
+const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
 //TODO-RACHEL auto test for presence of wrtc, its not available on rachel
 const wrtc = require('wrtc');
 
@@ -47,8 +48,14 @@ const ArchiveMember = require('./ArchiveMemberPatched');
 const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const app = express();
+
+MirrorConfig.fromDefault((err, config) => {
+    if (err) { debug("Exiting because of error", err.message);} else {
+
+
 // noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
+MirrorFS = MirrorFS.init({directories: config.directories});
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     transports: ["HTTP"],
@@ -291,12 +298,12 @@ app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
 });
 app.get('/arc/archive.org/metadata/*', function(req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
     // noinspection JSUnresolvedVariable
-    proxyUrl(req, res, next, [config.archiveorg.metadata,req.params[0]].join('/'), {"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
+    proxyUrl(req, res, next, [config.upstream+req.url].join('/'), {"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/*', function(req, res, next) { // noinspection JSUnresolvedVariable
-    proxyUrl(req, res, next, [config.archiveorg.mds,req.params[0]].join('/'), {"Content-Type": "application/json"} )});
+    proxyUrl(req, res, next, [ACUtil.gateway.mds,req.params[0]].join('/'), {"Content-Type": "application/json"} )});
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
@@ -332,3 +339,5 @@ app.use((req,res,next) => {
 // noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
 
+    } // Config load success
+} ); // config load

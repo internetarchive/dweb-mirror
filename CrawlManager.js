@@ -5,7 +5,6 @@ const each = require('async/each');
 const debug = require('debug')('dweb-mirror:CrawlManager');
 
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
-const config = require('./config');
 // Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
 require('./ArchiveFilePatched');
@@ -42,11 +41,11 @@ const MirrorFS = require('./MirrorFS');
 class CrawlManager {
 
     constructor({copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
-                    maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+                    maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={}) {
         this._uniqItems = {};
         this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
         this.errors = [];
-        this.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
+        this.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated});
         this.completed = 0;
         this.pushedCount = 0;
         this._taskQ = queue((task, cb) => {
@@ -57,8 +56,6 @@ class CrawlManager {
             }); //Task should be an instance of a class with a process method
         }, this.concurrency);
         this._taskQ.drain = () => this.drained.call(this);
-        this.defaultDetailsSearch = config.apps.crawl.defaultDetailsSearch;
-        this.defaultDetailsRelated = config.apps.crawl.defaultDetailsRelated;
     }
     push(task) {
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
@@ -73,16 +70,16 @@ class CrawlManager {
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
-        maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}, cb) {
+        maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={},  cb) {
         const parent = [];
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
-        CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks});
+        CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (MirrorFS.copyDirectory) {
-            debug("Will use %s for the crawl and %o as a cache",MirrorFS.copyDirectory, config.directories);
+            debug("Will use %s for the crawl and %o as a cache",MirrorFS.copyDirectory, MirrorFS.directories);
         } else {
-            debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", config.directories);
+            debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", MirrorFS.directories);
         }
         initialItemTaskList.forEach( task => {
             if (Array.isArray(task.identifier)) {
@@ -102,7 +99,7 @@ class CrawlManager {
 }
 CrawlManager._levels = ["tile", "metadata", "details", "all"];
 CrawlManager.cm = new CrawlManager();   // For now there is only one CrawlManager, at some point might start passing as a parameter to tasks.
-CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory"];
+CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory", "defaultDetailsSearch", "defaultDetailsRelated"];
 // q.drain = function() { console.log('all items have been processed'); }; // assign a callback *
 // q.push({name: 'foo'}, function(err) { console.log('finished processing foo'); }); // add some items to the queue
 // q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function(err) { console.log('finished processing item'); }); // add some items to the queue (batch-wise)

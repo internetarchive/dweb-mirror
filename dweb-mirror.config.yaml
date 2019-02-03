@@ -8,7 +8,7 @@ apps:
           - "images"
           - "movies"
           level: "details" # Getting enough to show the details page - i.e. all the thumbnails
-          search: # Override apps.crawl.defaultDetailsSearch (which would get top 40 tiles)
+          search: # Override apps.crawl.opts.defaultDetailsSearch (which would get top 40 tiles)
           # To get the details for the 3 most popular
           - sort: "-downloads"
             rows: 3
@@ -17,7 +17,7 @@ apps:
           - sort: "-downloads"
             rows: 10
             level: "tile"
-        # And get top 40 tiles for Prelinger (as spec in crawl.defaultDetailsSearch)
+        # And get top 40 tiles for Prelinger (as spec in crawl.opts.defaultDetailsSearch)
         - identifier: "prelinger"
           level: "details"
         # And retrieve playable movies for AboutBan1935 and Doctorin1946 that Brewster loves to demo

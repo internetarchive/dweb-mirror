@@ -15,7 +15,6 @@ const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/Arc
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
-const config = require('./config');
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
@@ -334,7 +333,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
             recursable(null, null);
         } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
             // noinspection JSUnresolvedVariable
-            const servicesurl = `${config.archiveorg.servicesImg}/${this.itemid}`;
+            const servicesurl = `${Util.gateway.url_servicesImg}/${this.itemid}`; // Direct to Archive server not via gateway
             // Include direct link to services
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
@@ -367,7 +366,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
         // noinspection JSUnresolvedVariable
         MirrorFS.cacheAndOrStream({wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
-            urls: config.archiveorg.related + "/" + itemid,
+            urls: Util.gateway.url_related + itemid, //url_related currently ends in /
             debugname: itemid + "/" + itemid + "_related.json"
         }, (err, res) => {
             // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.

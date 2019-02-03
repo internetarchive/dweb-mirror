@@ -1,12 +1,15 @@
+// Carefull not to introduce too many dependencies in here, as called very early in applications
 const os = require('os');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 const glob = require('glob');
 const debug = require('debug')('dweb-mirror:MirrorConfig');
+const each = require('async/each');
 //const canonicaljson = require('@stratumn/canonicaljson');
 const yaml = require('js-yaml');
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util.js'); //for Object.deeperAssign
 
+const defaultConfigFiles = [ "./configDefaults.yaml", "~/dweb-mirror.config.yaml"]; // config files (later override earlier)
 
 class MirrorConfig {
     /*
@@ -17,6 +20,27 @@ class MirrorConfig {
     constructor(...objs) {
         this.setOpts(...objs);
     }
+
+    static from(filenames, cb) { //TODO-API
+        /* build a new MirrorConfig from a set of options loaded from YAML files,
+            filename: filename of file, may use ., .., ~ etc, parameters in later override those in earlier.
+        */
+        each(filenames,
+            (filename, cb2) => {
+                this.readYaml(filename, (err, res) => cb(null, res)); // Ignore err, and res should be {} if error
+            },
+            (err, configobjs) => { // [ {...}* ]
+                if (err) { cb(err, null); } else {
+                    cb(null, new MirrorConfig(...configobjs));
+                }
+            })
+    }
+    static fromDefault(cb) {
+        this.from(defaultConfigFiles, cb);
+        debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
+    }
+
+
     static resolve(v) { // Handle ~ or . or .. in a path
         return (v.startsWith("~/") ? path.resolve(os.homedir(), v.slice(2)) : path.resolve(process.cwd(), v)); }
 

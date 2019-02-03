@@ -16,11 +16,7 @@ debug("config summary: directory:%o archiveui:%s", config.directories, config.ar
 exports = module.exports = config;
 
 /* TODO-CONFIG removing async
-    CrawlManager: pass defaultDetailsSearch & defaultDetailsRelated and address in debugs
-    MirrorFS - add init({directories}) and call before any methods called
-    MirrorFS - accumulate hashstore creation into init()
     mirrorHttp - async at top
     crawl - async at top
     collectionpreseed - async at top
-    ArchiveItemPatched - move config.archiveorg.* into AIC.Util
  */
