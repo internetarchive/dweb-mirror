@@ -10,7 +10,17 @@ const configuser = MirrorConfig.readYamlSync("~/dweb-mirror.config.yaml"); //TOD
 const configDefaults = MirrorConfig.readYamlSync("./configDefaults.yaml"); //TODO-CONFIG move to async readYaml(filename, cb)
 
 
-const config = new MirrorConfig(configDefaults, configuser); //TODO-CONFIG TODO-API
+const config = new MirrorConfig(configDefaults, configuser);
 debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
 
 exports = module.exports = config;
+
+/* TODO-CONFIG removing async
+    CrawlManager: pass defaultDetailsSearch & defaultDetailsRelated and address in debugs
+    MirrorFS - add init({directories}) and call before any methods called
+    MirrorFS - accumulate hashstore creation into init()
+    mirrorHttp - async at top
+    crawl - async at top
+    collectionpreseed - async at top
+    ArchiveItemPatched - move config.archiveorg.* into AIC.Util
+ */

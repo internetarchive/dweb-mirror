@@ -116,7 +116,7 @@ if (!opts.rows.length) {
     });
 
 if (opts.directory) {
-    config.setOpts(Array.isArray(opts.directory) ? opts.directory : [opts.directory])
+    config.setOpts({ directories: Array.isArray(opts.directory) ? opts.directory : [opts.directory]})
 }
 if (!config.directories.length) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
 /* Not needed, just removed these from strings

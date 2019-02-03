@@ -230,8 +230,6 @@ return stream     So that further .on can be added
 ##### keys(table, cb)
 Returns an array of keys via promise or cb(err, [key*])
 
-## MirrorConfig  TODO-CONFIG TODO-API its moving
-
 ##### new MirrorConfig(...config) 
 Create a new config structure from one or more config objects. 
 
@@ -239,7 +237,7 @@ The fields in later arguments (at the root, or nested levels) over-write the pre
 
 See config file for structure of config
 
-##### setopts(config)
+##### setopts(...config)
 Set some fields of configuration from passed object,
 it expands paths such as ~/foo and ./foo where appropriate.
 
