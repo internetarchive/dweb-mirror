@@ -13,13 +13,13 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 // noinspection JSUnusedLocalSymbols
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
 //This Repo
-const config = require('./config');
 // noinspection JSUnusedLocalSymbols
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 const CrawlManager = require('./CrawlManager');
 const MirrorFS = require('./MirrorFS');
+const MirrorConfig = require('./MirrorConfig');
 
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows"];
@@ -85,7 +85,7 @@ if (opts.help) { console.log(help); process.exit(); }
 
 
 
-MirrorConfig.fromDefault((err, config) => { // Load config early, so can use in opts processing
+MirrorConfig.new((err, config) => { // Load config early, so can use in opts processing
     if (err) {
         debug("Exiting because of error", err.message);
     } else {
@@ -170,7 +170,7 @@ MirrorConfig.fromDefault((err, config) => { // Load config early, so can use in 
         }
 
         if (!opts.dummy) { // Note almost same code in collectionpreseed.js
-                    MirrorFS = MirrorFS.init({directories: config.directories});
+                    MirrorFS.init({directories: config.directories});
                     DwebTransports.connect({
                         //transports: ["HTTP", "WEBTORRENT", "IPFS"],
                         transports: opts.transport,

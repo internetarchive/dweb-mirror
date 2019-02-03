@@ -46,7 +46,7 @@ const crawlOptions = {
     defaultDetailsRelated: {sort: "-downloads", rows: "6", level: "tile"}, // Get tiles for 6 related on each, so details page will display
 }
 
-MirrorConfig.fromDefault((err, config) => {
+MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
         MirrorFS = MirrorFS.init({directories: config.directories});
         DwebTransports.connect({

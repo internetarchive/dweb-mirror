@@ -1,12 +1,13 @@
-// Carefull not to introduce too many dependencies in here, as called very early in applications
+// Careful not to introduce too many dependencies in here, as called very early in applications
 const os = require('os');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
 const glob = require('glob');
 const debug = require('debug')('dweb-mirror:MirrorConfig');
-const each = require('async/each');
+const asyncMap = require('async/map');
 //const canonicaljson = require('@stratumn/canonicaljson');
 const yaml = require('js-yaml');
+// noinspection JSUnusedLocalSymbols
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util.js'); //for Object.deeperAssign
 
 const defaultConfigFiles = [ "./configDefaults.yaml", "~/dweb-mirror.config.yaml"]; // config files (later override earlier)
@@ -21,27 +22,28 @@ class MirrorConfig {
         this.setOpts(...objs);
     }
 
-    static from(filenames, cb) { //TODO-API
+    static new(filenames, cb) { //TODO-API
         /* build a new MirrorConfig from a set of options loaded from YAML files,
             filename: filename of file, may use ., .., ~ etc, parameters in later override those in earlier.
         */
-        each(filenames,
+        if (typeof filenames === "function") { cb = filenames; filenames = undefined}
+        if (!(filenames && filenames.length)) { filenames = defaultConfigFiles; }
+        asyncMap(this.resolves(filenames),
             (filename, cb2) => {
-                this.readYaml(filename, (err, res) => cb(null, res)); // Ignore err, and res should be {} if error
+                this.readYaml(filename, (err, res) => cb2(null, res)); // Ignore err, and res should be {} if error
             },
             (err, configobjs) => { // [ {...}* ]
                 if (err) { cb(err, null); } else {
-                    cb(null, new MirrorConfig(...configobjs));
+                    const config =  new MirrorConfig(...configobjs);
+                    // noinspection JSUnresolvedVariable
+                    debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
+                    cb(null, config);
                 }
             })
     }
-    static fromDefault(cb) {
-        this.from(defaultConfigFiles, cb);
-        debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
-    }
-
 
     static resolve(v) { // Handle ~ or . or .. in a path
+        // noinspection JSUnresolvedVariable
         return (v.startsWith("~/") ? path.resolve(os.homedir(), v.slice(2)) : path.resolve(process.cwd(), v)); }
 
     static resolves(vv) {
@@ -59,19 +61,20 @@ class MirrorConfig {
     setOpts(...opts) {
         Object.deeperAssign(this, ...opts);
         this.directories = MirrorConfig.resolves(this.directories); // Handle ~/ ./ ../ and expand * or ?? etc
+        // noinspection JSUnresolvedVariable
         this.archiveui.directory = MirrorConfig.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
     }
 
-    static readYamlSync(filename) { //TODO-CONFIG Make callers use a cb then use readYaml
+    // noinspection JSUnusedGlobalSymbols
+    static readYamlSync(filename) {
         try {
-            //const configuser = canonicaljson.parse(fs.readFileSync(MirrorConfig.resolve("~/dweb-mirror.config.json"), 'utf8'));
             return yaml.safeLoad(fs.readFileSync(MirrorConfig.resolve(filename), 'utf8'));
         } catch(err) {
             debug("Error reading user configuration: %s", err.message);
             return {};    // Caller is free to ignore err and treat {} as an empty set of config params
         }
     }
-    static readYaml(filename, cb) {  //TODO-CONFIG Make callers use a cb then use readYaml
+    static readYaml(filename, cb) {
         fs.readFile(filename, 'utf8', (err, yamlstr) => {
             if (err) {
                 debug("Unable to read %s: %s", filename, err.message);

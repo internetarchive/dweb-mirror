@@ -40,7 +40,6 @@ const wrtc = require('wrtc');
 
 // Local files
 const MirrorFS = require('./MirrorFS');
-const config = require('./config'); // Global configuration, will add app specific requirements
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const ArchiveMember = require('./ArchiveMemberPatched');
@@ -49,7 +48,7 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const app = express();
 
-MirrorConfig.fromDefault((err, config) => {
+MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
 
 

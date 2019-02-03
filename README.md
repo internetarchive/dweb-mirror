@@ -86,11 +86,13 @@ TODO Later versions will do other tasks like configuring IPFS
 #### 4. Edit configuration
 TODO EDIT AND TEST FROM HERE DOWN
 
-* Edit `dweb-mirror/config.js` … **this location may change**
+* Copy `dweb-mirror/dweb-mirror.config.yaml` to your home directory and edit, 
+for now see `configDefaults.yaml` for inline documentation.
+
   * `directories`  should point at places you want the cache to store and look for files - at least one of these should exist
   * `archiveui/directories` you probably dont need to change this as it will usually guess right, but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
-  * `apps.crawl` includes a structure that lists what collections are to be installed. The default is to get the first 5 movies from the `prelinger` collection and the tiles. This is good for testing and can be deleted later. 
-    * for now see config.js for documentation
+  * `apps.crawl` includes a structure that lists what collections are to be installed, I suggest testing and then editing
+
    
 Note that directories specified in the config file can be written using with shell / unix conventions such as "~/" or "../".
 
@@ -99,7 +101,7 @@ Note that directories specified in the config file can be written using with she
 * cd /path/to/install/dweb-mirror
 * ./crawl.js
 
-Look in the location configured in `config.js ... directory` and there should 
+Look in the location configured in `configDefaults.yaml` or `~/dweb-mirror.config.yaml` ... directory` and there should 
 be directories appearing for each item, with metadata and/or thumbnails.
 
 You can safely delete any of the crawled material and it will be re-fetched if needed.

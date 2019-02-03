@@ -11,7 +11,6 @@ const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 //This Repo
-const config = require('./config');
 //TODO Add tests from each of the classes when/if they exist
 
 
