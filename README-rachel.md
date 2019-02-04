@@ -61,6 +61,7 @@ sudo node --version # Typically shows an antique version of node around version 
 curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 sudo apt-cache policy nodejs # Should show v10 but for some Rachel problem it only goes to v9 which is ok but sub-optimal
 sudo apt-get install -y nodejs
+sudo npm i -g npm # Update npm
 ```
 Note there is an issue open on the community about this ...
 [http://community.rachelfriends.org/t/installing-usable-version-of-node/1082/4]
@@ -80,6 +81,14 @@ sudo apt-get update && sudo apt-get install yarn
 ## Install dweb-mirror, for now installing globally.
 ```
 cd /usr/local  # Various other places didn't work
+```
+Struggling as `npm install wrtc` fails tried ...
+```
+sudo npm install -g node-gyp 
+```
+
+
+
 
 #sudo npm install node-pre-gyp    # I did this because next line fails without it, didn't help
 sudo npm install @internetarchive/dweb-mirror # install -g didn't work
