@@ -21,7 +21,7 @@ mirrorHttp|/arc/archive.org/download/:itemid/*|streamArchiveFile|
 mirrorHttp|/arc/archive.org/images/*|CACHE/images/*|
 mirrorHttp|/arc/archive.org/metadata/:itemid|loadedAI|
 mirrorHttp|loadedAI(itemid)|ArchiveItem(patched).fetch_metadata
-mirrorHttp & config.archiveorg.metadata|/arc/archive.org/metadata/:itemid/:filepath|https://dweb.me/arc/archive.org/metadata/:itemid/:filepath|
+mirrorHttp|/arc/archive.org/metadata/:itemid/:filepath|https://dweb.me/arc/archive.org/metadata/:itemid/:filepath|
 mirrorHttp|/arc/archive.org/mds/v1/get_related/all/*|sendRelated > loadedAI & ArchiveItem.relatedItems|
 mirrorHttp|/arc/archive.org/mds/*|https://be-api.us.archive.org/mds/*|
 mirrorHttp|/arc/archive.org/serve/:itemid/*|streamArchiveFile|

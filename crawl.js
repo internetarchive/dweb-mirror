@@ -13,12 +13,13 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 // noinspection JSUnusedLocalSymbols
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
 //This Repo
-const config = require('./config');
 // noinspection JSUnusedLocalSymbols
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 const CrawlManager = require('./CrawlManager');
+const MirrorFS = require('./MirrorFS');
+const MirrorConfig = require('./MirrorConfig');
 
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows"];
@@ -30,7 +31,7 @@ const opts = getopts(process.argv.slice(2),{
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
-    string: ["directory", "search", "related", "debugidentifier", "transport", "level"],
+    string: ["directory", "search", "related", "transport", "level"], // Not debugidentifier because undefined and "" are not the same.
     default: {transport: "HTTP"},
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
 });
@@ -82,96 +83,110 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
 `;
 if (opts.help) { console.log(help); process.exit(); }
 
-optsArray.forEach(key => {
-    if ((typeof opts[key] === "undefined") || (opts[key] === "")) {
-        opts[key] = [];
-    } else if (!Array.isArray(opts[key])) {
-        opts[key] = [ opts[key] ];
+
+
+MirrorConfig.new((err, config) => { // Load config early, so can use in opts processing
+    if (err) {
+        debug("Exiting because of error", err.message);
+    } else {
+
+        optsArray.forEach(key => {
+            if ((typeof opts[key] === "undefined") || (opts[key] === "")) {
+                opts[key] = [];
+            } else if (!Array.isArray(opts[key])) {
+                opts[key] = [ opts[key] ];
+            }
+        });
+        // code cares about case for these opts
+        opts.transport = opts.transport.map(t=>t.toUpperCase());
+        opts.level = opts.level.map(t=>t.toLowerCase());
+        if (!opts.level.length) opts.level.push("details"); // Default is 1 level at details
+        if (!opts.rows.length) {
+            opts.rows.push(
+                ( CrawlManager._levels.indexOf(opts.level[0]) >= CrawlManager._levels.indexOf("details")
+                    ? ((config.apps.crawl.opts.defaultDetailsSearch && config.apps.crawl.opts.defaultDetailsSearch.rows) || 0)
+                    : 0)
+            );
+        } // Default is whatever specified in default search
+
+        ["search", "related"]
+            .forEach(key => {
+                if (opts[key].length) {
+                    try {
+                        opts[key] = canonicaljson.parse(opts[key]);
+                    } catch (err) {
+                        console.log("Invalid json in argument", key, "=", opts[key], err.message);
+                        process.exit();
+                    }
+                } else {
+                    opts[key] = undefined;
+                }
+            });
+
+        if (opts.directory) {
+            config.setOpts({ directories: Array.isArray(opts.directory) ? opts.directory : [opts.directory]})
+        }
+        if (!config.directories.length) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
+        /* Not needed, just removed these from strings
+        [ "rows", "depth", "concurrency", "maxFileSize", "limitTotalTasks"]
+            .forEach(key=> {
+                opts[key] = (opts[key] && opts[key].length) ? parseInt(opts[key]) : undefined;
+            });
+        */
+        //TODO-CRAWL pass directory to CrawlManager
+
+        if (opts.search && (opts.rows || opts.depth)) {
+            console.log("Cannot specify search with rows or depth argumenets"); process.exit();
+        }
+        let taskTemplate = { level: opts.level[0], related: opts.related };
+        function f(depthnow, depth) { // Recurses
+            if (depth) {
+                return Object.assign({}, opts.search || config.apps.crawl.opts.defaultDetailsSearch,
+                    {level: opts.level[Math.min(depthnow+1,opts.level.length-1)], rows: opts.rows[Math.min(depthnow,opts.rows.length-1)], search: f(depthnow+1, depth -1)});
+            } else {
+                return undefined;
+            }
+        }
+
+        taskTemplate.search = f(0, Math.max(opts.depth ||0, opts.level.length, opts.rows.length));
+
+
+        let tasks;
+        if (opts._.length) {
+            tasks = opts._.map( identifier => Object.assign({}, taskTemplate, {identifier: identifier}));
+        } else {
+            if (opts.depth || opts.search || opts.related ) {
+                console.log("If specifying options then should also specify identifiers to crawl"); process.exit();
+            }
+            tasks = config.apps.crawl.tasks; // Default or configured tasks
+        }
+
+
+        const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
+
+        if (opts.verbose || opts.dummy) {
+            console.log( "Crawl configuration: tasks=", canonicaljson.stringify(tasks), "opts=", canonicaljson.stringify(crawlopts),
+                "transports=", opts.transport);
+        }
+
+        if (!opts.dummy) { // Note almost same code in collectionpreseed.js
+                    MirrorFS.init({directories: config.directories});
+                    DwebTransports.connect({
+                        //transports: ["HTTP", "WEBTORRENT", "IPFS"],
+                        transports: opts.transport,
+                        //webtorrent: {tracker: { wrtc }}, //TODO-CRAWL TODO-TRANSPORTS see if this is needed / useful
+                    }, (unusederr, unused) => {
+                        //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
+                        DwebTransports.http().supportFunctions.push("createReadStream");
+                        CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
+                            DwebTransports.p_stop(t => debug("%s is stopped", t.name))
+                        });
+                        // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168
+                    });
+        }
+
     }
 });
-// code cares about case for these opts
-opts.transport = opts.transport.map(t=>t.toUpperCase());
-opts.level = opts.level.map(t=>t.toLowerCase());
-if (!opts.level.length) opts.level.push("details"); // Default is 1 level at details
-if (!opts.rows.length) {
-    opts.rows.push(
-        ( CrawlManager._levels.indexOf(opts.level[0]) >= CrawlManager._levels.indexOf("details")
-            ? ((config.apps.crawl.defaultDetailsSearch && config.apps.crawl.defaultDetailsSearch.rows) || 0)
-            : 0)
-    );
-} // Default is whatever specified in default search
 
-["search", "related"]
-    .forEach(key => {
-        if (opts[key].length) {
-            try {
-                opts[key] = canonicaljson.parse(opts[key]);
-            } catch (err) {
-                console.log("Invalid json in argument", key, "=", opts[key], err.message);
-                process.exit();
-            }
-        } else {
-            opts[key] = undefined;
-        }
-    });
-
-if (opts.directory) {
-    config.setOpts(Array.isArray(opts.directory) ? opts.directory : [opts.directory])
-}
-if (!config.directories.length) { console.log("Directory for the cache is not defined or doesnt exist"); process.exit();}
-/* Not needed, just removed these from strings
-[ "rows", "depth", "concurrency", "maxFileSize", "limitTotalTasks"]
-    .forEach(key=> {
-        opts[key] = (opts[key] && opts[key].length) ? parseInt(opts[key]) : undefined;
-    });
-*/
-//TODO-CRAWL pass directory to CrawlManager
-
-if (opts.search && (opts.rows || opts.depth)) {
-    console.log("Cannot specify search with rows or depth argumenets"); process.exit();
-}
-let taskTemplate = { level: opts.level[0], related: opts.related };
-function f(depthnow, depth) { // Recurses
-    if (depth) {
-        return Object.assign({}, opts.search || config.apps.crawl.defaultDetailsSearch,
-            {level: opts.level[Math.min(depthnow+1,opts.level.length-1)], rows: opts.rows[Math.min(depthnow,opts.rows.length-1)], search: f(depthnow+1, depth -1)});
-    } else {
-        return undefined;
-    }
-}
-
-taskTemplate.search = f(0, Math.max(opts.depth ||0, opts.level.length, opts.rows.length));
-
-
-let tasks;
-if (opts._.length) {
-    tasks = opts._.map( identifier => Object.assign({}, taskTemplate, {identifier: identifier}));
-} else {
-    if (opts.depth || opts.search || opts.related ) {
-        console.log("If specifying options then should also specify identifiers to crawl"); process.exit();
-    }
-    tasks = config.apps.crawl.tasks; // Default or configured tasks
-}
-
-
-const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
-
-if (opts.verbose || opts.dummy) {
-    console.log( "Crawl configuration: tasks=", canonicaljson.stringify(tasks), "opts=", canonicaljson.stringify(crawlopts),
-        "transports=", opts.transport);
-}
-if (!opts.dummy) {
-    DwebTransports.connect({
-        //transports: ["HTTP", "WEBTORRENT", "IPFS"],
-        transports: opts.transport,
-        //webtorrent: {tracker: { wrtc }}, //TODO-CRAWL TODO-TRANSPORTS see if this is needed / useful
-    }, (unusederr, unused) => {
-        //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-        DwebTransports.http().supportFunctions.push("createReadStream");
-        CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
-            DwebTransports.p_stop(t => debug("%s is stopped", t.name))});
-            // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168
-        });
-}
 
 

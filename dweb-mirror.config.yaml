@@ -1,0 +1,28 @@
+--- # User configuration for dweb mirror
+# Note in YAML, indentation is significant, and you can't have multiple spaces after the ":"
+apps:
+    crawl:
+        tasks:
+        - identifier: # Iterate over each of these identifiers
+          - "/"
+          - "images"
+          - "movies"
+          level: "details" # Getting enough to show the details page - i.e. all the thumbnails
+          search: # Override apps.crawl.opts.defaultDetailsSearch (which would get top 40 tiles)
+          # To get the details for the 3 most popular
+          - sort: "-downloads"
+            rows: 3
+            level: "details"
+          # And tile for top 10
+          - sort: "-downloads"
+            rows: 10
+            level: "tile"
+        # And get top 40 tiles for Prelinger (as spec in crawl.opts.defaultDetailsSearch)
+        - identifier: "prelinger"
+          level: "details"
+        # And retrieve playable movies for AboutBan1935 and Doctorin1946 that Brewster loves to demo
+        - identifier:
+          - "AboutBan1935"
+          - "Doctorin1946"
+          level: "details"
+...

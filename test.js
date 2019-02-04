@@ -11,7 +11,6 @@ const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
 //This Repo
-const config = require('./config');
 //TODO Add tests from each of the classes when/if they exist
 
 
@@ -23,6 +22,7 @@ const HashStore = require('./HashStore');
 //HashStore.test();
 const MirrorFS = require('./MirrorFS');
 // noinspection JSUnresolvedVariable
+MirrorFS.init({directories: config.directories});
 MirrorFS.loadHashTables({}, (err, res) => console.log(err, res));
 
 
@@ -73,6 +73,9 @@ DwebTransports.connect({
     DwebTransports.http().supportFunctions.push("createReadStream");
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
     CrawlManager.startCrawl(testCrawl,
-        {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300});
+        {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300,
+         defaultDetailsSearch: config.apps.crawl.opts.defaultDetailsSearch,
+         defaultDetailsRelated: config.apps.crawl.opts.defaultDetailsRelated,
+        });
 });
 */

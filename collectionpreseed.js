@@ -25,8 +25,7 @@ const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveMember = require('./ArchiveMemberPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
-//Not used currently const config = require('./config');
-
+const MirrorConfig = require('./MirrorConfig');
 const CrawlManager = require('./CrawlManager');
 
 const crawlPreseed = [ //skipFetchFile, skipcache, mediatype: collection
@@ -40,15 +39,28 @@ const crawlPreseed = [ //skipFetchFile, skipcache, mediatype: collection
             crawl: { rows: 100, level: "tile", sort: "-downloads" }}}
 ];
 
+const crawlOptions = {
+    skipFetchFile: true, // dont want the files, just want the gateway to push them into IPFS
+    skipCache: true, // Dont care if we already have it cached, its the gateway we want to be seeding it anyway
+    defaultDetailsSearch: {sort: "-downloads", rows: "40", level: "tile"}, // Not used, specified above
+    defaultDetailsRelated: {sort: "-downloads", rows: "6", level: "tile"}, // Get tiles for 6 related on each, so details page will display
+}
 
-DwebTransports.connect({
-    //transports: ["HTTP", "WEBTORRENT", "IPFS"],
-    transports: ["HTTP"],
-    //webtorrent: {tracker: { wrtc }},
-}, (unusederr, unused) => {
-    //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-    DwebTransports.http().supportFunctions.push("createReadStream");
-    //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
-    CrawlManager.startCrawl(crawlPreseed, {skipFetchFile: true, skipCache: true});
-});
+MirrorConfig.new((err, config) => {
+    if (err) { debug("Exiting because of error", err.message);} else {
+        MirrorFS = MirrorFS.init({directories: config.directories});
+        DwebTransports.connect({
+            //transports: ["HTTP", "WEBTORRENT", "IPFS"],
+            transports: ["HTTP"],
+            //webtorrent: {tracker: { wrtc }},
+        }, (unusederr, unused) => {
+            //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
+            DwebTransports.http().supportFunctions.push("createReadStream");
+            CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
+                DwebTransports.p_stop(t => debug("%s is stopped", t.name))});
+            // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168
+        });
+    }
+} );
+
 

@@ -18,24 +18,24 @@ The API may change fairly frequently up until v1.0.0. Likely changes should be d
 
 # Config file
 
+There are two config files, one at dweb-mirror/configDefaults.yaml 
+and ~/dweb-mirror.config.yaml for which there is an example you can copy.
+
+Both files follow the same format, and the settings in your home directory override that in dweb-mirror.
+
 #### Expected changes
-config.js is definately going to change as new features added
+Note these files are definately going to change as new features added, 
+we will attempt to keep backward compatability, i.e. to add parameters but not rearrange or delete, but no promises!
 
 If in doubt, check the file itself which should be self-documenting
 ```
-{
-  directories: [ path* ]; // List of places to look for the Cache directory - expands ~/xx and ./xx
-  archiveui: { // Anything relating to display of the Archive UI
-    directory: [ ... ]; // Where to look for the files for the Archive UI - uses first - expands ~/xx and ./xx
-  }
-  apps: { // Each application can have its own configuration
-    http: { // Relating to mirrorHttp.js
-    crawl: { // Relating to crawl.js
-  }
-  // Dont edit anything below here
-  archiveorg: // Relate to the location of Archive services that will generally
-  upstream: // Where to find a generic upstream server that recognizes URLs like /arc or /contenthash
-}
+directories: [ path* ] # List of places to look for the Cache directory - expands ~/xx and ./xx and * etc
+archiveui: # Anything relating to display of the Archive UI
+  directory: [ ... ] # Where to look for the files for the Archive UI - uses first - expands ~/xx and ./xx and * etc
+  apps: # Each application can have its own configuration
+    http: # Relating to mirrorHttp.js
+    crawl: # Relating to crawl.js
+  upstream: "dweb.me" # Where to find an upstream server, typically "dweb.me"
 ```
 
 
@@ -230,10 +230,37 @@ return stream     So that further .on can be added
 ##### keys(table, cb)
 Returns an array of keys via promise or cb(err, [key*])
 
-## MirrorConfig
+##### new MirrorConfig(...config) 
+Create a new config structure from one or more config objects. 
 
-#### new MirrorConfig(config) 
-Create a new config structure. See config file for structure of config
+The fields in later arguments (at the root, or nested levels) over-write the previous ones.
+
+See config file for structure of config
+
+##### new(filenames, cb) 
+```
+filenames   optional ordered array of paths to possible config files (they may be missing), ~/ ./ * etc are expanded (I'm not sure about ../)
+    If missing then it looks in dweb-mirror/configDefaults.yaml and ~/dweb-mirror.config.yaml 
+cb(err, config) Called with an instance of MirrorConfig
+```
+Create a new config by reading YAML from filenames in order, (later overriding earlier) 
+
+##### setopts(...config)
+Set some fields of configuration from passed object,
+it expands paths such as ~/foo and ./foo where appropriate.
+
+Note this currently overwrites anything at the path, but may be modified to use Object.deeperassign in future. 
+
+##### static readYamlSync(filename)
+
+Read an return YAML from filename
+
+Throws errors on failure to read, or failure to parse.
+
+##### static readYaml(filename, cb)
+
+Read YAML from filename and return via cb(err, res), 
+or return error if unable to read or parse.
 
 ## CrawlManager, CrawlFile
 

@@ -29,7 +29,7 @@ function lnfirst {
 		shift
 	done
 }
-# Where to serve the ARCHIVEUI from , this must be the same list as in config.js/archiveui/directory
+# Where to serve the ARCHIVEUI from , this must be the same list as in <config>/archiveui/directory
 ARCHIVEUI=`firstof ../node_modules/dweb-archive/dist ./node_modules/@internetarchive/dweb-archive/dist`
 
 pushd "${ARCHIVEUI}"
