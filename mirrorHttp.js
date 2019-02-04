@@ -40,6 +40,7 @@ const wrtc = require('wrtc');
 
 // Local files
 const MirrorFS = require('./MirrorFS');
+const MirrorConfig = require('./MirrorConfig');
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const ArchiveMember = require('./ArchiveMemberPatched');
