@@ -110,7 +110,7 @@ echo >package.json <<EOT
   "description": "Rachel install file for dweb-mirror",
   "dependencies": {
     "@internetarchive/dweb-archive": "latest",
-    "@internetarchive/dweb-mirror": "latest",
+    "@internetarchive/dweb-mirror": "git+https://git@github.com/internetarchive/dweb-archive.git#rachel",
   },
   "devDependencies": {
   },
