@@ -85,10 +85,12 @@ cd /usr/local  # Various other places didn't work
 Struggling as `npm install wrtc` fails tried ...
 ```
 sudo npm install -g node-gyp 
+
+went back to node 8.x (uninstall 9.x, run setup_8.x, check policy, install)
+yarn install node-pre-gyp
+yarn install cmake
+yarn install wrtc
 ```
-
-
-
 
 #sudo npm install node-pre-gyp    # I did this because next line fails without it, didn't help
 sudo npm install @internetarchive/dweb-mirror # install -g didn't work
