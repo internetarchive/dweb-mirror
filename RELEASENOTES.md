@@ -3,7 +3,6 @@
 ## Known issues - and features for next release or two
 
 (See [https://github.com/internetarchive/dweb-mirror/issues] for more detail)
-* configuration file revisions - this needs to improved [https://github.com/internetarchive/dweb-mirror/issues/88](#88)(minor)
 * support collection sort order in caching (minor) [https://github.com/internetarchive/dweb-mirror/issues/32](#32)
 * better integration with IAUX library (mostly this will be in dweb-archive) [https://github.com/internetarchive/dweb-mirror/issues/66](#66)
 * Video caching [https://github.com/internetarchive/dweb-mirror/issues/67](#67) (major)
@@ -27,3 +26,5 @@ See [Milestone v0.1.0 on Github](https://github.com/internetarchive/dweb-mirror/
 * 0.1.1: Added support for multiple cache directories
 * 0.1.1: Added support for "copyDirectory" to support cloning to a USB for example. 
 * 0.1.1: Support for search collections that have "identifier:xxx*" as the query.  
+* 0.1.2: Support multiple config files in yaml,  [https://github.com/internetarchive/dweb-mirror/issues/88](#88)(minor)
+* 0.1.2: Fix bug installing with yarn

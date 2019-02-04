@@ -9,8 +9,8 @@
   },
   "name": "@internetarchive/dweb-mirror",
   "dependencies": {
-    "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git#master",
-    "@internetarchive/dweb-archivecontroller": "git+https://git@github.com/internetarchive/dweb-archivecontroller.git#master",
+    "@internetarchive/dweb-archive": "git+https://git@github.com/internetarchive/dweb-archive.git",
+    "@internetarchive/dweb-archivecontroller": "git+https://git@github.com/internetarchive/dweb-archivecontroller.git",
     "@internetarchive/dweb-objects": "^0.1.20",
     "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
     "@stratumn/canonicaljson": "^1.0.2",
@@ -44,5 +44,5 @@
     "install": "./install.sh",
     "update": "./install.sh"
   },
-  "version": "0.1.1"
+  "version": "0.1.2"
 }
