@@ -10,6 +10,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
+const MirrorFS = require('./MirrorFS');
 //This Repo
 //TODO Add tests from each of the classes when/if they exist
 
