@@ -290,7 +290,7 @@ configtask: { identifier, level, query, search, related}
 ```
 
 ### class CrawlManager
-Currently (may change) one instance only - that has parameterisation for crawls.
+Currently (may change) one instance only - that has paramaterisation for crawls.
 
 ##### Attributes
 ```

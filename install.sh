@@ -1,6 +1,8 @@
 #!/bin/bash
-
 # Note - this can be run multiple times, and should adjust to current reality
+
+
+set -e # Break on error
 
 # Not running install as this script is in packages.json so called BY `npm install`
 #npm install # Get all the node_modules etc
@@ -40,14 +42,31 @@ lnfirst . ../../dweb-mirror/@internetarchive/dweb-transports/dist/dweb-transport
 	../../dweb-transports/dist/dweb-transports-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-transports/dist/dweb-transports.bundle.js
 popd
-ls -al ${ARCHIVEUI}
+#ls -al ${ARCHIVEUI}
 
-exit # IPFS NOT INTEGRATED YET
+
+BREW=`which brew`
+APTGET=`which apt-get`
+IPFS_PATH=
 #TODO-IPFS
-if ! (ipfs --version)
+if ! (ipfs --version) # 0.4.17
 then
-    echo "Need to install IPFS from "https://dist.ipfs.io/#go-ipfs"
-    open https://dist.ipfs.io/#go-ipfs
+    # Copied from dweb/Dockerfile
+    # Dont appear to need these that Dockerfile installs: redis-server supervisor zsh git python3-pip curl sudo nginx python3-nacl golang nodejs npm cron
+    if [ -n ${APTGET} ]
+    then
+        ${APTGET} -y update && ${APTGET} -y install golang
+    elif [ -n ${BREW} ]
+    then
+         ${BREW} install golang
+    fi
+    go get -u -v github.com/ipfs/ipfs-update \
+    && ipfs-update install latest
+    && cp /app/ipfs_container_daemon_modified.sh /usr/local/bin/start_ipfs
+    exit # This is how far got with testing ipfs
+
+    #echo "Need to install IPFS from "https://dist.ipfs.io/#go-ipfs"
+    #open https://dist.ipfs.io/#go-ipfs
     # TODO-INSTALL install IPFS go daemon automagically
 else
     ipfs config --json Experimental.FilestoreEnabled true

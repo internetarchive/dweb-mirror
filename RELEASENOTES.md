@@ -28,3 +28,18 @@ See [Milestone v0.1.0 on Github](https://github.com/internetarchive/dweb-mirror/
 * 0.1.1: Support for search collections that have "identifier:xxx*" as the query.  
 * 0.1.2: Support multiple config files in yaml,  [https://github.com/internetarchive/dweb-mirror/issues/88](#88)(minor)
 * 0.1.2: Fix bug installing with yarn
+
+#### IPFS - will fold into releases when done and branch merged ... 
+
+* Figure out how to install IPFS 
+  * Check "dweb" repo for how we do it on Docker, copy into an install script
+  * Instal IPFS on my machine, following those instructions, and check multiple runs work
+* Figure out how to add files
+  * Check whether nocopy works as described in https://github.com/internetarchive/dweb-mirror/issues/22
+  * Find a way to add so matches the IPFS hash generated on server
+  * Hook into caching process
+* if there is a way to just automate updating the entire cache on IPFS see [https://github.com/protocol/collab-internet-archive/issues/62](collab#62)
+  * Hook IPFS to watch the cache directories
+* If no way then hook into MirrorFS (?) so updates IPFS as it writes the cache,
+  * will need some bulk process to counter IPFS's dendency to randomly lose the whole repo or some subset of it (via GC we think) 
+* Make sure that either dweb-mirror (prefered) or the browser can fetch files that are on IPFS
