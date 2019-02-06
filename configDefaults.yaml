@@ -26,7 +26,7 @@ apps:
     #      details:    enough to render a page, including e.g. low res video
     #      all:        all files in the item - beware this can be large
     # search & related consists of sort: (only -downloads supported at present), rows: how many items to retrieve;
-    #      level, search & related inside another search or related applies to the items retrieved by that search/related and nests indefinately.
+    #      level, search & related inside another search or related applies to the items retrieved by that search/related and nests indefinitely.
     tasks:
     # opts controls how the search performs
     opts:
@@ -34,7 +34,7 @@ apps:
       limitTotalTasks: 300 # No more than this many tasks total (typically one per item & file.
       maxFileSize: 200000000 # Maximum size of any file retrieved
       skipCache: false # Set to true to ignore current cache contents, this is used to force the upstream server to look at each item and cache it
-      skipFetchFile: false # Set to true to ignore actually fething files, most often used for debugging
+      skipFetchFile: false # Set to true to ignore actually fetching files, most often used for debugging
       # Default crawls if either search &| related are unspecified but crawling an item with level=detail||full
       defaultDetailsSearch:
         sort: '-downloads'

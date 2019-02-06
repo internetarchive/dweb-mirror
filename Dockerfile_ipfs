@@ -27,7 +27,7 @@ EXPOSE ${GATEWAY_PORT}
 # Only useful for this Dockerfile
 #ENV FABRIC_ROOT=$GOPATH/src/github.com/hyperledger/fabric
 
-#Added to apt-get above, will need if run as seperate docker
+#Added to apt-get above, will need if run as separate docker
 #RUN apt-get -y update && apt-get -y install golang git
 
 # Add go path after installing go so it can find ipfs-update when installed
