@@ -223,7 +223,7 @@ class CrawlItem extends Crawlable {
                 return true;
             }
         } else {
-            CrawlManager.cm._uniqItems[key] = [{level: this.level, search: this.search}]; // Explicitly not caching ArchiveItem as could get large inmemory
+            CrawlManager.cm._uniqItems[key] = [{level: this.level, search: this.search}]; // Explicitly not caching ArchiveItem as could get large in memory
             return true;
         }
     }

@@ -8,7 +8,9 @@ const debug = require('debug')("dweb-mirror:crawl");
 const getopts = require('getopts');
 const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
+// noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
+// noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 // noinspection JSUnusedLocalSymbols
 const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
@@ -55,12 +57,12 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
     --copydirectory path : Store a copy of the crawl in this directory (often used for a removable drive)
     --directory path : override the directory set in the configuration for the root of the cache
     --search json    : override default search string, strict json syntax only
-    --related json   : override default settign for crawling related items, strict json syntax only
+    --related json   : override default setting for crawling related items, strict json syntax only
     --debugidentifier identifier : identifier to do extra debugging on, only really valuable when using an IDE
     --maxfilesize bytes : any file bigger than this will be ignored
     --concurrency threads : how many files or searches to be happening concurrently - use 1 for debugging, otherwise 10 is about right
     --limittotaltasks tasks : a maximum number of tasks to run, will be (approximately) the number of searches, plus the number of items crawled.
-    --transport TRANSPORT : The names of transport to use, by default its HTTP, but can currenrly add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
+    --transport TRANSPORT : The names of transport to use, by default its HTTP, but can currently add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
     --skipfetchfile : Dont actually transfer the files (good for debugging)
     --skipcache     : Ignore current contents of cache and always refetch
     --dummy         : Just print the result of the options in the JSON format used for configuration
@@ -136,7 +138,7 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
         //TODO-CRAWL pass directory to CrawlManager
 
         if (opts.search && (opts.rows || opts.depth)) {
-            console.log("Cannot specify search with rows or depth argumenets"); process.exit();
+            console.log("Cannot specify search with rows or depth arguments"); process.exit();
         }
         let taskTemplate = { level: opts.level[0], related: opts.related };
         function f(depthnow, depth) { // Recurses

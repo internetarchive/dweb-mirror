@@ -4,12 +4,15 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
 // Other IA repos
+// noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
+// noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 // noinspection JSUnusedLocalSymbols
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
+const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 //This Repo
 //TODO Add tests from each of the classes when/if they exist
@@ -21,7 +24,8 @@ const MirrorFS = require('./MirrorFS');
 
 const HashStore = require('./HashStore');
 //HashStore.test();
-const MirrorFS = require('./MirrorFS');
+MirrorConfig.from((err, config) => {
+
 // noinspection JSUnresolvedVariable
 MirrorFS.init({directories: config.directories});
 MirrorFS.loadHashTables({}, (err, res) => console.log(err, res));
@@ -80,3 +84,4 @@ DwebTransports.connect({
         });
 });
 */
+});

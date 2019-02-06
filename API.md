@@ -24,8 +24,8 @@ and ~/dweb-mirror.config.yaml for which there is an example you can copy.
 Both files follow the same format, and the settings in your home directory override that in dweb-mirror.
 
 #### Expected changes
-Note these files are definately going to change as new features added, 
-we will attempt to keep backward compatability, i.e. to add parameters but not rearrange or delete, but no promises!
+Note these files are definitely going to change as new features added, 
+we will attempt to keep backward compatibility, i.e. to add parameters but not rearrange or delete, but no promises!
 
 If in doubt, check the file itself which should be self-documenting
 ```
@@ -267,7 +267,7 @@ or return error if unable to read or parse.
 A set of related classes for managing crawling
 
 ### configuration
-The crawl is initialized from a datastructure, or indirectly from JSON syntax is:
+The crawl is initialized from a data-structure, or indirectly from JSON syntax is:
 ```
 config:     [ configtask ]
 configtask: { identifier, level, query, search, related}
@@ -351,7 +351,7 @@ parent [ debugname* ]   Array of parents of this task, allow reporting where a r
 Create a new task, usually only ever called as super()
 
 #### asParent()
-returns array from concatenting debugname to parent array.
+returns array from concatenating debugname to parent array.
 
 ### class CrawlFile extends Crawlable
 #### Attributes
@@ -366,7 +366,7 @@ cb(err) Called when item processed - errors should be reported when encountered 
 Process a ArchiveFile, retrieve it if not already cached, depends on state of skipFetchFile & maxFileSize
 
 #### isUniq() {
-True if havent already tried this file on this crawl.
+True if have not already tried this file on this crawl.
 
 ### class CrawlItem extends Crawlable
 #### Attributes
@@ -401,7 +401,7 @@ directory:  Absolute path to directory where cache stored, may include symlinks,
 filepath:   Absolute path to file, normally must be in "directory"
 format:     Format of result, defaults to 'hex', alternative is 'multihash58'
 ```
-Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz where refered to below
+Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz where referred to below
 
 #### static quickhash(str, options={})
 Synchronous calculation of hash
@@ -530,7 +530,7 @@ The following files are present in `dweb-mirror` but, as of v0.1.0 are still a w
 
 The following files are present in `dweb-mirror` but are still a work in progress and not yet defined and will probably change a lot. 
 
-* index.html - skeleton for UI, will most likely be entirely rewritten and doesn't yet work.
+* index.html - skeleton for UI, will most likely be entirely rewritten and does not yet work.
 * LICENCE - GNU Alfredo licence
 * mirrorHttp_rachel - a version of mirrorHttp edited to work on the Rachel platform (under construction)
 * README.md - main documentation
