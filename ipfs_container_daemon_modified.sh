@@ -3,6 +3,7 @@
 # Almost same code in "dweb" and "dweb-mirror" repos - main difference is enabling Filestore
 # all changes commented
 set -e      # Break on error
+set -x
 
 # Requires caller to set up
 # $IPFS_PATH pointing to directory space to use
@@ -21,7 +22,7 @@ if [ `id -u` -eq 0 ]; then
     if [ -n "${IPFS_USER}" ]; then
         echo "Changing user to ${IPFS_USER}"
         # ensure folder is writable
-        su-exec "${IPFS_USER}" test -w "${IPFS_PATH:=~/.ipfs}" || chown -R -- "${IPFS_USER}" "${IPFS_PATH:=~/.ipfs}"
+        su-exec "${IPFS_USER}" test -w "${IPFS_PATH:=${HOME}/.ipfs}" || chown -R -- "${IPFS_USER}" "${IPFS_PATH:=${HOME}/.ipfs}"
         # restart script with new privileges
         exec su-exec "${IPFS_USER}" "$0" "$@"
     fi
@@ -29,7 +30,9 @@ fi
 
 # 2nd invocation with regular user
 if [ -n "${IPFS_PATH}" ] ; then
-    ln -s "${IPFS_PATH}" ~/.ipfs    # I think IPFS is using .ipfs anyway,
+    ln -s "${IPFS_PATH}" ${HOME}/.ipfs    # I think IPFS is using .ipfs anyway,
+else
+    IPFS_PATH="${HOME}/.ipfs"
 fi
 
 ipfs version
@@ -43,7 +46,7 @@ else
   #DOCKER: Allow parameterization of ports by env variables
   ipfs config Addresses.API /ip4/0.0.0.0/tcp/${IPFS_API_PORT:=5001}
   ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/${IPFS_GATEWAY_PORT:=8080}
-  ipfs config --json Addresses.Swarm '["/ip4/0.0.0.0/tcp/${IPFS_SWARM_PORT:=4001}","/ip6/::/tcp/${IPFS_SWARM_PORT:=4001}","/ip4/0.0.0.0/tcp/${IPFS_WS_PORT:=4002}/ws","/ip6/::/tcp/${IPFS_WS_PORT:=4002}/ws"]'
+  ipfs config --json Addresses.Swarm "[\"/ip4/0.0.0.0/tcp/${IPFS_SWARM_PORT:=4001}\",\"/ip6/::/tcp/${IPFS_SWARM_PORT:=4001}\",\"/ip4/0.0.0.0/tcp/${IPFS_WS_PORT:=4002}/ws\",\"/ip6/::/tcp/${IPFS_WS_PORT:=4002}/ws\"]"
   #DOCKER: Allow access to http API from localhost
   ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://localhost"]'
   ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '["true"]'

@@ -48,6 +48,9 @@ popd
 BREW=`which brew`
 APTGET=`which apt-get`
 IPFS_PATH=
+# On dweb-mirror its in ./, in dweb its in /app/
+IPFS_STARTSCRIPT=./ipfs_container_daemon_modified.sh
+# Can also override variables used in IPFS_STARTSCRIPT: IPFS_USER; IPFS_API_PORT; IPFS_GATEWAY_PORT; IPFS_SWAM_PORT; IPFS_WS_PORT
 #TODO-IPFS
 if ! (ipfs --version) # 0.4.17
 then
@@ -60,14 +63,11 @@ then
     then
          ${BREW} install golang
     fi
-    go get -u -v github.com/ipfs/ipfs-update \
-    && ipfs-update install latest
-    && cp /app/ipfs_container_daemon_modified.sh /usr/local/bin/start_ipfs
-    exit # This is how far got with testing ipfs
-
-    #echo "Need to install IPFS from "https://dist.ipfs.io/#go-ipfs"
+    #Alternative is to install IPFS directly from "https://dist.ipfs.io/#go-ipfs" via a browser
     #open https://dist.ipfs.io/#go-ipfs
-    # TODO-INSTALL install IPFS go daemon automagically
+    go get -u -v github.com/ipfs/ipfs-update \
+    && ipfs-update install latest \
+    && cp ${IPFS_STARTSCRIPT} /usr/local/bin/start_ipfs
 else
     ipfs config --json Experimental.FilestoreEnabled true
 fi
