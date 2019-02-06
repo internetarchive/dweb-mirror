@@ -3,6 +3,7 @@
 
 
 set -e # Break on error
+set -x
 
 # Not running install as this script is in packages.json so called BY `npm install`
 #npm install # Get all the node_modules etc
@@ -44,22 +45,30 @@ lnfirst . ../../dweb-mirror/@internetarchive/dweb-transports/dist/dweb-transport
 popd
 #ls -al ${ARCHIVEUI}
 
-
+set +e # Errors ok here, we are testing for these two options
 BREW=`which brew`
 APTGET=`which apt-get`
-IPFS_PATH=
-# On dweb-mirror its in ./, in dweb its in /app/
-IPFS_STARTSCRIPT=./ipfs_container_daemon_modified.sh
-# Can also override variables used in IPFS_STARTSCRIPT: IPFS_USER; IPFS_API_PORT; IPFS_GATEWAY_PORT; IPFS_SWAM_PORT; IPFS_WS_PORT
+set -e
+
 #TODO-IPFS
+
+IPFS_PATH=
+# On dweb-mirror its in dweb-mirror, in dweb its in /app/ but either way should be in CWD
+IPFS_STARTSCRIPT="${PWD}/ipfs_container_daemon_modified.sh"
+if [ ! -e "${IPFS_STARTSCRIPT}" ]; then
+    echo "Missing ${IPFS_STARTSCRIPT}"
+    exit
+fi
+# Can also override variables used in IPFS_STARTSCRIPT: IPFS_USER; IPFS_API_PORT; IPFS_GATEWAY_PORT; IPFS_SWAM_PORT; IPFS_WS_PORT
 if ! (ipfs --version) # 0.4.17
 then
+    echo "No IPFS found - installing with GO"
     # Copied from dweb/Dockerfile
     # Dont appear to need these that Dockerfile installs: redis-server supervisor zsh git python3-pip curl sudo nginx python3-nacl golang nodejs npm cron
-    if [ -n ${APTGET} ]
+    if [ -n "${APTGET}" ]
     then
         ${APTGET} -y update && ${APTGET} -y install golang
-    elif [ -n ${BREW} ]
+    elif [ -n "${BREW}" ]
     then
          ${BREW} install golang
     fi
@@ -69,9 +78,9 @@ then
     && ipfs-update install latest \
     && cp ${IPFS_STARTSCRIPT} /usr/local/bin/start_ipfs
 else
+    echo "IPFS `ipfs --version` already installed "
     ipfs config --json Experimental.FilestoreEnabled true
 fi
-
 
 
 

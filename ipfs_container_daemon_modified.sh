@@ -3,10 +3,9 @@
 # Almost same code in "dweb" and "dweb-mirror" repos - main difference is enabling Filestore
 # all changes commented
 set -e      # Break on error
-set -x
 
 # Requires caller to set up
-# $IPFS_PATH pointing to directory space to use
+# $IPFS_PATH pointing to directory space to use (aka the "repo"), if unspecified will use .ipfs, On DOCKER=/pv/ipfs
 # $IPFS_USER if set, and run as root then will switch to this user
 # $IPFS_API_PORT if not 5001
 # $IPFS_GATEWAY_PORT if not 8080
@@ -17,7 +16,9 @@ set -x
 #DOCKER: make sure log includes date restarting and prominent === to help find crashes
 echo "===== Starting IPFS daemon at `date` ================="
 
-#DOCKER: not doing user change
+# If running as root && specified a IPFS_USER then relaunch as that user.
+#DOCKER runs as root, but doesnt specify a user,
+#DWEB-MIRROR may specifiy 'ipfs' or might just run as the logged in user (not sudo-ed)
 if [ `id -u` -eq 0 ]; then
     if [ -n "${IPFS_USER}" ]; then
         echo "Changing user to ${IPFS_USER}"
@@ -40,7 +41,7 @@ ipfs version
 #DOCKER: Want peerid allocated once per machine; files to persist across invocations, and config same on all sites
 #TODO: It should be coming up on 4001 and 4002 like dweb.me, check !
 if [ -e "${IPFS_PATH}/config" ]; then
-  echo "Found IPFS fs-repo at ${IPFS_PATH}"
+  echo "Found IPFS fs-repo at ${IPFS_PATH}, not reconfiguring"
 else
   ipfs init # ipfs init will create new repo if one doesnt exist which allocates a new peer-id.
   #DOCKER: Allow parameterization of ports by env variables
