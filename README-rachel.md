@@ -82,49 +82,35 @@ but I'm not sure there is anyone currently on the project with sufficient linux 
 TODO - currently got help from Refael Ackermann from the node-js project. 
 
 ### Install nvm 
-touch ~/.bashrc # Nvm needs it to at least exist
+```
+touch ~/.bash_profile # Nvm needs it to at least exist
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+source ~/.bash_profile
 nvm install node # Should compile 10.13.0 or later from source using the g++ installed earlier
 node -v # Check its 10.x 
-
+```
 ## Install dweb-mirror, for now installing globally.
 ```
 cd /usr/local  # Various other places didn't work
 # It may or may not be necessary to 'yarn add node-pre-gyp cmake'
 
-cd /usr/local
+# Create a top level cache directory (its in configDefaults.yaml to check here
+[ -e "/.data" ] && sudo mkdir "/.data/archiveorg" && sudo chown cap /.data/archiveorg
 
-# Now create a package.json 
-echo >package.json <<EOT
-{
-  "author": {
-    "name": "Mitra Ardron",
-    "email": "mitra@mitra.biz",
-    "url": "http://www.mitra.biz"
-  },
-  "bugs": {
-    "url": "https://github.com/internetarchive/dweb-mirror/issues"
-  },
-  "description": "Rachel install file for dweb-mirror",
-  "dependencies": {
-    "@internetarchive/dweb-archive": "latest",
-    "@internetarchive/dweb-mirror": "git+https://git@github.com/internetarchive/dweb-archive.git#rachel",
-  },
-  "devDependencies": {
-  },
-  "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
-  "keywords": [],
-  "license": "AGPL-3.0",
-  "name": "ia_rachel_install",
-  "scripts": {
-  },
-  "version": "0.1.36"
-}
-EOT
-sudo npm install # Theoretically should work but didnt
-sudo npm install @internetarchive/dweb-archive
-sudo npm install @internetarchive/dweb-transports
-cd @internetarchive/dweb-archive/dist && ln -s ../../dweb-objects/dweb-objects-bundle.js .
-cd @internetarchive/dweb-archive/dist && ln -s ../../dweb-transports/dweb-transports-bundle.js .
-#cd @internetarchive/dweb-archive/dist && cp -r includes/node_modules_dist dist/includes/node_modules  # May not be required since now not .gitignored
+# Now create a package.json that points at the mirror and install it
+curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/rachel/package-rachel.json
+yarn install
+```
+## Edit the config file
+```
+cp /usr/local/node_modules/dweb-mirror/dweb-mirror.config.yaml ~
+# probably edit ~/dweb-mirror.config.yaml to a smaller set of tasks initially
+```
+
+## Playing with yq but not using it yet
+```
+sudo add-apt-repository ppa:rmescandon/yq
+sudo apt update
+sudo apt install yq -y
+# or go get gopkg.in/mikefarah/yq.v2
 ```
