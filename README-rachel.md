@@ -55,6 +55,18 @@ sudo df -k
 sudo apt-get update  
 ```
 
+## Installing other tools
+I did: `sudo apt-get install gcc g++ make` but I'm not sure which of these are required. g++ is certainly required for nvm below 
+If something below complains of their absence then go ahead, the only downside is significant disk usage especially for gcc & g++
+
+Now get yarn - as probably going to end up using both npm and yarn
+```
+curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+sudo apt-get update && sudo apt-get install yarn
+```
+
+
 ## Updating Node (buggy)
 ```
 sudo node --version # Typically shows an antique version of node around version 4.x
@@ -67,36 +79,22 @@ Note there is an issue open on the community about this ...
 [http://community.rachelfriends.org/t/installing-usable-version-of-node/1082/4]
 but I'm not sure there is anyone currently on the project with sufficient linux expertise to figure out why this linux distro won't allow current node versions.
 
-## Installing other tools
-I did: `sudo apt-get install gcc g++ make` but I'm not sure any or all of these are required.  
-If something below complains of their absence then go ahead, the only downside is significant disk usage especially for gcc & g++
+TODO - currently got help from Refael Ackermann from the node-js project. 
 
-Now get yarn - as probably going to end up using both npm and yarn
-```
-curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-sudo apt-get update && sudo apt-get install yarn
-```
+### Install nvm 
+touch ~/.bashrc # Nvm needs it to at least exist
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+nvm install node # Should compile 10.13.0 or later from source using the g++ installed earlier
+node -v # Check its 10.x 
 
 ## Install dweb-mirror, for now installing globally.
 ```
 cd /usr/local  # Various other places didn't work
-```
-Struggling as `npm install wrtc` fails tried ...
-```
-sudo npm install -g node-gyp 
-
-went back to node 8.x (uninstall 9.x, run setup_8.x, check policy, install)
-yarn install node-pre-gyp
-yarn install cmake
-yarn install wrtc
-```
-
-#sudo npm install node-pre-gyp    # I did this because next line fails without it, didn't help
-sudo npm install @internetarchive/dweb-mirror # install -g didn't work
+# It may or may not be necessary to 'yarn add node-pre-gyp cmake'
 
 cd /usr/local
 
+# Now create a package.json 
 echo >package.json <<EOT
 {
   "author": {
@@ -129,4 +127,4 @@ sudo npm install @internetarchive/dweb-transports
 cd @internetarchive/dweb-archive/dist && ln -s ../../dweb-objects/dweb-objects-bundle.js .
 cd @internetarchive/dweb-archive/dist && ln -s ../../dweb-transports/dweb-transports-bundle.js .
 #cd @internetarchive/dweb-archive/dist && cp -r includes/node_modules_dist dist/includes/node_modules  # May not be required since now not .gitignored
-
+```
