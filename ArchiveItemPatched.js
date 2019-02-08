@@ -252,7 +252,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                         Util.asyncMap(this.members,
                             (ams,cb2) => {
                                 if (ams instanceof ArchiveMemberSearch) { cb2(null, ams) }
-                                else { ams.read((err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
+                                else { ams.read({},(err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
                             (err, arr) => {this.members=arr; cb() }); // Expand where possible
                     } else {
                         cb();

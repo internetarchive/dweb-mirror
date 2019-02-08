@@ -21,6 +21,7 @@ ArchiveMember.read = function({identifier = undefined}, cb) {
         identifier: Where to look - can be a real identifier or pseudo-one for a saved search
         cb(err, data structure from file)
     */
+    if (typeof unusedopts === "function") { cb = opts; opts={}; }
     const namepart = identifier;
     const part = "member";
     const relFilePath = path.join(namepart, `${namepart}_${part}.json`);
@@ -41,6 +42,7 @@ ArchiveMember.read = function({identifier = undefined}, cb) {
     });
 };
 ArchiveMember.prototype.read = function(unusedopts = {}, cb) {
+    if (typeof unusedopts === "function") { cb = unusedopts; unusedopts={}; }
     ArchiveMember.read({identifier: this.identifier}, cb);
 };
 
