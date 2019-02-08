@@ -11,11 +11,13 @@ function firstof {
 		if [ -e "${POSS}" ] 
 		then
 			echo "${POSS}"
+            return
 		fi
 		shift
 	done
 }
-function lnfirst {
+function lnfirst { # lnfirst destn source1 source2 source3 ...
+    # Symlink the first source found to the desn
 	DEST="$1"
 	shift
 	while (( "$#" )); do
@@ -30,14 +32,14 @@ function lnfirst {
 	done
 }
 # Where to serve the ARCHIVEUI from , this must be the same list as in <config>/archiveui/directory
-ARCHIVEUI=`firstof ../node_modules/dweb-archive/dist ./node_modules/@internetarchive/dweb-archive/dist`
+# Note the ./dweb-archive/dist works whether this directory is in node_modules or just installed via git clone
+ARCHIVEUI=`firstof ../dweb-archive/dist ./node_modules/@internetarchive/dweb-archive/dist`
 
+echo "linking into ArchiveUI at ${ARCHIVEUI}"
 pushd "${ARCHIVEUI}"
-lnfirst . ../../dweb-mirror/@internetarchive/dweb-objects/dist/dweb-objects-bundle.js \
-	../../dweb-objects/dist/dweb-objects-bundle.js \
+lnfirst . ../../dweb-objects/dist/dweb-objects-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-objects/dist/dweb-objects.bundle.js
-lnfirst . ../../dweb-mirror/@internetarchive/dweb-transports/dist/dweb-transports-bundle.js \
-	../../dweb-transports/dist/dweb-transports-bundle.js \
+lnfirst . ../../dweb-transports/dist/dweb-transports-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-transports/dist/dweb-transports.bundle.js
 popd
 ls -al ${ARCHIVEUI}

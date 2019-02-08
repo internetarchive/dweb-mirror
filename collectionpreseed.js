@@ -12,7 +12,9 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-stre
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
 // Other IA repos
+// noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
+// noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 
 //This Repo
@@ -26,9 +28,10 @@ const ArchiveMember = require('./ArchiveMemberPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 const MirrorConfig = require('./MirrorConfig');
+const MirrorFS = require('./MirrorFS');
 const CrawlManager = require('./CrawlManager');
 
-const crawlPreseed = [ //skipFetchFile, skipcache, mediatype: collection
+const crawlTasks = [ //skipFetchFile, skipcache, mediatype: collection
     // Get the tiles for the top 60 items on the top 100 collections of each supported media type
     { identifier: ["image","movies","texts","audio"], level: "details",
         crawl: { rows: 100, level: "details", sort: "-downloads",
@@ -44,11 +47,11 @@ const crawlOptions = {
     skipCache: true, // Dont care if we already have it cached, its the gateway we want to be seeding it anyway
     defaultDetailsSearch: {sort: "-downloads", rows: "40", level: "tile"}, // Not used, specified above
     defaultDetailsRelated: {sort: "-downloads", rows: "6", level: "tile"}, // Get tiles for 6 related on each, so details page will display
-}
+};
 
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
-        MirrorFS = MirrorFS.init({directories: config.directories});
+        MirrorFS.init({directories: config.directories});
         DwebTransports.connect({
             //transports: ["HTTP", "WEBTORRENT", "IPFS"],
             transports: ["HTTP"],
@@ -56,7 +59,7 @@ MirrorConfig.new((err, config) => {
         }, (unusederr, unused) => {
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             DwebTransports.http().supportFunctions.push("createReadStream");
-            CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
+            CrawlManager.startCrawl(crawlTasks, crawlOptions, (unusederr, unusedres) => {
                 DwebTransports.p_stop(t => debug("%s is stopped", t.name))});
             // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168
         });

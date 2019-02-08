@@ -108,7 +108,7 @@ class MirrorFS {
     static readFile(relFilePath, cb) {
         // like fs.readFile, but checks relevant places first
         this.checkWhereValidFile(relFilePath, {}, (err, existingFilePath) => {
-            if (err) cb(err)
+            if (err) cb(err);
             else fs.readFile(existingFilePath, cb);
         });
     }
@@ -197,7 +197,7 @@ class MirrorFS {
     static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
         /*
         digest      Digest of file to find
-        format      hex or multihash - how hash formated
+        format      hex or multihash - how hash formatted
         algorithm   e.g. 'sha1'
         relFilePath <Identifier>/<Filename>
 
@@ -240,9 +240,9 @@ class MirrorFS {
         }, (err, res) => {
             // Three possibilities - err (something failed) res (found) !err && !res (not found)
             if (err)
-                cb(err)
+                cb(err);
             else if (!res)
-                cb (new Error(`${relFilePath} not found in caches`))
+                cb (new Error(`${relFilePath} not found in caches`));
             else
                 cb(null, path.join(res, relFilePath)); // relFilePath should have been set by time get here
         });
@@ -282,7 +282,7 @@ class MirrorFS {
                 _notcached.call(this);
             } else { // sha1 matched, skip fetching, just stream from saved
                 if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
-                    const copyFilePath = path.join(this.copyDirectory, relFilePath)
+                    const copyFilePath = path.join(this.copyDirectory, relFilePath);
                     fs.copyFile(existingFilePath, copyFilePath , (err) => {
                         if (err) {
                             debug("Failed to copy %s to %s", relFilePath, copyFilePath);
@@ -403,8 +403,8 @@ class MirrorFS {
         fs.readdir(cacheDirectory, (err, files) => {
             if (err) {
                 debug("Failed to read directory %s", cacheDirectory);
-                cb(err); // Just pass up to caller
-            } else {
+                files=[];
+            }
                 return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories"}) // Can exclude other non hashables here
                     .map((identifier, cb) => fs.readdir(path.join(cacheDirectory, identifier),
                         (err, files) => {
@@ -422,7 +422,6 @@ class MirrorFS {
                         {name: "Read files sub dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
                     .flatten({name: "Flatten arrays level 2"})                                                 //  <item>/<file> & <item>/<subdir>/<file>
                     .pipe(s);
-            }
         });
         return s;
     }

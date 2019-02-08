@@ -39,7 +39,7 @@ mirrorHttp|ArchiveItem(Patched).relatedItems|MirrorFS.cacheAndOrStream(CACHEDIRS
 dweb-archivecontroller|ArchiveItem._fetch_metadata|dweb:/arc/archive.org/metadata/IDENTIFIER|
 mirrorHttp|ArchiveItem.fetch_query .members unexpanded|CACHEDIR/IDENTIFIER_member_cached.json|
 dweb-archivecontroller|ArchiveItem.fetch_query .members unexpanded|dweb.me/arc/archive.org/advancedsearch|
-mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_iteminage.jpg}) or MirrorFS.cacheAndOrStream(item.metadata.thumbnaillinks)
+mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_itemimage.jpg}) or MirrorFS.cacheAndOrStream(item.metadata.thumbnaillinks)
 mirrorHttp|MirrorFS.cacheAndOrStream|CACHEDIRS or urls|
 mirrorHttp|streamArchiveFile|loadedA;ArchiveFile(patched).cacheAndOrStream|
 mirrorHttp|streamThumbnail|loadedAI;ArchiveItem(patched).saveThumbnail|

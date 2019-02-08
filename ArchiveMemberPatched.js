@@ -11,7 +11,6 @@ const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMe
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 
-// noinspection JSUnresolvedVariable
 ArchiveMember.prototype.save = function({} = {}, cb) {
     cb(new Error("Shouldnt be trying to save ArchiveMember, only ArchiveMemberSearch"));
 };
@@ -41,7 +40,6 @@ ArchiveMember.read = function({identifier = undefined}, cb) {
         }
     });
 };
-// noinspection JSUnresolvedVariable
 ArchiveMember.prototype.read = function(unusedopts = {}, cb) {
     ArchiveMember.read({identifier: this.identifier}, cb);
 };

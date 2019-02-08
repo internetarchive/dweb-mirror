@@ -29,7 +29,9 @@ to their own disks, and then to serve them up via dweb tools such as IPFS or Web
 
 ## Installation
  
-At the moment this is one set for developing, or use, later I'll split it when its more stable.
+At the moment this is one set for developing, or use, later I'll split it when its more stable.\
+
+Please check for a platform specific README as these instructions dont work for some of the smaller platforms.
 
 #### 1. Prelim - getting your machine ready.
 * You'll need git, node, npm, which should be on most Linux machines.
@@ -61,6 +63,8 @@ Please check current versions of README.md in those packages, as they may have c
 You can come back and do this again later, but will need to rerun `cd /path/to/install/dweb-mirror; npm install` so that it recognizes the dev versions.
 
 #### 3. Install dweb-mirror
+
+(TODO - note there is an alternative where we are installing dweb-mirror direct from npm)
 
 From a command line:
 
@@ -112,7 +116,7 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 * `cd dweb-mirror && ./mirrorHttp.js &` # starts the HTTP server
   * the startup is a little slow but you'll see some debugging when its live.
 * `open http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
-* open [http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244] to see the test crawl if you didn't change 
+* open [http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244] to see the test crawl if you did not change 
 If you don’t get a Archive UI then look at the server log (in console) to see for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 

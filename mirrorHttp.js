@@ -32,7 +32,9 @@ const path = require('path');
 const ParallelStream = require('parallel-streams');
 
 // IA packages
+// noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
+// noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
 //TODO-RACHEL auto test for presence of wrtc, its not available on rachel
@@ -55,7 +57,7 @@ MirrorConfig.new((err, config) => {
 
 // noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
-MirrorFS = MirrorFS.init({directories: config.directories});
+MirrorFS.init({directories: config.directories});
 DwebTransports.p_connect({
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     transports: ["HTTP"],

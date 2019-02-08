@@ -38,6 +38,7 @@ const ParallelStream = require('parallel-streams');
 
 // IA packages
 global.DwebTransports = require('@internetarchive/dweb-transports');
+// noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 //TODO-RACHEL auto test for presence of wrtc, its not available on rachel
 //const wrtc = require('wrtc');

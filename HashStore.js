@@ -26,10 +26,12 @@ class HashStore {
         function f(table, key, val) {
             debug("%s.%o <- %o", table, key, val);
             if (typeof key === "object") {
+                // noinspection JSPotentiallyInvalidUsageOfClassThis
                 return this._db(table).batch(Object.keys(key).map(k => {
                     return {type: "put", key: k, value: key[k]};
                 }));
             } else {
+                // noinspection JSPotentiallyInvalidUsageOfClassThis
                 return this._db(table).put(key, val);
             }
         }
@@ -38,6 +40,7 @@ class HashStore {
         if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
         function f(cb) {
             // This is similar to level.get except not finding the value is not an error, it returns undefined.
+            // noinspection JSPotentiallyInvalidUsageOfClassThis
             return this._db(table).get(key, function (err, val) {
                 if (err && (err.type === "NotFoundError")) cb(null, undefined); // Undefined is not an error
                 if (err) {
@@ -70,6 +73,7 @@ class HashStore {
         if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
         function f(cb) {
             const keys=[];
+            // noinspection JSPotentiallyInvalidUsageOfClassThis
             const db = this._db(table);    //synchronous
             db
                 .createKeyStream()

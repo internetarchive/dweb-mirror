@@ -28,6 +28,7 @@ ArchiveItem.prototype._namepart = function() {
     }
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.save = function(opts = {}, cb) {
     /*
         Save metadata for this file as JSON in multiple files.
@@ -65,7 +66,8 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 
         function f() {
             // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
-                    Util.forEach(   // TODO move to async.forEach which has same syntax
+                    // noinspection JSPotentiallyInvalidUsageOfThis
+            Util.forEach(   // TODO move to async.forEach which has same syntax
                         [
                             ["meta", this.metadata],    // Maybe empty if is_dark
                             ["members", this.members],
@@ -94,7 +96,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 
 };
 // noinspection JSUnresolvedVariable
-// noinspection JSUnusedGlobalSymbols
+// noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
 ArchiveItem.prototype.read = function(opts = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files

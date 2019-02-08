@@ -5,11 +5,12 @@
 # Paths can include unix conventions like ~ * . .. etc
 # Default is to look in home directory and root of any device (for example a USB) for directories "archiveorg"
 directories:
-  - ~/archiveorg
-  - /Volumes/*/archiveorg
+  - ~/archiveorg # Home directory of user
+  - /Volumes/*/archiveorg # Any connected volume
+  - /.data/archiveorg # This is where Rachel3+ puts its data
 archiveui: # Where to find the ArchiveUI relative to the directory this file and the code resides in
-  directories: # Note code uses "directory" which is first of these to exist.
-    - ../dweb-archive/dist # Try a repo cloned to a directory parallel to this one, which is presumably for development
+  directories: # Note code uses "directory" which is first of these to exist - note this should match the list in install.sh TODO figure out how to read this yaml in install.sh
+    - ../dweb-archive/dist # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
     - node_modules/@internetarchive/dweb-archive/dist # Or a repo cloned during 'npm install'
 # The apps group include configuration only used by one application
 apps:
@@ -27,14 +28,14 @@ apps:
     #      all:        all files in the item - beware this can be large
     # search & related consists of sort: (only -downloads supported at present), rows: how many items to retrieve;
     #      level, search & related inside another search or related applies to the items retrieved by that search/related and nests indefinately.
-    tasks:
+    tasks: [ ]
     # opts controls how the search performs
     opts:
       concurrency: 10 # No more than this many tasks at a time (typically 10 open file downloads or searches
       limitTotalTasks: 300 # No more than this many tasks total (typically one per item & file.
       maxFileSize: 200000000 # Maximum size of any file retrieved
       skipCache: false # Set to true to ignore current cache contents, this is used to force the upstream server to look at each item and cache it
-      skipFetchFile: false # Set to true to ignore actually fething files, most often used for debugging
+      skipFetchFile: false # Set to true to ignore actually fetching files, most often used for debugging
       # Default crawls if either search &| related are unspecified but crawling an item with level=detail||full
       defaultDetailsSearch:
         sort: '-downloads'
