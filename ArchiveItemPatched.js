@@ -335,7 +335,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
             recursable(null, null);
         } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
             // noinspection JSUnresolvedVariable
-            const servicesurl = `${Util.gateway.url_servicesImg}/${this.itemid}`; // Direct to Archive server not via gateway
+            const servicesurl = `${Util.gatewayServer()}${Util.gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
             // Include direct link to services
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
