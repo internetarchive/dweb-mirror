@@ -122,7 +122,8 @@ sudo apt install yq -y
 ```
 
 ## Auto running
-TODO - hook into supervisorctl etc
-TODO - auto start mirrorHttp
-TODO - run crawl under cron
-TODO - maybe setup easy auto-update process
+* TODO-RACHEL - hook into supervisorctl etc [http://community.rachelfriends.org/t/starting-at-boot-supervisorctl/1202]
+  * THEN TODO-RACHEL - auto start mirrorHttp
+* TODO-RACHEL - run crawl under cron
+* TODO-RACHEL - maybe setup easy auto-update process
+* TODO-RACHEL - integrate into menus [http://community.rachelfriends.org/t/integrating-into-the-main-user-facing-menu/1203]

@@ -17,7 +17,6 @@ See URL_MAPPING.md for summary of below rules plus what they call.
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
-TODO-RACHEL - merge mirrorHttp with this with mirrorHttp_rachel
  */
 // External packages
 //Not debugging: express:*
@@ -37,7 +36,7 @@ global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
-//TODO-RACHEL auto test for presence of wrtc, its not available on rachel
+//auto test for presence of wrtc, its not available on rachel
 let wrtc;
 try {
     wrtc = require('wrtc');
@@ -65,7 +64,6 @@ MirrorFS.init({directories: config.directories});
 const connectOpts = {
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     transports: ["HTTP"],
-    //TODO-RACHEL comment out if wrtc not avail
 }
 if (wrtc) connectOpts.webtorrent = {tracker: {wrtc}}
 
