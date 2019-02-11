@@ -27,14 +27,16 @@
     "multihashes": "^0.4.14",
     "parallel-streams": "^0.0.14",
     "readable-stream": "^3.1.1",
-    "sha": "^2.0.1",
-    "wrtc": "^0.2.1"
+    "sha": "^2.0.1"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "devDependencies": {},
   "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
   "keywords": [],
   "license": "AGPL-3.0",
+  "optionalDependencies": {
+    "wrtc": "^0.2.1"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/internetarchive/dweb-mirror.git"

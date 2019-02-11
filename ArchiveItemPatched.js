@@ -252,7 +252,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                         Util.asyncMap(this.members,
                             (ams,cb2) => {
                                 if (ams instanceof ArchiveMemberSearch) { cb2(null, ams) }
-                                else { ams.read((err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
+                                else { ams.read({},(err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
                             (err, arr) => {this.members=arr; cb() }); // Expand where possible
                     } else {
                         cb();
@@ -335,7 +335,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
             recursable(null, null);
         } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
             // noinspection JSUnresolvedVariable
-            const servicesurl = `${Util.gateway.url_servicesImg}/${this.itemid}`; // Direct to Archive server not via gateway
+            const servicesurl = `${Util.gatewayServer()}${Util.gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
             // Include direct link to services
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg

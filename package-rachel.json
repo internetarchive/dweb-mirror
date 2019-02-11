@@ -1,0 +1,24 @@
+{
+  "author": {
+    "name": "Mitra Ardron",
+    "email": "mitra@mitra.biz",
+    "url": "http://www.mitra.biz"
+  },
+  "bugs": {
+    "url": "https://github.com/internetarchive/dweb-mirror/issues"
+  },
+  "description": "Rachel install file for dweb-mirror",
+  "dependencies": {
+    "@internetarchive/dweb-archive": "latest",
+    "@internetarchive/dweb-mirror": "git+https://git@github.com/internetarchive/dweb-mirror.git#rachel"
+  },
+  "devDependencies": {
+  },
+  "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
+  "keywords": [],
+  "license": "AGPL-3.0",
+  "name": "ia_rachel_install",
+  "scripts": {
+  },
+  "version": "0.1.36"
+}

@@ -17,7 +17,6 @@ See URL_MAPPING.md for summary of below rules plus what they call.
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
-TODO-RACHEL - merge mirrorHttp with this with mirrorHttp_rachel
  */
 // External packages
 //Not debugging: express:*
@@ -37,9 +36,13 @@ global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
-//TODO-RACHEL auto test for presence of wrtc, its not available on rachel
-const wrtc = require('wrtc');
-
+//auto test for presence of wrtc, its not available on rachel
+let wrtc;
+try {
+    wrtc = require('wrtc');
+} catch(err) {
+    debug("wrtc not present");
+}
 // Local files
 const MirrorFS = require('./MirrorFS');
 const MirrorConfig = require('./MirrorConfig');
@@ -58,12 +61,13 @@ MirrorConfig.new((err, config) => {
 // noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 MirrorFS.init({directories: config.directories});
-DwebTransports.p_connect({
+const connectOpts = {
     //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
     transports: ["HTTP"],
-    //TODO-RACHEL comment out if wrtc not avail
-    webtorrent: {tracker: { wrtc }},
-}).then(() => {
+}
+if (wrtc) connectOpts.webtorrent = {tracker: {wrtc}}
+
+DwebTransports.p_connect(connectOpts).then(() => {
     const Thttp =  DwebTransports.http();
     if (Thttp) Thttp.supportFunctions.push("createReadStream");
 }); // Async, handling may fail while this is happening

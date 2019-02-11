@@ -29,7 +29,9 @@ to their own disks, and then to serve them up via dweb tools such as IPFS or Web
 
 ## Installation
  
-At the moment this is one set for developing, or use, later I'll split it when its more stable.
+At the moment this is one set for developing, or use, later I'll split it when its more stable.\
+
+Please check for a platform specific README as these instructions dont work for some of the smaller platforms.
 
 #### 1. Prelim - getting your machine ready.
 * You'll need git, node, npm, which should be on most Linux machines.
@@ -61,6 +63,8 @@ Please check current versions of README.md in those packages, as they may have c
 You can come back and do this again later, but will need to rerun `cd /path/to/install/dweb-mirror; npm install` so that it recognizes the dev versions.
 
 #### 3. Install dweb-mirror
+
+(TODO - note there is an alternative where we are installing dweb-mirror direct from npm)
 
 From a command line:
 
