@@ -51,7 +51,7 @@ const crawlOptions = {
 
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
-        MirrorFS.init({directories: config.directories});
+        MirrorFS.init({directories: config.directories}); // Not passing in httpServer or urlUrlstore, we aren't using them here
         DwebTransports.connect({
             //transports: ["HTTP", "WEBTORRENT", "IPFS"],
             transports: ["HTTP"],

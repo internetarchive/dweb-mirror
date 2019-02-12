@@ -76,6 +76,8 @@ then
     fi
     #Alternative is to install IPFS directly from "https://dist.ipfs.io/#go-ipfs" via a browser
     #open https://dist.ipfs.io/#go-ipfs
+
+    # Install ipfs from source - first time IPFS_STARTSCRIPT is run it will configure IPFS.
     go get -u -v github.com/ipfs/ipfs-update \
     && ipfs-update install latest \
     && cp ${IPFS_STARTSCRIPT} /usr/local/bin/start_ipfs

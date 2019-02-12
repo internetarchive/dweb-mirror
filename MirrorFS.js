@@ -14,6 +14,8 @@ const waterfall = require('async/waterfall');
 // other packages of ours
 const ParallelStream = require('parallel-streams');
 const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
+//Should always be defined in caller prior to requiring dweb-objects
+const httptools = require('@internetarchive/dweb-transports/httptools');
 
 // other packages in this repo
 const HashStore = require('./HashStore');
@@ -31,8 +33,10 @@ class MirrorFS {
 
      */
 
-    static init({directories}) { // Not a constructor, all methods are static
+    static init({directories, httpServer, urlUrlstore, }) { // Not a constructor, all methods are static
         this.directories = directories;
+        this.httpServer = httpServer;
+        this.urlUrlstore = urlUrlstore;
         this.hashstores = Object.fromEntries(               // Mapping
             this.directories.map(d =>                         // of each config.directories
                 [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
@@ -367,11 +371,15 @@ class MirrorFS {
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
                                                     this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath);
-                                                    // noinspection JSUnresolvedVariable
-                                                    debug(`Closed ${debugname} size=${writable.bytesWritten}`);
-                                                    if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
-                                                        callbackEmptyOrData(newFilePath);
-                                                    }
+                                                    this.addIPFS({relFilePath}, (err, res) => {
+                                                        //Ignore err & res, its ok to fail to add to IPFS and will be logged inside addIPFS()
+                                                        // noinspection JSUnresolvedVariable
+                                                        debug(`Closed ${debugname} size=${writable.bytesWritten}`);
+                                                        if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
+                                                            callbackEmptyOrData(newFilePath);
+                                                        }
+                                                    } );
+
                                                 }
                                             })
                                         }
@@ -445,6 +453,37 @@ class MirrorFS {
             }, cb)
     }
 
+    static addIPFS({relFilePath}, cb) {
+        /* Add a file to IPFS, it should end up with a hash that matches that generated on dweb.me, allowing IPFS network splits to be healed.
+        TODO document args
+        Working around IPFS limitation in https://github.com/ipfs/go-ipfs/issues/4224
+         */
+        /*
+        check if filename is relative to $HOME
+        if not then symlink and convert path to use symlink
+        call js-api to write it
+        check hash matches that in the metadata
+         */
+
+        // This is the URL that the IPFS server uses to get the file from the local mirrorHttp
+        if (!this.urlUrlstore) { // Not doing IPFS
+            cb(null,undefined); // OK not to do it
+        } else {
+            const url2file = [this.httpServer + ACUtil.gateway.urlDownload, relFilePath].join('/'); // This is arc/archive.org/download/
+            const url = `${this.urlUrlstore}?arg=${encodeURIComponent(url2file)}`
+            // Have to be careful to avoid loops, the call to addIPFS should only be after file is retrieved and cached, and then addIPFS shouldnt be called if already cached
+            httptools.p_GET(url, (err, res) => {
+                if (err) {
+                    debug("addIPFS failed in http: %s", err.message);
+                    cb(err);
+                } else {
+                    debug("XXX Added to IPFS %O", res);
+                    //TODO-IPFS check some part of res against hash we expected
+                    cb(null, res)
+                }
+            })
+        }
+    }
 }
 
 exports = module.exports = MirrorFS;

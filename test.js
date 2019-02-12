@@ -27,7 +27,7 @@ const HashStore = require('./HashStore');
 MirrorConfig.from((err, config) => {
 
 // noinspection JSUnresolvedVariable
-MirrorFS.init({directories: config.directories});
+MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
 MirrorFS.loadHashTables({}, (err, res) => console.log(err, res));
 
 
