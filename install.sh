@@ -54,7 +54,3 @@ then
 else
     ipfs config --json Experimental.FilestoreEnabled true
 fi
-
-
-
-
