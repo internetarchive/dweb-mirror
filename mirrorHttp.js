@@ -31,8 +31,7 @@ const path = require('path');
 const ParallelStream = require('parallel-streams');
 
 // IA packages
-// noinspection JSUndefinedPropertyAssignment
-global.DwebTransports = require('@internetarchive/dweb-transports');
+global.DwebTransports = require('@internetarchive/dweb-transports'); // Must be before DwebObjects
 // noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
@@ -283,8 +282,8 @@ app.get('/arc/archive.org/details/:itemid', (req, res) => {
     res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); // and redirect to the html file
 });
 // noinspection JSUnresolvedFunction
-app.get('/arc/archive.org/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
+app.get(ACUtil.gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+app.get(ACUtil.gateway.urlDownload + '/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );

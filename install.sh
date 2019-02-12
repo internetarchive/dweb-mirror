@@ -85,6 +85,3 @@ else
     echo "IPFS `ipfs --version` already installed "
     ipfs config --json Experimental.FilestoreEnabled true
 fi
-
-
-

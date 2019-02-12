@@ -8,7 +8,6 @@ const debug = require('debug')("dweb-mirror:crawl");
 const getopts = require('getopts');
 const canonicaljson = require('@stratumn/canonicaljson');
 // Other IA repos
-// noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names

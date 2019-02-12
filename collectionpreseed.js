@@ -12,7 +12,6 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-mirror:* parallel-stre
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
 // Other IA repos
-// noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
