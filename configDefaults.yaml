@@ -57,4 +57,4 @@ archiveorg:
 upstream: 'https://dweb.me'
 transports:
   ipfs:
-    urlUrlstore: 'https://localhost:5001/api/v0/urlstore/add'
+    urlUrlstore: 'http://localhost:5001/api/v0/urlstore/add'

@@ -171,9 +171,6 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
         }
 
         if (!opts.dummy) { // Note almost same code in collectionpreseed.js
-            //TODO pass in httpServer=http://localhost:4244 and this.urlUrlstore = config.transports.ipfs.urlUrlstore
-
-
                 MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
                     DwebTransports.connect({
                         //transports: ["HTTP", "WEBTORRENT", "IPFS"],

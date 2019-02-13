@@ -15,6 +15,7 @@
     "@internetarchive/dweb-transports": "git+https://git@github.com/internetarchive/dweb-transports.git",
     "@stratumn/canonicaljson": "^1.0.2",
     "async": "^2.6.1",
+    "child_process": "^1.0.2",
     "debug": "^4.1.1",
     "express": "^4.16.4",
     "getopts": "^2.2.3",

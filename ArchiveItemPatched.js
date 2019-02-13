@@ -67,6 +67,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
         function f() {
             // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
                     // noinspection JSPotentiallyInvalidUsageOfThis
+            // Note all these files should be in MirrorFS.isSpecialFile
             Util.forEach(   // TODO move to async.forEach which has same syntax
                         [
                             ["meta", this.metadata],    // Maybe empty if is_dark
@@ -238,8 +239,13 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     } else {
                         MirrorFS.readFile(relFilePath, (err, jsonstring) => {
                             if (!err) {
-                                this.members = canonicaljson.parse(jsonstring)
-                                    .map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
+                                try {
+                                    const data = canonicaljson.parse(jsonstring);
+                                    this.members = data.map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
+                                } catch(err) {
+                                    debug("Cant parse json in %s: %s", relFilePath, err.message)
+                                    this.members = []
+                                }
                             }
                             cb();
                         });

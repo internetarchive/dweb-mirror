@@ -1,5 +1,6 @@
 const level = require('level');
 const debug = require("debug")("dweb-mirror:HashStore");
+const each = require('async/each');
 
 class HashStore {
     /*
@@ -21,18 +22,33 @@ class HashStore {
         }
         return this.tables[table]; // Note file might not be open yet, if not any put/get/del will be queued by level till its ready
     }
+    destroy(table, cb) {
+        level.destroy(this._tablepath(table), cb);
+    }
+    destroyAll(cb) {
+        each(Object.keys(this.tables), (table, cb2) => this.destroy(table, cb2), cb)
+    }
+
     put(table, key, val, cb) {
-        if (typeof cb === "function") { f.call(this, table, key, val).catch(err=>cb(err)).then((res) => cb(null, res))} else return f.call(this, table, key, val);
-        function f(table, key, val) {
+        /*
+        Set a key to a val for a specific table. TODO check what gets returned
+        val = any valid persistent value acceptable to level (not sure what limits are)
+        key = any valud key for level (not sure what limits are)
+        cb(err)
+         */
+        if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+        function f(cb2) {
             debug("%s.%o <- %o", table, key, val);
             if (typeof key === "object") {
                 // noinspection JSPotentiallyInvalidUsageOfClassThis
-                return this._db(table).batch(Object.keys(key).map(k => {
-                    return {type: "put", key: k, value: key[k]};
-                }));
+                this._db(table).batch(Object.keys(key).map(k => {
+                        return {type: "put", key: k, value: key[k]};
+                    }),
+                    cb2
+                );
             } else {
                 // noinspection JSPotentiallyInvalidUsageOfClassThis
-                return this._db(table).put(key, val);
+                this._db(table).put(key, val, cb2);
             }
         }
     }

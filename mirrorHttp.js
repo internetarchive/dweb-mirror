@@ -28,7 +28,10 @@ const url = require('url');
 const express = require('express'); //http://expressjs.com/
 const morgan = require('morgan'); //https://www.npmjs.com/package/morgan
 const path = require('path');
+const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const ParallelStream = require('parallel-streams');
+const waterfall = require('async/waterfall');
+
 
 // IA packages
 global.DwebTransports = require('@internetarchive/dweb-transports'); // Must be before DwebObjects
@@ -164,43 +167,40 @@ function temp(req, res, next) {
 
 function streamArchiveFile(req, res, next) {
     // Note before this is called req.streamOpts = {start, end}
+    //TODO-CACHE-AGING Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile (maxAge, immutable)
     try {
         const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
         const itemid = req.params['itemid'];
+        const opts = Object.assign({}, req.streamOpts, { wantStream: true });
+        let af; // Passed out from waterfall to end
         debug('Sending ArchiveFile %s/%s', itemid, filename);
-        loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.new can do this, but wont use cached metadata
-            ArchiveFile.new({archiveitem, filename}, (err, af) => {
+        waterfall([
+                (cb) => loadedAI({itemid}, cb),
+                (archiveitem, cb) => ArchiveFile.new({archiveitem, filename}, cb),
+                // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
+                (archivefile, cb) => {
+                    af = archivefile;
+                    archivefile.cacheAndOrStream(opts, cb)},
+            ],
+            (err, s)=> {
                 if (err) {
-                    debug("streamArchiveFile -> ArchiveFile.new({itemid:%s, filename:%s}) failed: %s", itemid, filename, err.message);
+                    // Failed - report
+                    debug("streamArchiveFile failed for %s/%s: %s",itemid, filename, err.message);
                     res.status(404).send(err.message);
                 } else {
+                    // Succeeded - pipe back to user with headers
                     res.status(req.streamOpts ? 206 : 200);
                     res.set('Accept-ranges', 'bytes');
                     if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size) - 1}/${af.metadata.size}`);
                     // noinspection JSUnresolvedVariable
-                    const opts = Object.assign({}, req.streamOpts, {
-                        wantStream: true
-                    });
                     res.set("Content-Type", af.mimetype());   // Not sure what happens if doesn't find it.
-
-                    // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
-                    af.cacheAndOrStream(opts, (err, s) => {
-                        if (err) {
-                            next(err);
-                        }
-                        else {
-                            s
-                                .pipe(ParallelStream.log(m => `${itemid}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {
-                                    name: "crsdata",
-                                    objectMode: false
-                                })) //Just debugging stream on way in
-                                .pipe(res);
-                        }
-                    });
-                    //TODO-CACHE-AGING Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile (maxAge, immutable)
+                    // Uncomment first .pipe to log bytes on way out.
+                    s
+                        //.pipe(ParallelStream.log(m => `${itemid}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {name: "crsdata",  objectMode: false }))
+                        .pipe(res)
                 }
-            });
-        });
+            }
+        );
     } catch (err) {
         debug('ERROR caught unhandled error in streamArchiveFile for %s: %s', req.url, err.message);
         next(err);
@@ -249,23 +249,37 @@ function streamQuery(req, res, next) {
 
 
 function streamThumbnail(req, res, next) {
+    /*
+    Stream back the icon,
+    In many cases we will have the icon, but nothing else for the item (eg its a tile on a collection), in that case just send the icon
+    Otherwise fetch metadata, find it in several possible places.
+     */
+    function sendJpegStream(s) {
+        // Stream back with appropriate status and Content-type
+        res.status(200); // Assume error if dont get here
+        res.set({"Content-Type": "image/jpeg; charset=UTF-8"} );
+        s.pipe(res);
+    }
     const itemid = req.params['itemid'];
     debug('Sending Thumbnail for %s', itemid);
-    loadedAI({itemid}, (err, archiveitem) => { // ArchiveFile.new can do this, but wont use cached metadata
-        if (err) { // Failed to load itemid
-            next(err);
+    MirrorFS.checkWhereValidFile(itemid+"/__ia_thumb.jpg", {}, (err, existingFilePath) => {
+        if (!err) {
+            sendJpegStream(fs.createReadStream(existingFilePath));
         } else {
-            // noinspection JSUnresolvedVariable
-            archiveitem.saveThumbnail({wantStream: true}, (err, s) => {
-                if (err) {
-                    debug("item %s.saveThumbnail failed: %s", itemid, err.message);
-                    next(err);
-                } else {
-                    res.status(200); // Assume error if dont get here
-                    res.set({"Content-Type": "image/jpeg; charset=UTF-8"} );
-                    s.pipe(res);
+            // We dont already have the file
+            waterfall([
+                    (cb1) => loadedAI(itemid, cb1),
+                    (archiveitem, cb2) => archiveitem.saveThumbnail({wantStream: true}, cb2)
+                ],
+                (err, s) => {
+                    if (err) {
+                        debug("Failed to stream Thumbnail for %s: %s", itemid, err.message);
+                        next(err)
+                    } else {
+                        sendJpegStream(s);
+                    }
                 }
-            });
+            );
         }
     });
 }

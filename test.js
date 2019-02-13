@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // noinspection JSUnresolvedVariable
 process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 
@@ -24,11 +25,10 @@ const MirrorFS = require('./MirrorFS');
 
 const HashStore = require('./HashStore');
 //HashStore.test();
-MirrorConfig.from((err, config) => {
+MirrorConfig.new((err, config) => {
 
 // noinspection JSUnresolvedVariable
 MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
-MirrorFS.loadHashTables({}, (err, res) => console.log(err, res));
 
 
 /*

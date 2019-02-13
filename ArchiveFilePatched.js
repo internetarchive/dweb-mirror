@@ -27,7 +27,8 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStre
                 urls, skipFetchFile, wantStream, start, end, debugname,
                 sha1: this.metadata.sha1,
                 relFilePath: path.join(itemid, filename),
-                expectsize: this.metadata.size
+                expectsize: this.metadata.size,
+                ipfs: this.metadata.ipfs, // Will usually be undefined as not currently retrieving
             }, (err, streamOrUndefined)=> {
                 if (err) {
                     debug("Unable to cacheOrStream %s",debugname); cb(err);

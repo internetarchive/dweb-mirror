@@ -34,12 +34,13 @@ See [Milestone v0.1.0 on Github](https://github.com/internetarchive/dweb-mirror/
 [DONE] Figure out how to install IPFS 
   [DONE] Check "dweb" repo for how we do it on Docker, copy into an install script
   [DONE] Instal IPFS on my machine, following those instructions, and check multiple runs work
-* Figure out how to add files
-  * Hook into caching process for generic add to any transport
-  * Check whether nocopy works as described in https://github.com/internetarchive/dweb-mirror/issues/22
-  * Find a way to add so matches the IPFS hash generated on server
-* if there is a way to just automate updating the entire cache on IPFS see [https://github.com/protocol/collab-internet-archive/issues/62](collab#62)
-  * Hook IPFS to watch the cache directories
-* If no way then hook into MirrorFS (?) so updates IPFS as it writes the cache,
-  * will need some bulk process to counter IPFS's dendency to randomly lose the whole repo or some subset of it (via GC we think) 
+[DONE] Figure out how to add files
+  [DONE] Hook into caching process for generic add to any transport
+  [DONE] Check whether nocopy works as described in https://github.com/internetarchive/dweb-mirror/issues/22
+  [DONE] Find a way to add so matches the IPFS hash generated on server
+[DONE] if there is a way to just automate updating the entire cache on IPFS see [https://github.com/protocol/collab-internet-archive/issues/62](collab#62)
+  [NO] Hook IPFS to watch the cache directories
+       Moved to urlstore which makes this irrelevant and gives resiliance if remove volumes
+[N/A] If no way then hook into MirrorFS (?) so updates IPFS as it writes the cache,
+  [DONE] will need some bulk process to counter IPFS's dendency to randomly lose the whole repo or some subset of it (via GC we think) 
 * Make sure that either dweb-mirror (prefered) or the browser can fetch files that are on IPFS

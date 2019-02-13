@@ -457,8 +457,11 @@ cb behavior needs explanation !
 * In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
 
 
-#### static loadHashTables({cacheDirectories = undefined, algorithm = 'sha1'}, cb)
-Load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'
+#### static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = true}, cb)
+Perform maintenance on the system. 
+Clear out old hashes and load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'.
+Make sure all applicable files are in IPFS. 
+Delete any .part files (typically these come from a server crash while something is partially streamed in)
 
 # Applications
 

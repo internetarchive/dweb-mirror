@@ -82,7 +82,7 @@ class MirrorConfig {
             } else {
                 try {
                     const o = yaml.safeLoad(yamlstr);
-                    cb(null, o);
+                    try { cb(null, o); } catch(err) { console.error("Uncaught err in readYaml cb ", err); }
                 } catch(err) {
                     debug("Unable to pass yaml: %s", err.message);
                     cb(err, {});

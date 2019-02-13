@@ -10,6 +10,7 @@ const multihashes = require('multihashes');
 const detect = require('async/detect');
 const each = require('async/each');
 const waterfall = require('async/waterfall');
+var exec = require('child_process').exec;
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
@@ -68,6 +69,18 @@ class MirrorFS {
             }
             cb();
         })
+    }
+
+    static rmdir(path, cb) {
+        var path = '/path/to/the/dir';
+        exec('rm -r ' + path, function (err, stdout, stderr) {
+            if (err) {
+                debug ("failed to rm -r %s", path);
+                cb(err);
+            } else {
+                cb(null);
+            }
+        });
     }
 
     static quickhash(str, options={}) {
@@ -254,7 +267,7 @@ class MirrorFS {
 
     static cacheAndOrStream({relFilePath=undefined,
                                   debugname="UNDEFINED", urls=undefined,
-                                  expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
+                                  expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
                                   start=0, end=undefined} = {}, cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
@@ -266,6 +279,7 @@ class MirrorFS {
         expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
         sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
         skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
+        ipfs:           IPFS hash if known
         wantStream:     True if want an open stream to the contents, (set to false, when crawling)
         wantBuff:       True if want a buffer of data (not stream)
         start,end       First and last bytes wanted
@@ -413,12 +427,12 @@ class MirrorFS {
                 debug("Failed to read directory %s", cacheDirectory);
                 files=[];
             }
-                return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories"}) // Can exclude other non hashables here
+                return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories", paralleloptions: {silentwait: true}}) // Can exclude other non hashables here
                     .map((identifier, cb) => fs.readdir(path.join(cacheDirectory, identifier),
                         (err, files) => {
                             if (err) { cb(null, path.join(cacheDirectory, identifier) );}      // Just pass on relPaths (identifiers) that aren't directories
                             else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>path.join(identifier, f))) }} ),
-                        {name: "Read files dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                        {name: "Read files dirs", async: true, paralleloptions: {limit:100, silentwait: true}})                                         //  [ /foo/mirrored/<item>/<file>* ]
                     // Stream of <filename> (unlikely) and [<identifier>/<filename||subdirname>*]
                     .flatten({name: "Flatten arrays"})                                                  //  /foo/mirrored/<item>/<file>
                     // Stream of <filename> (unlikely) and <identifier>/<filename||subdirname>
@@ -427,7 +441,7 @@ class MirrorFS {
                         (err, files) => {
                             if (err) { cb(null,relFilePath) }      // Just pass on paths that aren't directories (should all be hashable files)
                             else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=> path.join(cacheDirectory, f))) }} ),
-                        {name: "Read files sub dirs", async: true, paralleloptions: {limit:100}})                                         //  [ /foo/mirrored/<item>/<file>* ]
+                        {name: "Read files sub dirs", async: true, paralleloptions: {limit:100, silentwait: true}})                                         //  [ /foo/mirrored/<item>/<file>* ]
                     .flatten({name: "Flatten arrays level 2"})                                                 //  <item>/<file> & <item>/<subdir>/<file>
                     .pipe(s);
         });
@@ -435,28 +449,60 @@ class MirrorFS {
     }
 
     //maybe redo to use async.each etc
-    static loadHashTables({cacheDirectories = undefined, algorithm = 'sha1'}, cb) {
+    static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = false}, cb) {
         // Normally before running this, will delete the old hashstore
         // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
         // Runs in parallel 100 at a time,
         const tablename = `${algorithm}.relfilepath`;
-        each( cacheDirectories.length ? cacheDirectories : this.directories,
-            (cacheDirectory,cb1) => {
-                MirrorFS._streamOfCachedItemPaths({cacheDirectory})
-                .map((relFilePath, cb2) =>  this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {format: 'multihash58', algorithm},
-                    (err, multiHash) => {
-                        if (err) { debug("loadHashTable saw error: %s", err.message); cb2(); }
-                        else { this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, cb2); }
-                    }),
-                    {name: "Hashstore", async: true, paralleloptions: {limit:100}})
-                .reduce(undefined, undefined, cb1);
-            }, cb)
+        each( (cacheDirectories && cacheDirectories.length) ? cacheDirectories : this.directories,
+            (cacheDirectory, cb1) => {
+                this.hashstores[cacheDirectory].destroy(tablename, (err, res)=> {
+                    if (err) {
+                        debug("Unable to destroy hashstore %s in %s", tablename,cacheDirectory);
+                        cb1(err);
+                    } else {
+                        MirrorFS._streamOfCachedItemPaths({cacheDirectory})
+                            .filter(relFilePath => {
+                                if (relFilePath.endsWith('.part')) {
+                                    // Note the unlink is async, but we are not waiting for it.
+                                    fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug("unlink %s %s", relFilePath, err ? "Failed "+err.message : ""))
+                                    return false; // Dont hash or add to IPFS
+                                } else {
+                                    return true;
+                                }
+                            })
+                            .map((relFilePath, cb2) => this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {
+                                    format: 'multihash58',
+                                    algorithm
+                                },
+                                (err, multiHash) => {
+                                    if (err) {
+                                        debug("loadHashTable saw error: %s", err.message);
+                                        cb2(err);
+                                    } else {
+                                        this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, (err, res) => {
+                                            if (err) { debug("failed to put table:%s key:%s val:%s %s", tablename, multiHash, relFilePath, err.message); cb2(err); } else {
+                                                cb2(null, relFilePath)
+                                            }
+                                        });
+                                    }
+                                }),
+                                {name: "Hashstore", async: true, paralleloptions: {limit: 100, silentwait: true}})
+                            .map((relFilePath, cb3) => { if (ipfs && !this.isSpecialFile(relFilePath)) { this.addIPFS({relFilePath}, cb3); } else { cb3(); }},
+                                {name: "addIPFS", async: true, justReportError: true, paralleloptions: {limit: 0}})
+                            .reduce(undefined, undefined, cb1);
+                    }
+                })
+            },
+            cb)
     }
 
-    static addIPFS({relFilePath}, cb) {
+    static addIPFS({relFilePath, ipfs}, cb) {
         /* Add a file to IPFS, it should end up with a hash that matches that generated on dweb.me, allowing IPFS network splits to be healed.
         TODO document args
         Working around IPFS limitation in https://github.com/ipfs/go-ipfs/issues/4224
+        relFilePath: ITEMID/FILENAME
+        ipfs:       IPFS hash if known (usually not known)
          */
         /*
         check if filename is relative to $HOME
@@ -474,15 +520,19 @@ class MirrorFS {
             // Have to be careful to avoid loops, the call to addIPFS should only be after file is retrieved and cached, and then addIPFS shouldnt be called if already cached
             httptools.p_GET(url, (err, res) => {
                 if (err) {
-                    debug("addIPFS failed in http: %s", err.message);
+                    debug("addIPFS for %s failed in http: %s", url2file, err.message);
                     cb(err);
                 } else {
-                    debug("XXX Added to IPFS %O", res);
-                    //TODO-IPFS check some part of res against hash we expected
+                    debug("Added %s to IPFS key=", relFilePath, res.Key);
+                    if (ipfs && ipfs != res.Key) {  debug("ipfs hash doesnt match expected metadata has %s daemon returned %s", ipfs, res.Key); }
+                    //TODO-IPFS store res.Key in metadata - though not using for anything currently
                     cb(null, res)
                 }
             })
         }
+    }
+    static isSpecialFile(relFilePath) { // Note special files should match between MirrorFS.isSpecialFile and ArchiveItemPatched.save
+        return ["_meta.json", "_extra.json", "_member.json", "_members_cached.json", "_members.json","_files.json","_extra.json","_reviews.json", ".part", "_related.json"].some(ending=>relFilePath.endsWith(ending));
     }
 }
 
