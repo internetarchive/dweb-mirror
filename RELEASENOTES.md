@@ -28,6 +28,7 @@ See [Milestone v0.1.0 on Github](https://github.com/internetarchive/dweb-mirror/
 * 0.1.1: Support for search collections that have "identifier:xxx*" as the query.  
 * 0.1.2: Support multiple config files in yaml,  [https://github.com/internetarchive/dweb-mirror/issues/88](#88)(minor)
 * 0.1.2: Fix bug installing with yarn
+* 0.2.0: Integrate seeding to IPFS and IPFS installation
 
 #### IPFS - will fold into releases when done and branch merged ... 
 
