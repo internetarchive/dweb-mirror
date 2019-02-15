@@ -113,7 +113,7 @@ cp /usr/local/node_modules/dweb-mirror/dweb-mirror.config.yaml ~
 # probably edit ~/dweb-mirror.config.yaml to a smaller set of tasks initially
 ```
 
-## Playing with yq but not using it yet
+## Playing with yq but not using it yet so probably dont install this yet
 ```
 sudo add-apt-repository ppa:rmescandon/yq
 sudo apt update
@@ -126,4 +126,5 @@ sudo apt install yq -y
   * THEN TODO-RACHEL - auto start mirrorHttp
 * TODO-RACHEL - run crawl under cron
 * TODO-RACHEL - maybe setup easy auto-update process
+* TODO-RACHEL - install ipfs
 * TODO-RACHEL - integrate into menus [http://community.rachelfriends.org/t/integrating-into-the-main-user-facing-menu/1203]

@@ -7,20 +7,8 @@
 # See https://github.com/ipfs/go-ipfs/issues/5998
 
 # Hard coded latest version since "lastest" isn't supported (yet)
+# TODO get this version number from the last line of  https://dist.ipfs.io/go-ipfs/versions  which is what ipfs-update does
 IPFSLATESTVERSION=0.4.18
-
-# First figure out if we'll use brew or apt-get
-if (which apt-get)
-then
-    apt-get -y update
-    INSTALL="apt-get -y install"
-elif (which brew)
-then
-    INSTALL="brew install"
-else
-    echo "Neither apt-get nor brew found"
-    exit 1
-fi
 
 IPFS_PATH=
 # The startup script sets configuration the first time IPFS is run, which we also use in our Docker installs of dweb-gateway

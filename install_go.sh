@@ -1,11 +1,26 @@
 #!/bin/bash
 # This script is intended to make sure GO is installed for a variety of platforms, especially MacOS, RaspberryPi and Rachel3+
+
+# First figure out if we'll use brew or apt-get
+if (which apt-get)
+then
+    apt-get -y update
+    INSTALL="apt-get -y install"
+elif (which brew)
+then
+    INSTALL="brew install"
+else
+    echo "Neither apt-get nor brew found"
+    exit 1
+fi
+
+
 # First have to see if have a version of go already
 if (go version)
 then
     # TODO if anyone can figure out some math on the go version and then to go ot apt-get if its <=1.9 and then to fail if apt-get doesn't fix that
     echo "Go appears to be installed: `go version`;
-    echo "If this version is not >= 1.9 then next step will fail, try \"apt-get -y install golang\" and see if it improves version number"
+    echo "If this version is not >= 1.9 then install of ipfs-update will fail, try \"apt-get -y install golang\" and see if it improves version number"
     if [ -n "${GOPATH}" ]
     then
         echo "Go is telling us it is at ${GOPATH} so we wont try and guess"
