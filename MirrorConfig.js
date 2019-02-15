@@ -19,6 +19,7 @@ class MirrorConfig {
     Note the API for this is in flux as build the first few use cases
     */
     constructor(...objs) {
+        this.configOpts = objs; // For info query
         this.setOpts(...objs);
     }
 

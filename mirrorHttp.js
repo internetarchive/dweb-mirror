@@ -347,7 +347,11 @@ app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.direc
 
 // noinspection JSUnresolvedFunction
 app.get('/info', function(req, res) {
+<<<<<<< HEAD
     res.status(200).set('Accept-Ranges','bytes').json({"config": config.configOpts}); //TODO this may change to include info on transports (IPFS, WebTransport etc) //TODO-CONFIG needs hash for writing
+=======
+    res.status(200).set('Accept-Ranges','bytes').json({"config": config.objs}); //TODO this may change to include info on transports (IPFS, WebTransport etc) //TODO-CONFIG needs hash for writing
+>>>>>>> master
 });
 
 app.use((req,res,next) => {
