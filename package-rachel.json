@@ -10,7 +10,7 @@
   "description": "Rachel install file for dweb-mirror",
   "dependencies": {
     "@internetarchive/dweb-archive": "latest",
-    "@internetarchive/dweb-mirror": "git+https://git@github.com/internetarchive/dweb-mirror.git#rachel"
+    "@internetarchive/dweb-mirror": "git+https://git@github.com/internetarchive/dweb-mirror.git"
   },
   "devDependencies": {
   },

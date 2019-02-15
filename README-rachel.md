@@ -101,10 +101,10 @@ cd /usr/local  # Various other places didn't work
 # yarn add node-pre-gyp cmake
 
 # Create a top level cache directory (its in configDefaults.yaml to check here
-[ -e "/.data" ] && sudo mkdir "/.data/archiveorg" && sudo chown cap /.data/archiveorg
+[ -e "/.data" ] && sudo mkdir "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
 
 # Now create a package.json that points at dweb-mirror and install it
-curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/rachel/package-rachel.json
+curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-rachel.json
 yarn install
 ```
 ## Edit the config file
