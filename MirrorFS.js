@@ -385,14 +385,14 @@ class MirrorFS {
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
                                                     this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath);
-                                                    this.addIPFS({relFilePath}, (err, res) => {
-                                                        //Ignore err & res, its ok to fail to add to IPFS and will be logged inside addIPFS()
-                                                        // noinspection JSUnresolvedVariable
-                                                        debug(`Closed ${debugname} size=${writable.bytesWritten}`);
-                                                        if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
-                                                            callbackEmptyOrData(newFilePath);
-                                                        }
-                                                    } );
+                                                    this.addIPFS({relFilePath}, (err, res) => { });
+                                                    //Ignore err & res, its ok to fail to add to IPFS and will be logged inside addIPFS()
+                                                    // Also - its running background, we arent waiting for it to complete
+                                                    // noinspection JSUnresolvedVariable
+                                                    debug(`Closed ${debugname} size=${writable.bytesWritten}`);
+                                                    if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
+                                                        callbackEmptyOrData(newFilePath);
+                                                    }
 
                                                 }
                                             })
@@ -518,6 +518,7 @@ class MirrorFS {
             const url2file = [this.httpServer + ACUtil.gateway.urlDownload, relFilePath].join('/'); // This is arc/archive.org/download/
             const url = `${this.urlUrlstore}?arg=${encodeURIComponent(url2file)}`
             // Have to be careful to avoid loops, the call to addIPFS should only be after file is retrieved and cached, and then addIPFS shouldnt be called if already cached
+            // TODO-IPFS pass a parameter to p_GET that tells it not to loop retrying
             httptools.p_GET(url, (err, res) => {
                 if (err) {
                     debug("addIPFS for %s failed in http: %s", url2file, err.message);

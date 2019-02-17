@@ -33,7 +33,7 @@ class HashStore {
         /*
         Set a key to a val for a specific table. TODO check what gets returned
         val = any valid persistent value acceptable to level (not sure what limits are)
-        key = any valud key for level (not sure what limits are)
+        key = any valid key for level (not sure what limits are)
         cb(err)
          */
         if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2

@@ -268,7 +268,7 @@ function streamThumbnail(req, res, next) {
         } else {
             // We dont already have the file
             waterfall([
-                    (cb1) => loadedAI(itemid, cb1),
+                    (cb1) => loadedAI({itemid}, cb1),
                     (archiveitem, cb2) => archiveitem.saveThumbnail({wantStream: true}, cb2)
                 ],
                 (err, s) => {

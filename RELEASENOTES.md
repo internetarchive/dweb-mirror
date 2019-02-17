@@ -38,3 +38,6 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 
 * 0.2.0: Integrate seeding to IPFS and IPFS installation
 * 0.2.0: Integrate installation process for Rachel3+ - still not perfect but works though doesnt support IPFS yet. 
+* 0.2.1: Tidy up IPFS, GO, install; and platform specific docs & installs for Rachel3+ (which now includes IPFS)
+* 0.2.1: Working on Raspberry Pi 3 with IPFS
+* 0.2.2: Switch dependencies to our own repo's to npm releases (away from github)

@@ -9,16 +9,16 @@
   },
   "description": "Rachel install file for dweb-mirror",
   "dependencies": {
-    "@internetarchive/dweb-archive": "latest",
-    "@internetarchive/dweb-mirror": "git+https://git@github.com/internetarchive/dweb-mirror.git"
+    "@internetarchive/dweb-archive": "^0.1.48",
+    "@internetarchive/dweb-mirror": "^0.2.2"
   },
   "devDependencies": {
   },
   "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
   "keywords": [],
   "license": "AGPL-3.0",
-  "name": "ia_rachel_install",
+  "name": "ia_appliance_install",
   "scripts": {
   },
-  "version": "0.1.36"
+  "version": "0.2.1"
 }

@@ -93,33 +93,16 @@ node -v # Check its 10.x
 ```
 TODO-RACHEL figure out the issues around `path` etc for services accessing node and use whatever Rafael produces.
 
-## Install dweb-mirror, for now installing globally.
-```
-cd /usr/local  # Various other places didn't work
-
-# The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
-# yarn add node-pre-gyp cmake
-
-# Create a top level cache directory (its in configDefaults.yaml to check here
-[ -e "/.data" ] && sudo mkdir "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
-
-# Now create a package.json that points at dweb-mirror and install it
-curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-rachel.json
-yarn install
-```
-## Edit the config file
-```
-cp /usr/local/node_modules/dweb-mirror/dweb-mirror.config.yaml ~
-# probably edit ~/dweb-mirror.config.yaml to a smaller set of tasks initially
-```
-
-## Playing with yq but not using it yet
+## YQ
+I'm playing with yq for reading yaml, but not using it yet so probably dont install this yet
 ```
 sudo add-apt-repository ppa:rmescandon/yq
 sudo apt update
 sudo apt install yq -y
 # or go get gopkg.in/mikefarah/yq.v2
 ```
+
+## Now continue from the general README.md
 
 ## Auto running
 * TODO-RACHEL - hook into supervisorctl etc [http://community.rachelfriends.org/t/starting-at-boot-supervisorctl/1202]
