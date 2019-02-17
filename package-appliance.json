@@ -17,8 +17,8 @@
   "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
   "keywords": [],
   "license": "AGPL-3.0",
-  "name": "ia_rachel_install",
+  "name": "ia_appliance_install",
   "scripts": {
   },
-  "version": "0.1.36"
+  "version": "0.2.1"
 }
