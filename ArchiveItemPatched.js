@@ -304,7 +304,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
 
     if (!namepart) {
-        cb(null,this);
+        cb(null,wantStream ? undefined : this);
     } else {
         //MirrorFS._mkdir(dirpath, (err) => { // No longer making since a) comes after .save and b) mirrorFS.cacheAndOrStream does so
         //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
