@@ -16,7 +16,6 @@ var exec = require('child_process').exec;
 const ParallelStream = require('parallel-streams');
 const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
 //Should always be defined in caller prior to requiring dweb-objects
-const httptools = require('@internetarchive/dweb-transports/httptools');
 
 // other packages in this repo
 const HashStore = require('./HashStore');
@@ -519,7 +518,7 @@ class MirrorFS {
             const url = `${this.urlUrlstore}?arg=${encodeURIComponent(url2file)}`
             // Have to be careful to avoid loops, the call to addIPFS should only be after file is retrieved and cached, and then addIPFS shouldnt be called if already cached
             // TODO-IPFS pass a parameter to p_GET that tells it not to loop retrying
-            httptools.p_GET(url, (err, res) => {
+            DwebTransports.httptools.p_GET(url, (err, res) => {
                 if (err) {
                     debug("addIPFS for %s failed in http: %s", url2file, err.message);
                     cb(err);

@@ -6,7 +6,7 @@ const glob = require('glob');
 const debug = require('debug')('dweb-mirror:MirrorConfig');
 const asyncMap = require('async/map');
 //const canonicaljson = require('@stratumn/canonicaljson');
-const yaml = require('js-yaml');
+const yaml = require('js-yaml'); //https://www.npmjs.com/package/js-yaml
 // noinspection JSUnusedLocalSymbols
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util.js'); //for Object.deeperAssign
 
@@ -17,6 +17,8 @@ class MirrorConfig {
     A set of tools to manage and work on configuration data structures and to map to storage or UI
 
     Note the API for this is in flux as build the first few use cases
+
+    Note this makes extensive use of the fact that the last of the ...objs can be edited, set back with setopts and leave this changed as expected.
     */
     constructor(...objs) {
         this.configOpts = objs; // For info query
@@ -90,6 +92,20 @@ class MirrorConfig {
                 }
             }
         })
+    }
+    writeUser(obj, cb) {
+        this.configOpts[this.configOpts.length-1] = obj;
+        this.setOpts(obj);                               // Merge into this.
+        // By now sendInfo will send correct result back
+        // And write to user's file
+        MirrorConfig.writeYaml(MirrorConfig.resolve(defaultConfigFiles[defaultConfigFiles.length-1]), obj, cb);
+    }
+
+    static writeYaml(filename, obj, cb) {
+        fs.writeFile(filename, yaml.safeDump(obj), {encoding: 'utf8'}, (err) => {
+            if (err) { debug("Unable to write yaml to %s: %s", filename, err.message); }
+            cb(err);
+        });
     }
 
 }

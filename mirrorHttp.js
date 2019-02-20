@@ -76,6 +76,7 @@ DwebTransports.p_connect(connectOpts).then(() => {
 
 // noinspection JSUnresolvedVariable
 app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
+app.use(express.json());
 
 //app.get('*/', (req, res, next) => { req.url = req.params[0]; next(); } // Strip trailing '/'
 app.use((req, res, next) => {
@@ -89,21 +90,6 @@ app.use((req, res, next) => {
     }
     next();
 });
-
-
-function loadedAI({itemid=undefined, metaapi=undefined}={}, cb) {
-    // Get an ArchiveItem, from net or cache
-    new ArchiveItem({itemid, metaapi})
-        .fetch_metadata((err, ai) => {
-            if (err) {
-                debug("loadedAI: Unable to retrieve metadata for %s", itemid);
-                cb(err);
-            } else {
-                debug("loadedAI: Retrieved metadata for %s", ai.itemid); // Combined data metadata/files/reviews
-                cb(null, ai);
-            }
-        });
-}
 
 // Serving static (e.g. UI) files
 //app.use('/arc/archive.org/download/', express.static(dir)); // Simplistic, better ...
@@ -125,15 +111,12 @@ function _sendFileFromDir(req, res, next, dir) {
 
 
 function sendRelated(req, res, next) {
-    const itemid = req.params[0];
-    loadedAI({itemid}, (err, archiveitem) => {
-        if (err) { next(err);}
-        else {
-            // noinspection JSUnresolvedVariable
-            archiveitem.relatedItems({ wantStream: true}, (err, s) =>
-                _proxy(req, res, next, err, s, {"Content-Type": "application/json"}));
-        }
-    })
+    const ai = new ArchiveItem({itemid: req.params[0]});
+    waterfall([
+        (cb) => ai.fetch_metadata(cb),
+            (ai, cb) => ai.relatedItems({wantStream: true}, cb)
+        ], (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"})
+    );
 }
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
 function proxyUpstream(req, res, next, headers={}) {
@@ -160,7 +143,6 @@ function _proxy(req, res, next, err, s, headers) {
 
 // noinspection JSUnusedLocalSymbols
 function temp(req, res, next) {
-
     console.log(req);
     next();
 }
@@ -174,8 +156,9 @@ function streamArchiveFile(req, res, next) {
         const opts = Object.assign({}, req.streamOpts, { wantStream: true });
         let af; // Passed out from waterfall to end
         debug('Sending ArchiveFile %s/%s', itemid, filename);
+        const ai = new ArchiveItem({itemid});
         waterfall([
-                (cb) => loadedAI({itemid}, cb),
+                (cb) => ai.fetch_metadata(cb),
                 (archiveitem, cb) => ArchiveFile.new({archiveitem, filename}, cb),
                 // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
                 (archivefile, cb) => {
@@ -267,8 +250,9 @@ function streamThumbnail(req, res, next) {
             sendJpegStream(fs.createReadStream(existingFilePath));
         } else {
             // We dont already have the file
+            const ai = new ArchiveItem({itemid});
             waterfall([
-                    (cb1) => loadedAI({itemid}, cb1),
+                    (cb) => ai.fetch_metadata(cb),
                     (archiveitem, cb2) => archiveitem.saveThumbnail({wantStream: true}, cb2)
                 ],
                 (err, s) => {
@@ -282,6 +266,11 @@ function streamThumbnail(req, res, next) {
             );
         }
     });
+}
+function sendInfo(req, res) {
+    // TODO this may change to include info on transports (IPFS, WebTransport etc)
+    // TODO-CONFIG needs hash for writing
+    res.status(200).set('Accept-Ranges','bytes').json({"config": config.configOpts});
 }
 
 //app.get('/', (req,res)=>{debug("ROOT URL");});
@@ -307,17 +296,18 @@ app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVar
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/metadata/:itemid', function(req, res, next) {
-    loadedAI({itemid: req.params.itemid}, (err, ai) => {
-        if (err) {
-            res.status(404).send(err.message); // Its neither local, nor from server
-        } else {
-            res.json(ai.exportMetadataAPI());
-        }
-    })
+    new ArchiveItem({itemid: req.params.itemid})
+        .fetch_metadata((err, ai) => {
+            if (err) {
+                res.status(404).send(err.message); // Its neither local, nor from server
+            } else {
+                res.json(ai.exportMetadataAPI());
+            }
+        })
 });
 app.get('/arc/archive.org/metadata/*', function(req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
     // noinspection JSUnresolvedVariable
-    proxyUrl(req, res, next, [config.upstream+req.url].join('/'), {"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
+    proxyUpstream(req, res, next, {"Content-Type": "application/json"} )}); //TODO should be retrieving. patching into main metadata and saving
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
@@ -345,9 +335,19 @@ app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try t
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", {maxAge: "86400000", immutable: true}, (err)=>err ? next(err) : debug('sent /favicon.ico')) );
 
 
+
 // noinspection JSUnresolvedFunction
-app.get('/info', function(req, res) {
-    res.status(200).set('Accept-Ranges','bytes').json({"config": config.configOpts}); //TODO this may change to include info on transports (IPFS, WebTransport etc) //TODO-CONFIG needs hash for writing
+app.get('/info', sendInfo);
+
+app.post('/setconfig', function(req, res, next) {
+   debug("Testing setconfig %O",req.body);
+   config.writeUser(req.body, err => {
+       if (err) {
+           next(err);
+       } else {
+           sendInfo(req, res);  // Send info again, as UI will need to display this
+       }
+   });
 });
 
 app.use((req,res,next) => {
