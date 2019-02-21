@@ -18,6 +18,15 @@ apps:
   http:
     port: 4244
     morgan: ':method :url :req[range] :status :res[content-length] :response-time ms'
+    connect:
+      transports:
+        - 'HTTP'
+        - 'IPFS'
+        #- 'WEBTORRENT'
+        #- 'GUN'
+        #- 'WORT'
+      webtorrent:
+        tracker: 'wrtc'   # May or may not work on different platforms
   # crawl.js uses these
   crawl:
     # An array of tasks each consists of { identifier, level, and optional search & related

@@ -56,6 +56,7 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const app = express();
 
+// Make "config" available in rest of mirrorHttp setup
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
 
@@ -63,11 +64,19 @@ MirrorConfig.new((err, config) => {
 // noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
-const connectOpts = {
-    //transports: ["HTTP", "WEBTORRENT", "GUN", "IPFS"],
-    transports: ["HTTP"],
+
+const connectOpts = config.apps.http.connect; // Setup in yaml defaults, can be user overridden
+
+//wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
+if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
+    try {
+        wrtc = require('wrtc');
+        if (wrtc) connectOpts.webtorrent.tracker = wrtc;
+    } catch (err) {
+        debug("wrtc requested but not present");
+        delete connectOpts.webtorrent.tracker;
+    }
 }
-if (wrtc) connectOpts.webtorrent = {tracker: {wrtc}}
 
 DwebTransports.p_connect(connectOpts).then(() => {
     const Thttp =  DwebTransports.http();
