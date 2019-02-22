@@ -257,7 +257,7 @@ class CrawlItem extends Crawlable {
                     if (this.level === "details") { // Details
                         this.item.minimumForUI().forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
                     } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
-                        this.item.files.forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
+                        if (this.item.files) this.item.files.forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
                     }
                     cb4(null);
                 },

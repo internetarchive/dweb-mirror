@@ -43,3 +43,4 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 * 0.2.2: Switch dependencies to our own repo's to npm releases (away from github)
 * 0.2.3: Simple button to change config crawl level for item/collection reqs dweb-archive v0.1.49
 * unreleased: Move transport config into YAML; IPFS fetching now supported
+* unreleased: Fix bug in crawling "all" for querys
