@@ -33,7 +33,7 @@ const opts = getopts(process.argv.slice(2),{
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
     string: ["directory", "search", "related", "transport", "level"], // Not debugidentifier because undefined and "" are not the same.
-    default: {transport: "HTTP"},
+    //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
 });
 
@@ -99,7 +99,6 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
             }
         });
         // code cares about case for these opts
-        opts.transport = opts.transport.map(t=>t.toUpperCase());
         opts.level = opts.level.map(t=>t.toLowerCase());
         if (!opts.level.length) opts.level.push("details"); // Default is 1 level at details
         if (!opts.rows.length) {
@@ -124,6 +123,9 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
                 }
             });
 
+        if (opts.transport.length) {
+            config.setOpts({ apps: { crawl: { connect: { transport: opts.transport.map(t=>t.toUpperCase())}}}}) // Code cares about case
+        }
         if (opts.directory) {
             config.setOpts({ directories: Array.isArray(opts.directory) ? opts.directory : [opts.directory]})
         }
@@ -165,18 +167,27 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
 
         const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
 
+        const connectOpts = config.apps.crawl.connect;
+
+        //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
+        if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
+            try {
+                wrtc = require('wrtc');
+                if (wrtc) connectOpts.webtorrent.tracker = wrtc;
+            } catch (err) {
+                debug("wrtc requested but not present");
+                delete connectOpts.webtorrent.tracker;
+            }
+        }
+
         if (opts.verbose || opts.dummy) {
             console.log( "Crawl configuration: tasks=", canonicaljson.stringify(tasks), "opts=", canonicaljson.stringify(crawlopts),
-                "transports=", opts.transport);
+                "transports=", connectOpts.transport);
         }
 
         if (!opts.dummy) { // Note almost same code in collectionpreseed.js
                 MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
-                    DwebTransports.connect({
-                        //transports: ["HTTP", "WEBTORRENT", "IPFS"],
-                        transports: opts.transport,
-                        //webtorrent: {tracker: { wrtc }}, //TODO-CRAWL TODO-TRANSPORTS see if this is needed / useful
-                    }, (unusederr, unused) => {
+                    DwebTransports.connect(connectOpts, (unusederr, unused) => {
                         //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
                         DwebTransports.http().supportFunctions.push("createReadStream");
                         CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
