@@ -107,17 +107,25 @@ CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "ma
 
 class Crawlable {
     constructor(debugname, parent) {
-        // Nothing done here at present
+        /* Common between CrawlFile and CrawlItem
+            debugname   str name of this object (for debugging)
+            parent      [str*] names of parents (for debugging) (oldest first)
+         */
         this.debugname = debugname; // Used to display messages
         this.parent = parent;       // Used to display path thru crawl to this task
     }
     asParent() {
+        // Return new parent array (this crawlable's parent array + debugname)
         return this.parent.concat(this.debugname)
     }
 }
 
 class CrawlFile extends Crawlable {
     constructor({file}, parent) {
+        /*
+            file    ArchiveFile
+            parent  [str*] see Crawlable
+         */
         super(file.metadata.name, parent);
         this.file = file;
     }

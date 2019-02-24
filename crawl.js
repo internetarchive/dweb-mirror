@@ -37,6 +37,8 @@ const opts = getopts(process.argv.slice(2),{
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
 });
 
+//TODO allow specifying "crawl item/filename" to get just one file see https://github.com/internetarchive/dweb-mirror/issues/108
+
 const help = `
 usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
     [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*

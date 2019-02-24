@@ -58,7 +58,7 @@ apps:
     connect:
       transports:
         - 'HTTP'
-        - 'IPFS'
+        #- 'IPFS'
         #- 'WEBTORRENT'
         #- 'GUN'
         #- 'WORT'
