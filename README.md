@@ -47,9 +47,8 @@ Please check for a platform specific README as these instructions dont work for 
 #### Rachel 3+ (32 bit intel box from World Possible)
 This is complex, the OS with the box is seriously out of date, see README-rachel.md
 
-#### Raspberry Pi 3
-TODO-DOCS copy from Evernote notes taken during install
-
+#### Raspberry Pi 3 with or without Internet In A Box (IIAB)
+This is complex, see [README-raspberrypi.md] then come back here to finish
 
 ### 3. Install dweb-mirror
 
@@ -58,21 +57,27 @@ There are two alternatives, depending on whether you will develop on this machin
 #### 3a. EITHER dweb-mirror as a server / appliance (tested on Rachel 3+ and RPi3)
 
 We will install it as a standard node_module
+Create a top level cache directory (its in configDefaults.yaml to check here
+# You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
+```
+sudo mkdir -p "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
+```
+# Now create a package.json that points at dweb-mirror
 ```
 cd /usr/local  # Various other places didn't work on Rachel, but in theory it should work anywhere.
-
-# Create a top level cache directory (its in configDefaults.yaml to check here
-# You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
-sudo mkdir -p "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
-
-# Now create a package.json that points at dweb-mirror
 curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-appliance.json
+```
+If it complains about write permissions then prefix with `sudo `
 
-# The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
+The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
+```
 # yarn add node-pre-gyp cmake
-
-# Now install dweb-mirror with yarn
+```
+Now install dweb-mirror, otherwise:
+```
+#if the curl above failed then you'll need `sudo yarn install` 
 yarn install
+# If it fails, then running it again is safe.
 ```
 The example above would install dweb-mirror as `/usr/local/node_modules/@internetarchive/dweb-mirror`
 which is refered to as `<wherever>/dweb-mirror` in the rest of this README
@@ -128,11 +133,13 @@ otherwise to those automatically brought in by `npm install`
 
 ```
 cd <wherever you installed dweb-mirror>/dweb-mirror
+# By default this is /usr/local/node_modules/@internetarchive/dweb-mirror or /usr/local/git/dweb-mirror
+# depending on whether you did 3a or 3b above.
 cp ./dweb-mirror.config.yaml ${HOME} # Copy sample to your home directory and edit, 
 ```
 and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for inline documentation.
 
-  * `directories`  should point at places you want the cache to store and look for files - at least one of these should exist
+  * `directories`  should point at places you want the cache to store and look for files - at least one of these should exist and it will default to the .data/archiveorg you setup above
   * `archiveui/directories` you probably dont need to change this as it will usually guess right, but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
   * `apps.crawl` includes a structure that lists what collections are to be installed, I suggest testing and then editing
 
@@ -144,7 +151,9 @@ Note that directories specified in the config file can be written using with she
 * From a command line:
 * `cd <wherever>/dweb-mirror && ./mirrorHttp.js &` # starts the HTTP server
   * the startup is a little slow but you'll see some debugging when its live.
-* `open http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
+* If you are working directly on the machine (e.g. its your Mac) then
+  * `open http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
+* If you are ssh-ed into the machine then in your browser go to: `http://<IP of machine>:4244`
 * open [http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244] to see the test crawl if you did not change 
 If you don’t get a Archive UI then look at the server log (in console) to see for any “FAILING” log lines which indicate a problem
 
