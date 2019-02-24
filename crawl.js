@@ -26,7 +26,7 @@ const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // 
 const optsArray = ["level", "transport", "rows"];
 
 //XXX make depth max of depth, level-1, rows
-//const opts = getopts("--rows 100 --depth 2 --dummy movies".split(" "),{ // Just for testing different options
+//const opts = getopts("--level all zandvoort.newspapers.1992.zandvoorts.nieuwsblad".split(" "),{ // Just for testing different options
 const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
