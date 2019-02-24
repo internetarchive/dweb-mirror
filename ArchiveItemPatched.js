@@ -36,7 +36,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
         .members -> <IDENTIFIER>.members.json
         .reviews -> <IDENTIFIER>.reviews.json
         .files -> <IDENTIFIER>.files.json
-        {collection_titles} -> <IDENTIFIER>.extra.json
+        {collection_titles, collecton_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
         and .member_cached.json is saved from ArchiveMemberSearch not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
@@ -73,7 +73,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
                             ["meta", this.metadata],    // Maybe empty if is_dark
                             ["members", this.members],
                             ["files", this.exportFiles()],
-                            ["extra", {collection_titles: this.collection_titles, is_dark: this.is_dark}],
+                            ["extra", Object.fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
                             ["reviews", this.reviews]
                         ],
                         (i, cbInner) => { // [ part, obj ]
@@ -101,7 +101,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 ArchiveItem.prototype.read = function(opts = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
-        cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
+        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure suitable for "item" field of ArchiveItem
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
@@ -143,9 +143,8 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
                             res.members = o; // Undefined if failed
                             _parse("extra", (err, o) => {
                                 // Unavailable on archive.org but there on dweb.archive.org: collection_titles
-                                // Not relevant on dweb.archive.org, d1, d2, dir, item_size, server, uniq, workable_servers
-                                res.collection_titles = o && o.collection_titles;
-                                res.is_dark = o && o.is_dark;
+                                // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
+                                ArchiveItem.extraFields.forEach(k => res[k] = o && o[k]);
                                 cb(null, res);
                             });
                         });

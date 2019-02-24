@@ -51,7 +51,7 @@ Metadata is stored in specially named files.
 |<IDENTIFIER>.meta.json|ArchiveItem.metadata|
 |<IDENTIFIER>.reviews.json|ArchiveItem.reviews|On disk is format returned by API
 |<IDENTIFIER>.files.json|ArchiveItem.files|
-|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, is_dark}|
+|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, is_dark, dir, server}|
 |<IDENTIFIER>.member.json|ArchiveMemberSearch|As retrieved in a search
 |<IDENTIFIER>.members.json|List of members - this file is a normal ArchiveFile in fav-* collections|
 |<IDENTIFIER>.members_cached.json|ArchiveMemberSearch.*|All the search results for this item retrieved so far
@@ -103,7 +103,7 @@ If not already done so, will `fetch_metadata` (but not query, as that may want t
 
 Read metadata, reviews, files and extra from corresponding files - see `Files on disk`
 ```
-cb(err, {files, files_count, metadata, reviews, collection_titles})  data structure suitable for "item" field of ArchiveItem
+cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, server})  data structure suitable for "item" field of ArchiveItem
 ```
 
 ##### fetch_metadata(opts={}, cb)
