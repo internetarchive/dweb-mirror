@@ -42,5 +42,5 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 * 0.2.1: Working on Raspberry Pi 3 with IPFS
 * 0.2.2: Switch dependencies to our own repo's to npm releases (away from github)
 * 0.2.3: Simple button to change config crawl level for item/collection reqs dweb-archive v0.1.49
-* unreleased: Move transport config into YAML; IPFS fetching now supported
-* unreleased: Fix bug in crawling "all" for querys
+* 0.2.4: Move transport config into YAML; IPFS fetching now supported
+* 0.2.4: Fix bug in crawling "all" for querys
