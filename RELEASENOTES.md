@@ -44,3 +44,4 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 * 0.2.3: Simple button to change config crawl level for item/collection reqs dweb-archive v0.1.49
 * 0.2.4: Move transport config into YAML; IPFS fetching now supported
 * 0.2.4: Fix bug in crawling "all" for querys
+* 0.2.5: Oops - was depending on fixed version of dweb-transports
