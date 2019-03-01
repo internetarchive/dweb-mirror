@@ -8,10 +8,12 @@ const path = require('path');
 const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
+const each = require('async/each');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMemberFav = require('@internetarchive/dweb-archivecontroller/ArchiveMemberFav');
 const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
+const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
@@ -27,6 +29,24 @@ ArchiveItem.prototype._namepart = function() {
         return undefined; // Should be caught at higher level to decide not to use cache
     }
 };
+
+function _save1file(key, obj, namepart, cb) {
+    const relFilePath = path.join(namepart, `${namepart}_${key}.json`);
+    if (typeof obj === "undefined") {
+        cb(null);
+    } else {
+        MirrorFS.writeFile(relFilePath, canonicaljson.stringify(obj), (err) => {
+            if (err) {
+                console.error(`Unable to write ${key} to ${relFilePath}`);
+                cb(err);
+            } else {
+                cb(null);
+            }
+        });
+    }
+}
+
+
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.save = function(opts = {}, cb) {
@@ -66,36 +86,79 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 
         function f() {
             // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
-                    // noinspection JSPotentiallyInvalidUsageOfThis
+            // noinspection JSPotentiallyInvalidUsageOfThis
             // Note all these files should be in MirrorFS.isSpecialFile
-            Util.forEach(   // TODO move to async.forEach which has same syntax
-                        [
-                            ["meta", this.metadata],    // Maybe empty if is_dark
-                            ["members", this.members],
-                            ["files", this.exportFiles()],
-                            ["extra", Object.fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
-                            ["reviews", this.reviews]
-                        ],
-                        (i, cbInner) => { // [ part, obj ]
-                            const relFilePath = path.join(namepart, `${namepart}_${i[0]}.json`);
-                            if (typeof i[1] === "undefined") {
-                                cbInner(null);
-                            } else {
-                                MirrorFS.writeFile(relFilePath, canonicaljson.stringify(i[1]), (err) => {
-                                    if (err) {
-                                        console.error(`Unable to write ${i[0]} to ${relFilePath}`);
-                                        cbInner(err);
-                                    } else {
-                                        cbInner(null);
-                                    }
-                                });
-                            }
-                        },
-                        (err)=>{if (err) { cb(err) } else { cb(null, this);}});
+            // noinspection JSPotentiallyInvalidUsageOfThis
+            each(   // TODO move to async.forEach which has same syntax
+                [
+                    ["meta", this.metadata],    // Maybe empty if is_dark
+                    ["members", this.members],
+                    ["files", this.exportFiles()],
+                    ["extra", Object.fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
+                    ["reviews", this.reviews]
+                ],
+                (i, cbInner) => { // [ part, obj ]
+                    _save1file(i[0], i[1], namepart, cbInner);
+                },
+                (err)=>{if (err) { cb(err) } else { cb(null, this);}});
         }
     }
 
 };
+// noinspection JSUnresolvedVariable
+ArchiveItem.prototype.saveBookReader = function(opts = {}, cb) {
+    /*
+        Save BookReader for this file as JSON
+        .bookreader -> <IDENTIFIER>.bookreader.json
+    */
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+    if (!this.itemid) {
+        // Must be a Search so dont try and save files or bookreader - might save members
+        debug("Search so not saving bookReader");
+        cb(null, this);
+    } else {
+        const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
+
+        if (!(this.bookreader || this.is_dark)) {
+            // noinspection JSUnusedLocalSymbols
+            this.fetch_bookreader((err, data) => {
+                if (err) {
+                    console.error(`Cant save because could not fetch bookreader for %s: %s`, this.itemid, err.message);
+                    cb(err);
+                } else {
+                    f.call(this); // Need the call because it loses track of "this"
+                }
+            });
+        } else {
+            f.call(this);
+        }
+        function f() {
+            // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
+            // noinspection JSPotentiallyInvalidUsageOfThis
+            // Note all these files should be in MirrorFS.isSpecialFile
+            _save1file("bookreader", this.bookreader, namepart, (err) => { if (err) {cb(err) } else {cb(null, this) }})
+        }
+    }
+};
+
+function _parse_common(namepart, part, cb) {
+    const relFilePath = path.join(namepart, `${namepart}_${part}.json` );
+    MirrorFS.readFile(relFilePath, (err, jsonstring) => {
+        if (err) {
+            cb(err);    // Not logging as not really an err for there to be no file, as will read
+        } else {
+            let o;
+            try {
+                o = canonicaljson.parse(jsonstring); // No reviver function, which would allow postprocessing
+            } catch (err) {
+                // It is on the other hand an error for the JSON to be unreadable
+                debug("Failed to parse json at %s: part %s %s", namepart, part, err.message);
+                cb(err);
+            }
+            cb(null, o);
+        }
+    })
+}
 // noinspection JSUnresolvedVariable
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
 ArchiveItem.prototype.read = function(opts = {}, cb) {
@@ -106,24 +169,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
     const res = {};
-    function _parse(part, cb) {
-        const relFilePath = path.join(namepart, `${namepart}_${part}.json` );
-        MirrorFS.readFile(relFilePath, (err, jsonstring) => {
-            if (err) {
-                cb(err);    // Not logging as not really an err for there to be no file, as will read
-            } else {
-                let o;
-                try {
-                    o = canonicaljson.parse(jsonstring); // No reviver function, which would allow postprocessing
-                } catch (err) {
-                    // It is on the other hand an error for the JSON to be unreadable
-                    debug("Failed to parse json at %s: part %s %s", namepart, part, err.message);
-                    cb(err);
-                }
-                cb(null, o);
-            }
-        })
-    }
+    function _parse(part, cb) { _parse_common(namepart, part, cb); }
 
     _parse("meta", (err, o) => {
         // errors: if called with an error when reading files
@@ -154,6 +200,80 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
         }
     });
 };
+
+// noinspection JSUnresolvedVariable
+// noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
+ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
+    /*
+        Read metadata, reviews, files and extra from corresponding files
+        cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
+    */
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+    const namepart = this.itemid; // Possible undefined
+    function _parse(part, cb) { _parse_common(namepart, part, cb); }
+    _parse("bookreader", (err, o) => {
+        if (err) {
+            cb(err);
+        } else {
+            o.metadata = this.metadata;
+            cb(null, new RawBookReaderResponse(o));
+        }
+    });
+};
+ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
+    /*
+    Fetch the bookreader data for this item if it hasn't already been.
+    More flexible version than dweb-archive.ArchiveItem
+    Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
+    Alternatives:
+    skipCache:          load from net
+    cached:             return from cache
+    !cached:            Load from net, save to cache
+
+    cb(err, this) or if undefined, returns a promise resolving to 'this'
+    Errors              TransportError (404)
+     */
+    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+    const skipCache = opts.skipCache;           // If set will not try and read cache
+    // noinspection JSUnresolvedVariable
+    if (cb) { try { f.call(this, cb) } catch(err) {
+        cb(err)}}
+    else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+    function errOrDark(err) {
+        return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
+    }
+    function f(cb) {
+        if (this.itemid && !(this.bookreader || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
+            if (!skipCache) { // We have a cache directory to look in
+                //TODO-CACHE-AGING need timing of how long use old metadata
+                this.read((err, bookapi) => {
+                    if (err) { // No cached version
+                        this._fetch_bookreader(opts, (err, ai) => {
+                            if (err) {
+                                cb(err); // Failed to read during fetch_metadata & failed to fetch here
+                            } else {
+                                ai.saveBookReader({}, (err, res) => cb(errOrDark(null), res)); // resave as have new data
+                            }  // Save data fetched (de-fjorded)
+                        });    // resolves to this
+                    } else {    // Local read succeeded.
+                        this.loadFromBookreaderAPI(bookapi); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
+                        //TODO-BOOK ensure copying bookreader during a crawl to an explicit copyDirectory
+                        if (MirrorFS.copyDirectory) { // If copyDirectory explicitly specified then save to it.
+                            this.saveBookReader({}, (err, res) => cb(errOrDark(null), res));
+                        } else {
+                            cb(errOrDark(null), this);
+                        }
+                    }
+                })
+            } else { // No cache Directory or skipCache telling us not to use it for read or save
+                this._fetch_bookreader(opts, cb); // Process Fjords and load .metadata and .files etc - handles darkOk
+            }
+        } else {
+            cb(errOrDark(null), this);
+        }
+    }
+};
+
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
@@ -242,7 +362,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                                     const data = canonicaljson.parse(jsonstring);
                                     this.members = data.map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
                                 } catch(err) {
-                                    debug("Cant parse json in %s: %s", relFilePath, err.message)
+                                    debug("Cant parse json in %s: %s", relFilePath, err.message);
                                     this.members = []
                                 }
                             }

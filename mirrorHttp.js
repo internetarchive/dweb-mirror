@@ -299,8 +299,6 @@ app.get(ACUtil.gateway.urlDownload + '/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
-app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
-    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
@@ -331,8 +329,23 @@ app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnai
 // noinspection JSUnresolvedFunction
 app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
-
 //TODO add generic fallback to use Domain.js for name lookup
+
+//e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
+app.get('/BookReader/BookReaderJSIA.php', function(req, res, next) {
+    waterfall([
+        (cb) => new ArchiveItem({itemid: req.query.id})
+            .fetch_metadata(cb),
+        (ai, cb) => ai.fetch_bookreader(cb)
+    ], (err, ai) => {
+        if (err) {
+            res.status(404).send(err.message); // Its neither local, nor from server
+        } else {
+            res.json(new RawBookReaderResponse(ai));
+        }
+    });
+});
+
 
 // noinspection JSUnresolvedVariable
 app.get('/contenthash/:contenthash', (req, res, next) =>
@@ -342,9 +355,8 @@ app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try t
 
 // noinspection JSUnresolvedVariable
 app.get('/favicon.ico', (req, res, next) => res.sendFile( config.archiveui.directory+"/favicon.ico", {maxAge: "86400000", immutable: true}, (err)=>err ? next(err) : debug('sent /favicon.ico')) );
-
-
-
+app.get('/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
+    _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );
 // noinspection JSUnresolvedFunction
 app.get('/info', sendInfo);
 
