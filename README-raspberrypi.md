@@ -43,6 +43,7 @@ So this is what I did. (Edits welcome, if your experience differed)
 
 #### Internet In A Box
 * Follow steps in [http://d.iiab.io/install.txt] with attention to [http://wiki.laptop.org/go/IIAB/FAQ]
+    * Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, and some bugs in the installer
 * On a terminal window `curl d.iiab.io/install.txt | sudo bash`
     * Selected 1 for choice of min/medium/max install, others should work as well
     * Did not edit the .yml file
@@ -52,11 +53,11 @@ So this is what I did. (Edits welcome, if your experience differed)
     * It enables SSH; 
 
 
-Try login to http://box/admin   iiab-admin/<whatever you set password to during install>
+Try login to `http://box.lan/admin`   id=`iiab-admin` pw=`whatever you set password to during install`
 
 Also see [http://wiki.laptop.org/go/IIAB/FAQ]
 
-And if you want to run as a local WiFi hotspot then..
+And if you want to run as a local WiFi hotspot (recommended) then..
 ```
 iiab-hotspot-on
 ```
@@ -117,7 +118,7 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 
 ```
 
-## Install dweb-mirro
+## Install dweb-mirror
 
 Now follow the instructions in [README.md], come back here to finish things off
 
