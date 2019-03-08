@@ -109,7 +109,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 ArchiveItem.prototype.saveBookReader = function(opts = {}, cb) {
     /*
         Save BookReader for this file as JSON
-        .bookreader -> <IDENTIFIER>.bookreader.json
+        .bookreader -> <IDENTIFIER>.bookreader.json =
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     if (!this.itemid) {
@@ -121,7 +121,7 @@ ArchiveItem.prototype.saveBookReader = function(opts = {}, cb) {
 
         if (!(this.bookreader || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
-            this.fetch_bookreader((err, data) => {
+            this.fetch_bookreader((err, ai) => {
                 if (err) {
                     console.error(`Cant save because could not fetch bookreader for %s: %s`, this.itemid, err.message);
                     cb(err);
@@ -205,18 +205,21 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
 ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
     /*
-        Read metadata, reviews, files and extra from corresponding files
-        cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
+       Read bookreader data from file and place in bookreader field on item
+       file = { data, brOptions, lendingInfo, possibly metadata }
+       item has bookreader: { data, brOptions, lendingInfo }
+       API returns { data: { data, brOptions, lendingInfo, possibly metadata } }
+       cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid; // Possible undefined
     function _parse(part, cb) { _parse_common(namepart, part, cb); }
-    _parse("bookreader", (err, o) => {
+    _parse("bookreader", (err, o) => { // { data, brOptions, lendingInfo }
         if (err) {
             cb(err);
         } else {
             o.metadata = this.metadata;
-            cb(null, new RawBookReaderResponse(o));
+            cb(null, new RawBookReaderResponse({data: o}));
         }
     });
 };
@@ -232,6 +235,8 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
 
     cb(err, this) or if undefined, returns a promise resolving to 'this'
     Errors              TransportError (404)
+
+    Result is ai.bookreader = { brOptions, data, lendingInfo}
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const skipCache = opts.skipCache;           // If set will not try and read cache
@@ -240,28 +245,29 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
         cb(err)}}
     else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function errOrDark(err) {
+        //TODO - this is not defined here
         return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
     }
     function f(cb) {
         if (this.itemid && !(this.bookreader || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
             if (!skipCache) { // We have a cache directory to look in
                 //TODO-CACHE-AGING need timing of how long use old metadata
-                this.read((err, bookapi) => {
+                this.read_bookreader((err, bookapi) => { // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
                     if (err) { // No cached version
                         this._fetch_bookreader(opts, (err, ai) => {
                             if (err) {
                                 cb(err); // Failed to read during fetch_metadata & failed to fetch here
                             } else {
-                                ai.saveBookReader({}, (err, res) => cb(errOrDark(null), res)); // resave as have new data
+                                ai.saveBookReader({}, (err, res) => cb(errOrDark.call(this, null), res)); // resave as have new data
                             }  // Save data fetched (de-fjorded)
                         });    // resolves to this
                     } else {    // Local read succeeded.
                         this.loadFromBookreaderAPI(bookapi); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
                         //TODO-BOOK ensure copying bookreader during a crawl to an explicit copyDirectory
                         if (MirrorFS.copyDirectory) { // If copyDirectory explicitly specified then save to it.
-                            this.saveBookReader({}, (err, res) => cb(errOrDark(null), res));
+                            this.saveBookReader({}, (err, res) => cb(errOrDark.call(this, null), res));
                         } else {
-                            cb(errOrDark(null), this);
+                            cb(errOrDark.call(this, null), this);
                         }
                     }
                 })
@@ -269,7 +275,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
                 this._fetch_bookreader(opts, cb); // Process Fjords and load .metadata and .files etc - handles darkOk
             }
         } else {
-            cb(errOrDark(null), this);
+            cb(errOrDark.call(this, null), this);
         }
     }
 };

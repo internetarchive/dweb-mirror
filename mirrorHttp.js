@@ -31,7 +31,7 @@ const path = require('path');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
-
+const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 
 // IA packages
 global.DwebTransports = require('@internetarchive/dweb-transports'); // Must be before DwebObjects
@@ -341,7 +341,7 @@ app.get('/BookReader/BookReaderJSIA.php', function(req, res, next) {
         if (err) {
             res.status(404).send(err.message); // Its neither local, nor from server
         } else {
-            res.json(new RawBookReaderResponse(ai));
+            res.json(RawBookReaderResponse.fromArchiveItem(ai));
         }
     });
 });
