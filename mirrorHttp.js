@@ -54,6 +54,7 @@ const ArchiveMember = require('./ArchiveMemberPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
+const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 const app = express();
 
 // Make "config" available in rest of mirrorHttp setup
@@ -63,7 +64,7 @@ MirrorConfig.new((err, config) => {
 
 // noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
-MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
+MirrorFS.init({directories: config.directories, httpServer: httpOrHttps+"://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
 
 const connectOpts = config.apps.http.connect; // Setup in yaml defaults, can be user overridden
 
@@ -282,6 +283,42 @@ function sendInfo(req, res) {
     res.status(200).set('Accept-Ranges','bytes').json({"config": config.configOpts});
 }
 
+
+function sendBookReaderJSIA(req, res, next) {
+    waterfall([
+        (cb) => new ArchiveItem({itemid: req.query.id})
+            .fetch_metadata(cb),
+        (ai, cb) => ai.fetch_bookreader(cb)
+    ], (err, ai) => {
+        if (err) {
+            res.status(404).send(err.message); // Its neither local, nor from server
+        } else {
+            res.json({data: RawBookReaderResponse.fromArchiveItem(ai).cooked({server: req.query.server, protocol: httpOrHttps})});
+        }
+    });
+};
+function sendBookReaderImages(req, res, next) {
+    debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
+    // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/unitednov65unit/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
+    const [unusedBlank, unusedInt, unusedItems, identifier, zipfile] = req.query.zip.split('/');
+    waterfall([
+        (cb) => new ArchiveItem({itemid: identifier})
+            .fetch_metadata(cb),
+        (ai, cb) => MirrorFS.cacheAndOrStream({
+            relFilePath: `${identifier}/${zipfile}/${req.query.file}`,
+            urls: "https://" + ai.server + req.url,
+            debugname: `${identifier}_${req.query.file}`,
+            wantStream: true
+        }, cb)
+    ], (err, s) => {
+        if (err) {
+            res.status(404).send(err.message); // Its neither local, nor from server
+        } else {
+            _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"});
+        }
+    });
+}
+
 //app.get('/', (req,res)=>{debug("ROOT URL");});
 
 app.get('/', (req,res)=>{res.redirect(url.format({pathname:"/archive/archive.html", query: {transport:"HTTP", mirror: req.headers.host}}))});
@@ -332,20 +369,8 @@ app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVa
 //TODO add generic fallback to use Domain.js for name lookup
 
 //e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
-app.get('/BookReader/BookReaderJSIA.php', function(req, res, next) {
-    waterfall([
-        (cb) => new ArchiveItem({itemid: req.query.id})
-            .fetch_metadata(cb),
-        (ai, cb) => ai.fetch_bookreader(cb)
-    ], (err, ai) => {
-        if (err) {
-            res.status(404).send(err.message); // Its neither local, nor from server
-        } else {
-            res.json(RawBookReaderResponse.fromArchiveItem(ai));
-        }
-    });
-});
-
+app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
+app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
 
 // noinspection JSUnresolvedVariable
 app.get('/contenthash/:contenthash', (req, res, next) =>
