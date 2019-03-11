@@ -7,6 +7,7 @@
 directories:
   - ~/archiveorg # Home directory of user
   - /Volumes/*/archiveorg # Any connected volume
+  - /media/pi/*/archiveorg # At least on Internet-in-a-Box USB volumes are put here
   - /.data/archiveorg # This is where Rachel3+ puts its data
 archiveui: # Where to find the ArchiveUI relative to the directory this file and the code resides in
   directories: # Note code uses "directory" which is first of these to exist - note this should match the list in install.sh TODO figure out how to read this yaml in install.sh
