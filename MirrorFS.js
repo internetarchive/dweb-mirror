@@ -59,14 +59,15 @@ class MirrorFS {
                 if (err.code === "ENOENT") { // missing parent dir
                     const parentdir = path.dirname(dirname);
                     MirrorFS._mkdir(parentdir, err => {
-                        if (err) cb(err); // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
+                        if (err) { cb(err) } else   // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
                         fs.mkdir(dirname, cb);
                     })
                 } else {
                     cb(err); // Throw any other error
                 }
+            } else {
+                cb()
             }
-            cb();
         })
     }
 

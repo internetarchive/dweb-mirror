@@ -296,28 +296,17 @@ function sendBookReaderJSIA(req, res, next) {
             res.json({data: RawBookReaderResponse.fromArchiveItem(ai).cooked({server: req.query.server, protocol: httpOrHttps})});
         }
     });
-};
+}
+
 function sendBookReaderImages(req, res, next) {
     debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
     // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/unitednov65unit/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
-    const [unusedBlank, unusedInt, unusedItems, identifier, zipfile] = req.query.zip.split('/');
-    waterfall([
-        (cb) => new ArchiveItem({itemid: identifier})
-            .fetch_metadata(cb),
-        (ai, cb) => MirrorFS.cacheAndOrStream({
-            relFilePath: `${identifier}/${zipfile}/${req.query.file}`,
-            urls: "https://" + ai.server + req.url,
-            debugname: `${identifier}_${req.query.file}`,
-            wantStream: true
-        }, cb)
-    ], (err, s) => {
-        if (err) {
-            res.status(404).send(err.message); // Its neither local, nor from server
-        } else {
-            _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"});
-        }
-    });
+    new ArchiveItem({itemid: req.query.zip.split('/')[3]})
+        .fetch_page({wantStream: true, reqUrl: req.url, zip: req.query.zip, file: req.query.file, scale: req.query.scale, rotate: req.query.rotate },
+            (err, s)=> _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"})
+        )
 }
+
 
 //app.get('/', (req,res)=>{debug("ROOT URL");});
 
