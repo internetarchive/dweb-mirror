@@ -46,3 +46,4 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 * 0.2.4: Fix bug in crawling "all" for querys
 * 0.2.5: Oops - was depending on fixed version of dweb-transports
 * 0.2.6: Recognize default location for IIAB USB sticks /media/pi/*
+* 0.2.7: Bookreader support
