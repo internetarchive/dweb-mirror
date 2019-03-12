@@ -360,6 +360,8 @@ app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumb
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 // noinspection JSUnresolvedFunction
+app.get('/archive/bookreader/BookReader/*', function(req,res,next) { //TODO-BOOK this isnt generic for all platforms use same technique as for config.archiveui.directory
+    _sendFileFromDir(req, res, next, "/usr/local/node_modules/@internetarchive/bookreader/BookReader"); } );
 app.get('/archive/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory ); } );
 //TODO add generic fallback to use Domain.js for name lookup
