@@ -299,10 +299,12 @@ function sendBookReaderJSIA(req, res, next) {
 }
 
 function sendBookReaderImages(req, res, next) {
-    debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
-    // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/unitednov65unit/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
-    new ArchiveItem({itemid: req.query.zip.split('/')[3]})
-        .fetch_page({wantStream: true, reqUrl: req.url, zip: req.query.zip, file: req.query.file, scale: req.query.scale, rotate: req.query.rotate },
+    //debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
+    // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
+    // or http://localhost:4244/download/IDENTIFIER/page/cover_t.jpg
+    const itemid = req.params['itemid'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
+    new ArchiveItem({itemid})
+        .fetch_page({wantStream: true, reqUrl: req.url, zip: req.query.zip, page: req.params['page'], file: req.query.file, scale: req.query.scale, rotate: req.query.rotate },
             (err, s)=> _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"})
         )
 }
@@ -316,12 +318,17 @@ app.get('/arc/archive.org/advancedsearch', streamQuery);
 app.get('/arc/archive.org/details', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/details/:itemid', (req, res) => {
-    req.query.item = req.params['itemid']; // Move itemid into query
-    res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); // and redirect to the html file
+    res.redirect(url.format({pathname: "/archive/archive.html", query: Object.assign(req.query, {item: req.params['itemid']})})); // Move itemid into query and redirect to the html file
+});
+//TODO-BOOK this will be needed on dweb.me as well OR make archive.html handle /arc/archive.org/details/foo
+app.get('/arc/archive.org/details/:itemid/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
+    res.redirect(url.format({pathname: "/archive/archive.html", query: Object.assign(req.query, {item: req.params['itemid'], page: req.params['page']})})); // Move itemid into query and redirect to the html file
 });
 // noinspection JSUnresolvedFunction
 app.get(ACUtil.gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next) ); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+app.get(ACUtil.gateway.urlDownload + '/:itemid/page/:page', sendBookReaderImages);
 app.get(ACUtil.gateway.urlDownload + '/:itemid/*', streamArchiveFile);
+
 // noinspection JSUnresolvedFunction
 app.get('/arc/archive.org/images/*',  function(req, res, next) { // noinspection JSUnresolvedVariable
     _sendFileFromDir(req, res, next, config.archiveui.directory+"/images" ); } );

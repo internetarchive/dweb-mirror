@@ -280,19 +280,23 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
     }
 };
 
-ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined, zip=undefined, file=undefined, scale=undefined, rotate=undefined}={}, cb) {
+ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined, zip=undefined, file=undefined, scale=undefined, rotate=undefined, page=undefined}={}, cb) {
     /* Fetch a page from the item, caching it
         cb(err, data || stream) returns either data, or if wantStream then a stream
      */
-    const [unusedBlank, unusedInt, unusedItems, identifier, zipfile] = zip.split('/');
+    let zipfile;
+    if (zip) zipfile = zip.split('/')[4];
     waterfall([
         (cbw) => this.fetch_metadata(cbw),
-        (ai, cbw) => MirrorFS.cacheAndOrStream({
-            relFilePath: `${this.itemid}/_expanded/${zipfile}/scale${scale}/rotate${rotate}/${file}`,
-            urls: "https://" + ai.server + reqUrl, // request URLs dont have server, and need to add datanode anyway - note passes scale & rotate
-            debugname: `${this.itemid}_${file}`,
-            wantStream,
-        }, cbw)
+        (ai, cbw) => {
+            // request URLs dont have server, and need to add datanode anyway - note passes scale & rotate
+            const urls = page
+                ? `https://${ai.server}/BookReader/BookReaderPreview.php?${Util.parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
+                : "https://" + ai.server + reqUrl;
+            MirrorFS.cacheAndOrStream({ urls, wantStream,
+                relFilePath: `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${scale}/rotate${rotate}/${file}`),
+                debugname: `${this.itemid}_${file}`,
+            }, cbw) }
     ], cb);
 }
 
