@@ -59,8 +59,13 @@ class MirrorFS {
                 if (err.code === "ENOENT") { // missing parent dir
                     const parentdir = path.dirname(dirname);
                     MirrorFS._mkdir(parentdir, err => {
-                        if (err) cb(err); // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
-                        fs.mkdir(dirname, cb);
+                        if (err && !(err.code === "EEXIST")) { // Its quite possible (likely) two attempts to create same directory at same time when loading many files in same dir
+                            cb(err)
+                        } else {  // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
+                            fs.mkdir(dirname, err => {
+                                if (err && !(err.code === "EEXIST")) { cb(err) } else { cb(null) };
+                            });
+                        }
                     })
                 } else {
                     cb(err); // Throw any other error
@@ -169,14 +174,16 @@ class MirrorFS {
                                 if (err) {
                                     console.error("Failed to mkdir for", filepath, err.message);
                                     cb(err);
+                                } else {
+                                    fs.open(filepath, 'w', (err, fd) => {
+                                        if (err) { // This shouldnt happen, we just checked the directory.
+                                            console.error("Failed to open", filepath, "after mkdir");
+                                            cb(err);
+                                        } else {
+                                            cb(null, fd);
+                                        }
+                                    });
                                 }
-                                fs.open(filepath, 'w', (err, fd) => {
-                                    if (err) { // This shouldnt happen, we just checked the directory.
-                                        console.error("Failed to open", filepath, "after mkdir");
-                                        throw err;
-                                    }
-                                    cb(null, fd)
-                                });
                             });
                         });
                     } else {
