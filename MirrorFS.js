@@ -70,8 +70,9 @@ class MirrorFS {
                 } else {
                     cb(err); // Throw any other error
                 }
+            } else {
+                cb();
             }
-            cb();
         })
     }
 
