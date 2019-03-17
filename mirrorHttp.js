@@ -56,12 +56,11 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 const app = express();
-
-// Make "config" available in rest of mirrorHttp setup
-MirrorConfig.new((err, config) => {
-    if (err) { debug("Exiting because of error", err.message);} else {
-
-
+/*
+TODO-MERGE: Pass it config - which fields
+    [ ] config.directories config.apps.http  config.upstream,
+ */
+function mirrorHttp(config) {
 // noinspection JSUnresolvedVariable
 debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 MirrorFS.init({directories: config.directories, httpServer: httpOrHttps+"://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
@@ -400,7 +399,10 @@ app.use((req,res,next) => {
 
 // noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
-
-
+}
+// Make "config" available in rest of mirrorHttp setup
+MirrorConfig.new((err, config) => {
+    if (err) { debug("Exiting because of error", err.message);} else {
+        mirrorHttp(config);
     } // Config load success
 } ); // config load
