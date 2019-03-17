@@ -24,6 +24,7 @@ const MirrorConfig = require('./MirrorConfig');
 
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows"]; // Options that can be arrays
+const optsLowerCase = ["level"]; // Always want lowercase
 
 //XXX make depth max of depth, level-1, rows
 //const opts = getopts("--level all zandvoort.newspapers.1992.zandvoorts.nieuwsblad".split(" "),{ // Just for testing different options
@@ -86,23 +87,34 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
 `;
 if (opts.help) { console.log(help); process.exit(); }
 
+function processOpts() {
+    /* Process the command line opts resulting in a munged opts */
 
+    // Handle arrays, always return an array, even if empty
+    optsArray.forEach(key => {
+        if ((typeof opts[key] === "undefined") || (opts[key] === "")) {
+            opts[key] = [];
+        } else if (!Array.isArray(opts[key])) {
+            opts[key] = [ opts[key] ];
+        }
+    });
+
+    optsLowercase.forEach(key => {
+        opts[key] = Array.isArray(opts[key])
+        ? opts[key].map(t=>t.toLowerCase())
+        : opts[key].toLowerCase()});
+
+}
 
 MirrorConfig.new((err, config) => { // Load config early, so can use in opts processing
     if (err) {
         debug("Exiting because of error", err.message);
     } else {
+        processOpts();
 
-        optsArray.forEach(key => {
-            if ((typeof opts[key] === "undefined") || (opts[key] === "")) {
-                opts[key] = [];
-            } else if (!Array.isArray(opts[key])) {
-                opts[key] = [ opts[key] ];
-            }
-        });
-        // code cares about case for these opts
-        opts.level = opts.level.map(t=>t.toLowerCase());
-        if (!opts.level.length) opts.level.push("details"); // Default is 1 level at details
+        // Default level is 1 level at details
+        if (!opts.level.length) opts.level.push("details");
+        // Default rows is in config...defaultDetailsSearch.rows if level >= detail
         if (!opts.rows.length) {
             opts.rows.push(
                 ( CrawlManager._levels.indexOf(opts.level[0]) >= CrawlManager._levels.indexOf("details")

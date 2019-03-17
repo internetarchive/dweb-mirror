@@ -15,7 +15,7 @@ DONE file, need pass on
 
 See URL_MAPPING.md for summary of below rules plus what they call.
 
-TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
+TODO-GATEWAY - special case for both metadportata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
  */
 // External packages
@@ -61,32 +61,6 @@ TODO-MERGE: Pass it config - which fields
     [ ] config.directories config.apps.http  config.upstream,
  */
 function mirrorHttp(config) {
-// noinspection JSUnresolvedVariable
-    debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
-    MirrorFS.init({
-        directories: config.directories,
-        httpServer: httpOrHttps + "://localhost:" + config.apps.http.port,
-        urlUrlstore: config.transports.ipfs.urlUrlstore
-    });
-
-    const connectOpts = config.apps.http.connect; // Setup in yaml defaults, can be user overridden
-
-//wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
-    if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
-        try {
-            wrtc = require('wrtc');
-            if (wrtc) connectOpts.webtorrent.tracker = wrtc;
-        } catch (err) {
-            debug("wrtc requested but not present");
-            delete connectOpts.webtorrent.tracker;
-        }
-    }
-
-    DwebTransports.p_connect(connectOpts).then(() => {
-        const Thttp = DwebTransports.http();
-        if (Thttp) Thttp.supportFunctions.push("createReadStream");
-    }); // Async, handling may fail while this is happening
-
 // noinspection JSUnresolvedVariable
     app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
     app.use(express.json());
@@ -456,6 +430,31 @@ function mirrorHttp(config) {
 // Make "config" available in rest of mirrorHttp setup
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
+        debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
+        MirrorFS.init({
+            directories: config.directories,
+            httpServer: httpOrHttps + "://localhost:" + config.apps.http.port,
+            urlUrlstore: config.transports.ipfs.urlUrlstore
+        });
+
+        const connectOpts = config.apps.http.connect; // Setup in yaml defaults, can be user overridden
+
+//wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
+        if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
+            try {
+                wrtc = require('wrtc');
+                if (wrtc) connectOpts.webtorrent.tracker = wrtc;
+            } catch (err) {
+                debug("wrtc requested but not present");
+                delete connectOpts.webtorrent.tracker;
+            }
+        }
+
+        DwebTransports.p_connect(connectOpts).then(() => {
+            const Thttp = DwebTransports.http();
+            if (Thttp) Thttp.supportFunctions.push("createReadStream");
+        }); // Async, handling may fail while this is happening
+
         mirrorHttp(config);
     } // Config load success
 } ); // config load
