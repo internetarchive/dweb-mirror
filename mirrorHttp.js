@@ -309,9 +309,8 @@ function sendBookReaderImages(req, res, next) {
         )
 }
 
-
+// Keep these lines in alphabetical order unless there is a reason not to (e.g. because capture specific before generic)
 //app.get('/', (req,res)=>{debug("ROOT URL");});
-
 app.get('/', (req,res)=>{res.redirect(url.format({pathname:"/archive/archive.html", query: {transport:"HTTP", mirror: req.headers.host}}))});
 app.get('/arc/archive.org', (req, res) => { res.redirect(url.format({pathname: "/archive/archive.html", query: req.query})); });
 app.get('/arc/archive.org/advancedsearch', streamQuery);
@@ -401,6 +400,7 @@ app.use((req,res,next) => {
 
 // noinspection JSUnresolvedVariable
 app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
+
 
     } // Config load success
 } ); // config load
