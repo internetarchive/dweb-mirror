@@ -63,7 +63,7 @@ class MirrorFS {
                             cb(err)
                         } else {  // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
                             fs.mkdir(dirname, err => {
-                                if (err && !(err.code === "EEXIST")) { cb(err) } else { cb(null) };
+                                if (err && !(err.code === "EEXIST")) { cb(err) } else { cb(null) }
                             });
                         }
                     })
@@ -77,7 +77,7 @@ class MirrorFS {
     }
 
     static rmdir(path, cb) {
-        var path = '/path/to/the/dir';
+        //var path = '/path/to/the/dir';
         exec('rm -r ' + path, function (err, stdout, stderr) {
             if (err) {
                 debug ("failed to rm -r %s", path);
@@ -472,7 +472,7 @@ class MirrorFS {
                             .filter(relFilePath => {
                                 if (relFilePath.endsWith('.part')) {
                                     // Note the unlink is async, but we are not waiting for it.
-                                    fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug("unlink %s %s", relFilePath, err ? "Failed "+err.message : ""))
+                                    fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug("unlink %s %s", relFilePath, err ? "Failed "+err.message : ""));
                                     return false; // Dont hash or add to IPFS
                                 } else {
                                     return true;
@@ -523,7 +523,7 @@ class MirrorFS {
             cb(null,undefined); // OK not to do it
         } else {
             const url2file = [this.httpServer + ACUtil.gateway.urlDownload, relFilePath].join('/'); // This is arc/archive.org/download/
-            const url = `${this.urlUrlstore}?arg=${encodeURIComponent(url2file)}`
+            const url = `${this.urlUrlstore}?arg=${encodeURIComponent(url2file)}`;
             // Have to be careful to avoid loops, the call to addIPFS should only be after file is retrieved and cached, and then addIPFS shouldnt be called if already cached
             // TODO-IPFS pass a parameter to p_GET that tells it not to loop retrying
             DwebTransports.httptools.p_GET(url, (err, res) => {
@@ -532,7 +532,7 @@ class MirrorFS {
                     cb(err);
                 } else {
                     debug("Added %s to IPFS key=", relFilePath, res.Key);
-                    if (ipfs && ipfs != res.Key) {  debug("ipfs hash doesnt match expected metadata has %s daemon returned %s", ipfs, res.Key); }
+                    if (ipfs && ipfs !== res.Key) {  debug("ipfs hash doesnt match expected metadata has %s daemon returned %s", ipfs, res.Key); }
                     //TODO-IPFS store res.Key in metadata - though not using for anything currently
                     cb(null, res)
                 }
