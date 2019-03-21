@@ -8,12 +8,9 @@ TODO-RPI find meta-task and document below
 
 ## Initial setup
 
-While it is unlikely that the process below is particularly fussy about a roughly normally configured RPi, 
-the following notes might aid in a speedy setup on a new RPi.
-
 There are several alternatives
 * Raspbian -> Internet In A Box -> dweb-mirror
-* NOOBS -> dweb-mirror (see [./README-raspberrypi-noobs.md] - TODO-RPI merge that doc in here or rename this as IIAB
+* NOOBS -> dweb-mirror (see [./README-raspberrypi-noobs.md]
 
 ### A. Raspbian -> Internet In A Box -> dweb-mirror
 
@@ -73,23 +70,24 @@ the following notes might aid in a speedy setup on a new RPi.
 We started with a standard preconfigured NOOBS MicroSD card that came with the box we got. 
 
 After the reboot during the process:
-* Change WiFi (not sure where) to connect
-* Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below.
+* Change WiFi to connect //TODO
+* Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below. //TODO
 * Menu/Preferences/Config
   * Interfaces:SSH:Enabled
-  * Set display to highest resolution
-  * Set Localization
+  * Set display to highest resolution that works for your display
+  * Set Localization if not done during install
   * Reboots (as part of saving these changes)
 
 In a terminal window, or via SSH to it. 
 ```
 sudo apt-get update
-sudo apt full-upgrade -y # Take a long break 
+# This next step now seems to happen during normal install, otherwise can be slow
+sudo apt full-upgrade -y 
 ```
 
 ### Both platforms ... install dweb-mirror
 
---- not done yet below here --- 
+--- not not checked on clean install of IIAB, but checked for NOOBS yet below here --- 
 
 
 ## Preliminaries to install
@@ -97,11 +95,14 @@ sudo apt full-upgrade -y # Take a long break
 Both platforms (Raspbian/IIAB and NOOBS) need a current version of node, 
 and we are in transition from npm to yarn so install both. 
 
+--- not checked below here on either clean install of IIAB, or of  NOOBS  --- 
+
 ### Node
 In terminal window or on SSH
 ```
-node -v # was v4.8.2 on Rachel3+ which is ancient and v8 on Noobs and Raspbian; 
+node -v # was v4.8.2 on Rachel3+ which is ancient and v8 on Noobs and Raspbian in some cases, or missing in others.
 curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+# This warned that you might need `sudo apt-get install gcc g++ make` which I haven't done
 sudo apt-cache policy nodejs # Should show v10 (on Rachel, only showed v9)
 sudo apt-get install -y nodejs
 ```
@@ -111,11 +112,11 @@ sudo npm i -g npm # Update npm
 ```
 
 ### Yarn
-Note a plain apt-get install yarn` will fail, and get the cmdtest instead, if you do this by mistake then sudo apt-get remove cmdtest before trying again
-```sudo apt-get update && sudo apt-get install yarn
+Note a plain `apt-get install yarn` will fail, and get the cmdtest instead, if you did this by mistake then `sudo apt-get remove cmdtest` before trying again
+```
 curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-
+sudo apt-get update && sudo apt-get install yarn
 ```
 
 ## Install dweb-mirror

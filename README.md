@@ -29,17 +29,12 @@ to their own disks, and then to serve them up via dweb tools such as IPFS or Web
 
 ## Installation
  
-At the moment this is one set for developing, or use, later I'll split it when its more stable.\
+At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-Please check for a platform specific README as these instructions dont work for some of the smaller platforms.
+Please check for a platform specific README (for Rachel or RaspberryPi with NOOBS or Internet In A Box) as these instructions dont work for some of the smaller platforms.
 
 ### 1. Prelim - getting your machine ready.
 * You'll need git, node, npm, which should be on most Linux machines.
-#### Generic
-* This is only tested on current versions, so I recommend updating before installing.
-  * Node: `https://nodejs.org` It should auto-detect your machine, and get the "recommended" version.
-  * Npm: # sudo npm install npm@latest -g
-  * Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
 
 #### Mac OSX
 * TODO Mac specific instructions to add these (need a clean machine to test on)
@@ -50,6 +45,12 @@ This is complex, the OS with the box is seriously out of date, see README-rachel
 #### Raspberry Pi 3 with or without Internet In A Box (IIAB)
 This is complex, see [README-raspberrypi.md] then come back here to finish
 
+#### Anything else
+* This is only tested on current versions, so I recommend updating before installing.
+  * Node: open `https://nodejs.org` in the browser.  It should auto-detect your machine, and get the "recommended" version.
+  * Npm: # sudo npm install npm@latest -g
+  * Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+
 ### 3. Install dweb-mirror
 
 There are two alternatives, depending on whether you will develop on this machine or not. 
@@ -57,8 +58,10 @@ There are two alternatives, depending on whether you will develop on this machin
 #### 3a. EITHER dweb-mirror as a server / appliance (tested on Rachel 3+ and RPi3)
 
 We will install it as a standard node_module
+
 Create a top level cache directory (its in configDefaults.yaml to check here
-# You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
+
+You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
 ```
 sudo mkdir -p "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
 ```
@@ -71,7 +74,7 @@ If it complains about write permissions then prefix with `sudo `
 
 The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
 ```
-# yarn add node-pre-gyp cmake
+yarn add node-pre-gyp cmake
 ```
 Now install dweb-mirror, otherwise:
 ```
