@@ -70,8 +70,8 @@ the following notes might aid in a speedy setup on a new RPi.
 We started with a standard preconfigured NOOBS MicroSD card that came with the box we got. 
 
 After the reboot during the process:
-* Change WiFi to connect //TODO
-* Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below. //TODO
+* Change WiFi to connect
+* Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below.
 * Menu/Preferences/Config
   * Interfaces:SSH:Enabled
   * Set display to highest resolution that works for your display
@@ -122,6 +122,9 @@ sudo apt-get update && sudo apt-get install yarn
 ## Install dweb-mirror
 
 Now follow the instructions in [README.md], come back here to finish things off
+
+### RPi with NOOBS
+No final steps required at the moment
 
 ### Raspberry + Internet In A Box
 #### Open port 

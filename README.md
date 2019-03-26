@@ -16,16 +16,26 @@ Its goal is to allow people to mirror one or more collections (or individual ite
 to their own disks, and then to serve them up via dweb tools such as IPFS or WebTorrent.
 
 ## What is it
-### Overall design
 
-* A process that crawls IA items & collection, and writes files & metadata to a local cache, its uses a multithreaded task queue.
-* An HTTP server that runs against the local cache and can either be a proxy, or fully offline.
-* A Javascript based UI (the same as https://dweb.archive.org) 
-* TODO Installers to run on a variety of the platforms that are used in contexts with poor internet
-* TODO: A control UI that edits a configuration file (local or virtual) - very basic
-* TODO A set of tools that add mirrored material from disk, or incrementally on crawling, to transports including: IPFS, WebTorrent, GUN ...
-* TODO An API to allow extension and adaptation
-* TODO Some test harness to check it.
+Dweb-mirror is intended to make the Internet Archive experience and UI available offline. 
+
+It consists of three parts
+* A crawler that can fetch a configurable list of content from the Internet Archive to local storage which can be sneaker-net to any location.
+* An http server that (once completed) can server this content completely offline
+* A proxy that can browse the Internet Archive saving content for future offline use.
+* A javascript based UI to the Internet Archive that can work offline (this is the related [dweb-archive](https://github.org/internetarchive/dweb-archive) repo
+
+It currently runs and is supported on four platforms though smarter integration is ongoing.
+* MacOSX - for development
+* Rachel 3+/World-Possible box (internal storage, battery, WiFi router)
+* Raspberry Pi 3+ starting with the NOOBS that usually comes in the box.
+* Raspberry Pi 3+ running IIAB. 
+
+We don't expect problems porting to other Linux based environments, the biggest challenge is usually getting an up-to-date version of Node to run.
+
+In addition the system can seed into IPFS and will be adding seeding to GUN, WEBTORRENT and WOLK soon.
+
+This is an ongoing project, continually adding support for new Internet Archive content types; new platforms; and new decentralized transports.
 
 ## Installation
  
@@ -85,6 +95,8 @@ yarn install
 The example above would install dweb-mirror as `/usr/local/node_modules/@internetarchive/dweb-mirror`
 which is refered to as `<wherever>/dweb-mirror` in the rest of this README
 
+Now skip to step 4
+
 #### 3b. OR dweb-mirror for development (tested on Mac OSX)
 
 
@@ -142,7 +154,7 @@ cp ./dweb-mirror.config.yaml ${HOME} # Copy sample to your home directory and ed
 ```
 and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for inline documentation.
 
-  * `directories`  should point at places you want the cache to store and look for files - at least one of these should exist and it will default to the .data/archiveorg you setup above
+  * `directories` if you plan on using places other than any of those in dweb-mirror.config.yaml (/.data/archiveorg, and any USBs on Rachel3+, NOOBS or IIAB
   * `archiveui/directories` you probably dont need to change this as it will usually guess right, but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
   * `apps.crawl` includes a structure that lists what collections are to be installed, I suggest testing and then editing
 
@@ -162,6 +174,8 @@ If you don’t get a Archive UI then look at the server log (in console) to see 
 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
+
+Expect, on slower machines, to see no images the first time, refresh after a little while and most should appear. 
 
 ### 6. Test crawling
 

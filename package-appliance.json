@@ -10,7 +10,8 @@
   "description": "Rachel install file for dweb-mirror",
   "dependencies": {
     "@internetarchive/dweb-archive": "^0.1.48",
-    "@internetarchive/dweb-mirror": "^0.2.2"
+    "@internetarchive/dweb-mirror": "^0.2.2",
+    "node-pre-gyp": "latest"
   },
   "devDependencies": {
   },
