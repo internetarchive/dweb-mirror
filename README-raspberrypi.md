@@ -30,9 +30,9 @@ So this is what I did. (Edits welcome, if your experience differed)
 * Powered up
 * It prompted me for soem getting started things, 
 * Accepted "Next to get started" though I suspect IIAB's comprehensive install gets some of them as well.
-* Selected Australia / Australian English (there was no choice of language :-( ) and US kbd
+* Selected your country, language, keyboard - it shouldnt matter which.
 * Changed password since RPis get hacked on default password
-* Connected to WiFi
+* Connected to WiFi (not neccessary if you have Ethernet connected)
 * It automatically Updated OS - this is big - take a break :-)
     * Note that this process failed for me with failures of size and sha, but a restart, after the prompts for password etc, 
     got me to a partially completed download so didn't have to start from scratch
@@ -87,15 +87,11 @@ sudo apt full-upgrade -y
 
 ### Both platforms ... install dweb-mirror
 
---- not not checked on clean install of IIAB, but checked for NOOBS yet below here --- 
-
-
 ## Preliminaries to install
 
 Both platforms (Raspbian/IIAB and NOOBS) need a current version of node, 
 and we are in transition from npm to yarn so install both. 
 
---- not checked below here on either clean install of IIAB, or of  NOOBS  --- 
 
 ### Node
 In terminal window or on SSH
@@ -105,6 +101,7 @@ curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 # This warned that you might need `sudo apt-get install gcc g++ make` which I haven't done
 sudo apt-cache policy nodejs # Should show v10 (on Rachel, only showed v9)
 sudo apt-get install -y nodejs
+node -v # Confirm it upgraded to 10.x
 ```
 ### NPM
 ```
@@ -119,30 +116,26 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 sudo apt-get update && sudo apt-get install yarn
 ```
 
-## Install dweb-mirror
-
-Now follow the instructions in [README.md], come back here to finish things off
-
-### RPi with NOOBS
-No final steps required at the moment
-
-### Raspberry + Internet In A Box
-#### Open port 
-TODO-IIAB integrate this fix into IIAB's release
-
-If access to `http://<box ip address>:4244` fails, then ...
+### On IIAB only need to open the port
 ```
 cd /usr/bin
 sudo nano /opt/iiab/iiab/roles/network/templates/gateway/iiab-gen-iptables
 ```
 * Around line 101 you'll find lines like
 `$IPTABLES -A INPUT -p tcp --dport $kiwix_port -m state --state NEW -i $wan -j ACCEPT`
-* Edit this to replace `$kwix_port` with `4244`
+* Duplicate this line and replace `$kwix_port` with `4244`
 * Save 
 ```
 cd /opt/iiab/iiab && sudo ./runrole network # Runs iiab-gen-iptables towards end
 ```
 You may have to do this any time you update IIAB until dweb-mirror is built into it.
 
+TODO-IIAB integrate into final version
+
 Also there is currently a bug in IIAB that requires a reboot after these installs or DNS lookup doesn't work.
+
+## Install dweb-mirror
+
+
+Now follow the instructions in [README.md], come back here to finish things off
 

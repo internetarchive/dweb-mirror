@@ -69,27 +69,26 @@ There are two alternatives, depending on whether you will develop on this machin
 
 We will install it as a standard node_module
 
-Create a top level cache directory (its in configDefaults.yaml to check here
+Create a top level cache directory,
 
-You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
 ```
 sudo mkdir -p "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
 ```
+Its in configDefaults.yaml to check at this address. You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
+
 # Now create a package.json that points at dweb-mirror
 ```
 cd /usr/local  # Various other places didn't work on Rachel, but in theory it should work anywhere.
-curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-appliance.json
+sudo curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-appliance.json
 ```
-If it complains about write permissions then prefix with `sudo `
 
 The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
 ```
-yarn add node-pre-gyp cmake
+sudo yarn add node-pre-gyp cmake
 ```
 Now install dweb-mirror, otherwise:
 ```
-#if the curl above failed then you'll need `sudo yarn install` 
-yarn install
+sudo yarn install
 # If it fails, then running it again is safe.
 ```
 The example above would install dweb-mirror as `/usr/local/node_modules/@internetarchive/dweb-mirror`
