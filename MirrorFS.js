@@ -504,6 +504,14 @@ class MirrorFS {
             cb)
     }
 
+    /* TODO https://github.com/internetarchive/dweb-mirror/issues/103
+    In ...there are calls to addIPFS, which uses httptools to send a query to local server . This should be via TransportIPFS
+    [] Work out appropriate API for Transports & ideally same for TransportIPFS
+    [] dweb-transports/TransportIPFS: Add urlstore call from API
+    [] dweb-transports/Transports: Add urlstore call
+    [] dweb-mirror/addIPFS replace with call to Transports
+    */
+
     static addIPFS({relFilePath, ipfs}, cb) {
         /* Add a file to IPFS, it should end up with a hash that matches that generated on dweb.me, allowing IPFS network splits to be healed.
         TODO document args
