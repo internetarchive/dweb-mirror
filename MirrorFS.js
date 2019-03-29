@@ -8,6 +8,7 @@ const Transform = require('stream').Transform || require('readable-stream').Tran
 const debug = require('debug')('dweb-mirror:MirrorFS');
 const multihashes = require('multihashes');
 const detect = require('async/detect');
+const detectSeries = require('async/detectSeries');
 const each = require('async/each');
 const waterfall = require('async/waterfall');
 var exec = require('child_process').exec;
@@ -218,6 +219,14 @@ class MirrorFS {
     }
     */
 
+    static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined}, cb) {
+        const scales = [];
+        for(let i=Math.floor(scale); i>0; i--) { scales.push(i); };  // A = e.g. [ 8...1 ]
+        detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
+            (rel, cb2) => this.checkWhereValidFile(rel, {}, (err, res) => cb2(null, !err)), // Find the first place having a file bigger or same size as
+            cb
+        )
+    }
     static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
         /*
         digest      Digest of file to find
@@ -273,6 +282,7 @@ class MirrorFS {
     }
 
     static cacheAndOrStream({relFilePath=undefined,
+                                existingFilePath=undefined,
                                   debugname="UNDEFINED", urls=undefined,
                                   expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
                                   start=0, end=undefined} = {}, cb) {
@@ -281,6 +291,7 @@ class MirrorFS {
 
         Returns a stream from the cache, or the net if start/end unset cache it
         relFilePath:    Path, relative to  cache, to a file.
+        existingFilePath:    If found, something else found where this file was
         urls:           Single url or array to retrieve
         debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
         expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
@@ -302,26 +313,32 @@ class MirrorFS {
             In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
         console.assert(urls);
-        this.checkWhereValidFile(relFilePath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err, existingFilePath) => {
-            if (err) { //Doesn't match
-                _notcached.call(this);
-            } else { // sha1 matched, skip fetching, just stream from saved
-                if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
-                    const copyFilePath = path.join(this.copyDirectory, relFilePath);
-                    fs.copyFile(existingFilePath, copyFilePath , (err) => {
-                        if (err) {
-                            debug("Failed to copy %s to %s", relFilePath, copyFilePath);
-                        } else {
-                            debug("copied cached file to %s", copyFilePath);
-                        }
-                        callbackEmptyOrDataOrStream(existingFilePath);
-                    })
-                } else {
-                    callbackEmptyOrDataOrStream(existingFilePath);
+        if (existingFilePath) {
+            haveExistingFile(existingFilePath);
+        } else {
+            this.checkWhereValidFile(relFilePath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err, existingFilePath) => {
+                if (err) { //Doesn't match
+                    _notcached.call(this);
+                } else { // sha1 matched, skip fetching, just stream from saved
+                    haveExistingFile.call(this, existingFilePath)
                 }
+            });
+        }
+        function haveExistingFile(existingFilePath) {
+            if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
+                const copyFilePath = path.join(this.copyDirectory, relFilePath);
+                fs.copyFile(existingFilePath, copyFilePath , (err) => {
+                    if (err) {
+                        debug("Failed to copy %s to %s", relFilePath, copyFilePath);
+                    } else {
+                        debug("copied cached file to %s", copyFilePath);
+                    }
+                    callbackEmptyOrDataOrStream(existingFilePath);
+                })
+            } else {
+                callbackEmptyOrDataOrStream(existingFilePath);
             }
-        });
-
+        }
        function callbackEmptyOrData(existingFilePath) {
             if (wantBuff) {
                 fs.readFile(existingFilePath, cb); //TODO check if its a string or a buffer or what
