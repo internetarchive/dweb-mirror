@@ -16,30 +16,35 @@ Its goal is to allow people to mirror one or more collections (or individual ite
 to their own disks, and then to serve them up via dweb tools such as IPFS or WebTorrent.
 
 ## What is it
-### Overall design
 
-* A process that crawls IA items & collection, and writes files & metadata to a local cache, its uses a multithreaded task queue.
-* An HTTP server that runs against the local cache and can either be a proxy, or fully offline.
-* A Javascript based UI (the same as https://dweb.archive.org) 
-* TODO Installers to run on a variety of the platforms that are used in contexts with poor internet
-* TODO: A control UI that edits a configuration file (local or virtual) - very basic
-* TODO A set of tools that add mirrored material from disk, or incrementally on crawling, to transports including: IPFS, WebTorrent, GUN ...
-* TODO An API to allow extension and adaptation
-* TODO Some test harness to check it.
+Dweb-mirror is intended to make the Internet Archive experience and UI available offline. 
+
+It consists of three parts
+* A crawler that can fetch a configurable list of content from the Internet Archive to local storage which can be sneaker-net to any location.
+* An http server that (once completed) can server this content completely offline
+* A proxy that can browse the Internet Archive saving content for future offline use.
+* A javascript based UI to the Internet Archive that can work offline (this is the related [dweb-archive](https://github.org/internetarchive/dweb-archive) repo
+
+It currently runs and is supported on four platforms though smarter integration is ongoing.
+* MacOSX - for development
+* Rachel 3+/World-Possible box (internal storage, battery, WiFi router)
+* Raspberry Pi 3+ starting with the NOOBS that usually comes in the box.
+* Raspberry Pi 3+ running IIAB. 
+
+We don't expect problems porting to other Linux based environments, the biggest challenge is usually getting an up-to-date version of Node to run.
+
+In addition the system can seed into IPFS and will be adding seeding to GUN, WEBTORRENT and WOLK soon.
+
+This is an ongoing project, continually adding support for new Internet Archive content types; new platforms; and new decentralized transports.
 
 ## Installation
  
-At the moment this is one set for developing, or use, later I'll split it when its more stable.\
+At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-Please check for a platform specific README as these instructions dont work for some of the smaller platforms.
+Please check for a platform specific README (for Rachel or RaspberryPi with NOOBS or Internet In A Box) as these instructions dont work for some of the smaller platforms.
 
 ### 1. Prelim - getting your machine ready.
 * You'll need git, node, npm, which should be on most Linux machines.
-#### Generic
-* This is only tested on current versions, so I recommend updating before installing.
-  * Node: `https://nodejs.org` It should auto-detect your machine, and get the "recommended" version.
-  * Npm: # sudo npm install npm@latest -g
-  * Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
 
 #### Mac OSX
 * TODO Mac specific instructions to add these (need a clean machine to test on)
@@ -50,6 +55,12 @@ This is complex, the OS with the box is seriously out of date, see README-rachel
 #### Raspberry Pi 3 with or without Internet In A Box (IIAB)
 This is complex, see [README-raspberrypi.md] then come back here to finish
 
+#### Anything else
+* This is only tested on current versions, so I recommend updating before installing.
+  * Node: open `https://nodejs.org` in the browser.  It should auto-detect your machine, and get the "recommended" version.
+  * Npm: # sudo npm install npm@latest -g
+  * Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+
 ### 3. Install dweb-mirror
 
 There are two alternatives, depending on whether you will develop on this machine or not. 
@@ -57,30 +68,33 @@ There are two alternatives, depending on whether you will develop on this machin
 #### 3a. EITHER dweb-mirror as a server / appliance (tested on Rachel 3+ and RPi3)
 
 We will install it as a standard node_module
-Create a top level cache directory (its in configDefaults.yaml to check here
-# You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
+
+Create a top level cache directory,
+
 ```
 sudo mkdir -p "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
 ```
+Its in configDefaults.yaml to check at this address. You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
+
 # Now create a package.json that points at dweb-mirror
 ```
 cd /usr/local  # Various other places didn't work on Rachel, but in theory it should work anywhere.
-curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-appliance.json
+sudo curl -opackage.json https://raw.githubusercontent.com/internetarchive/dweb-mirror/master/package-appliance.json
 ```
-If it complains about write permissions then prefix with `sudo `
 
 The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
 ```
-# yarn add node-pre-gyp cmake
+sudo yarn add node-pre-gyp cmake
 ```
 Now install dweb-mirror, otherwise:
 ```
-#if the curl above failed then you'll need `sudo yarn install` 
-yarn install
+sudo yarn install
 # If it fails, then running it again is safe.
 ```
 The example above would install dweb-mirror as `/usr/local/node_modules/@internetarchive/dweb-mirror`
 which is refered to as `<wherever>/dweb-mirror` in the rest of this README
+
+Now skip to step 4
 
 #### 3b. OR dweb-mirror for development (tested on Mac OSX)
 
@@ -139,7 +153,7 @@ cp ./dweb-mirror.config.yaml ${HOME} # Copy sample to your home directory and ed
 ```
 and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for inline documentation.
 
-  * `directories`  should point at places you want the cache to store and look for files - at least one of these should exist and it will default to the .data/archiveorg you setup above
+  * `directories` if you plan on using places other than any of those in dweb-mirror.config.yaml (/.data/archiveorg, and any USBs on Rachel3+, NOOBS or IIAB
   * `archiveui/directories` you probably dont need to change this as it will usually guess right, but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
   * `apps.crawl` includes a structure that lists what collections are to be installed, I suggest testing and then editing
 
@@ -159,6 +173,8 @@ If you don’t get a Archive UI then look at the server log (in console) to see 
 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
+
+Expect, on slower machines, to see no images the first time, refresh after a little while and most should appear. 
 
 ### 6. Test crawling
 

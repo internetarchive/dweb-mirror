@@ -293,10 +293,19 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
             const urls = page
                 ? `https://${ai.server}/BookReader/BookReaderPreview.php?${Util.parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
                 : "https://" + ai.server + reqUrl;
-            MirrorFS.cacheAndOrStream({ urls, wantStream,
-                relFilePath: `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${scale}/rotate${rotate}/${file}`),
-                debugname: `${this.itemid}_${file}`,
-            }, cbw) }
+            const debugname = `${this.itemid}_${file}`;
+            const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
+            if (page) {
+                MirrorFS.cacheAndOrStream({ urls, wantStream, debugname, relFilePath}, cbw)
+            } else {
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate,
+                    relFileDir: `${this.itemid}/_pages/${zipfile}`},
+                    (err, relFilePath) => {
+                        //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
+                        MirrorFS.cacheAndOrStream({urls, wantStream, relFilePath, debugname}, cbw)
+                    }
+                )
+            } }
     ], cb);
 }
 

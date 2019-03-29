@@ -8,12 +8,9 @@ TODO-RPI find meta-task and document below
 
 ## Initial setup
 
-While it is unlikely that the process below is particularly fussy about a roughly normally configured RPi, 
-the following notes might aid in a speedy setup on a new RPi.
-
 There are several alternatives
 * Raspbian -> Internet In A Box -> dweb-mirror
-* NOOBS -> dweb-mirror (see [./README-raspberrypi-noobs.md] - TODO-RPI merge that doc in here or rename this as IIAB
+* NOOBS -> dweb-mirror (see [./README-raspberrypi-noobs.md]
 
 ### A. Raspbian -> Internet In A Box -> dweb-mirror
 
@@ -33,9 +30,9 @@ So this is what I did. (Edits welcome, if your experience differed)
 * Powered up
 * It prompted me for soem getting started things, 
 * Accepted "Next to get started" though I suspect IIAB's comprehensive install gets some of them as well.
-* Selected Australia / Australian English (there was no choice of language :-( ) and US kbd
+* Selected your country, language, keyboard - it shouldnt matter which.
 * Changed password since RPis get hacked on default password
-* Connected to WiFi
+* Connected to WiFi (not neccessary if you have Ethernet connected)
 * It automatically Updated OS - this is big - take a break :-)
     * Note that this process failed for me with failures of size and sha, but a restart, after the prompts for password etc, 
     got me to a partially completed download so didn't have to start from scratch
@@ -73,37 +70,38 @@ the following notes might aid in a speedy setup on a new RPi.
 We started with a standard preconfigured NOOBS MicroSD card that came with the box we got. 
 
 After the reboot during the process:
-* Change WiFi (not sure where) to connect
+* Change WiFi to connect
 * Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below.
 * Menu/Preferences/Config
   * Interfaces:SSH:Enabled
-  * Set display to highest resolution
-  * Set Localization
+  * Set display to highest resolution that works for your display
+  * Set Localization if not done during install
   * Reboots (as part of saving these changes)
 
 In a terminal window, or via SSH to it. 
 ```
 sudo apt-get update
-sudo apt full-upgrade -y # Take a long break 
+# This next step now seems to happen during normal install, otherwise can be slow
+sudo apt full-upgrade -y 
 ```
 
 ### Both platforms ... install dweb-mirror
-
---- not done yet below here --- 
-
 
 ## Preliminaries to install
 
 Both platforms (Raspbian/IIAB and NOOBS) need a current version of node, 
 and we are in transition from npm to yarn so install both. 
 
+
 ### Node
 In terminal window or on SSH
 ```
-node -v # was v4.8.2 on Rachel3+ which is ancient and v8 on Noobs and Raspbian; 
+node -v # was v4.8.2 on Rachel3+ which is ancient and v8 on Noobs and Raspbian in some cases, or missing in others.
 curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+# This warned that you might need `sudo apt-get install gcc g++ make` which I haven't done
 sudo apt-cache policy nodejs # Should show v10 (on Rachel, only showed v9)
 sudo apt-get install -y nodejs
+node -v # Confirm it upgraded to 10.x
 ```
 ### NPM
 ```
@@ -111,34 +109,33 @@ sudo npm i -g npm # Update npm
 ```
 
 ### Yarn
-Note a plain apt-get install yarn` will fail, and get the cmdtest instead, if you do this by mistake then sudo apt-get remove cmdtest before trying again
-```sudo apt-get update && sudo apt-get install yarn
+Note a plain `apt-get install yarn` will fail, and get the cmdtest instead, if you did this by mistake then `sudo apt-get remove cmdtest` before trying again
+```
 curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-
+sudo apt-get update && sudo apt-get install yarn
 ```
 
-## Install dweb-mirror
-
-Now follow the instructions in [README.md], come back here to finish things off
-
-### Raspberry + Internet In A Box
-#### Open port 
-TODO-IIAB integrate this fix into IIAB's release
-
-If access to `http://<box ip address>:4244` fails, then ...
+### On IIAB only need to open the port
 ```
 cd /usr/bin
 sudo nano /opt/iiab/iiab/roles/network/templates/gateway/iiab-gen-iptables
 ```
 * Around line 101 you'll find lines like
 `$IPTABLES -A INPUT -p tcp --dport $kiwix_port -m state --state NEW -i $wan -j ACCEPT`
-* Edit this to replace `$kwix_port` with `4244`
+* Duplicate this line and replace `$kwix_port` with `4244`
 * Save 
 ```
 cd /opt/iiab/iiab && sudo ./runrole network # Runs iiab-gen-iptables towards end
 ```
 You may have to do this any time you update IIAB until dweb-mirror is built into it.
 
+TODO-IIAB integrate into final version
+
 Also there is currently a bug in IIAB that requires a reboot after these installs or DNS lookup doesn't work.
+
+## Install dweb-mirror
+
+
+Now follow the instructions in [README.md], come back here to finish things off
 
