@@ -60,7 +60,8 @@ const app = express();
 TODO-MERGE: Pass it config - which fields
     [ ] config.directories config.apps.http  config.upstream,
  */
-function mirrorHttp(config) {
+export default function mirrorHttp(config, cb) {
+    debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 // noinspection JSUnresolvedVariable
     app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
     app.use(express.json());
@@ -426,11 +427,11 @@ function mirrorHttp(config) {
 
 // noinspection JSUnresolvedVariable
     app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
+    cb(null);   // Just in case this becomes async
 }
 // Make "config" available in rest of mirrorHttp setup
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
-        debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
         MirrorFS.init({
             directories: config.directories,
             httpServer: httpOrHttps + "://localhost:" + config.apps.http.port,
@@ -455,6 +456,8 @@ MirrorConfig.new((err, config) => {
             if (Thttp) Thttp.supportFunctions.push("createReadStream");
         }); // Async, handling may fail while this is happening
 
-        mirrorHttp(config);
+        mirrorHttp(config, (err) => {});
     } // Config load success
 } ); // config load
+
+exports = module.exports = mirrorHttp;

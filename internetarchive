@@ -3,6 +3,13 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 //process.env.DEBUG=process.env.DEBUG + " bittorrent-tracker:*";  // Add Webtorrent debugging
 
 // TODO-MIRROR check using GUN for metadata
+/* TODO-MERGE https://github.com/internetarchive/dweb-mirror/issues/105
+[ ] Add CrawlManager to mirrorHttp
+    [ ] Provide URLs to activate it /crawl/start
+    [ ] Other URLs crawl/stop crawl/status
+    [ ] Make task processing update a status array (maybe use deduplicator)
+[ ] UI to show status with button for start/stop
+ */
 
 const debug = require('debug')("dweb-mirror:crawl");
 const getopts = require('getopts');
@@ -24,6 +31,7 @@ const ArchiveFile = require('./ArchiveFilePatched');
 const CrawlManager = require('./CrawlManager');
 const MirrorFS = require('./MirrorFS');
 const MirrorConfig = require('./MirrorConfig');
+const mirrorHttp = require('./mirrorHttp');
 
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows", "directory"]; // Options that can be arrays
@@ -34,7 +42,7 @@ const optsJson = ["search", "related"]; // Can be provided as JSON rather than i
 //XXX make depth max of depth, level-1, rows
 const opts = getopts("--dummy --level details commute".split(" "),{ // Just for testing different options
 //const opts = getopts(process.argv.slice(2),{
-    alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth",
+    alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth", c: "crawl", s: "server",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
@@ -42,17 +50,20 @@ const opts = getopts("--dummy --level details commute".split(" "),{ // Just for 
     //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
 });
+const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 
 //TODO allow specifying "crawl item/filename" to get just one file see https://github.com/internetarchive/dweb-mirror/issues/108
 
 const help = `
-usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
+usage: internetarchive [-hvsc] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
     [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*
     [--skipfetchfile] [--skipcache] [--dummy] [identifier]*
 
     h : help print this text
     v : verbose tell us which config being run (default is currently pretty verbose)
     q : quiet (TODO implement this)
+    s : server run http server
+    c : crawl run crawler
     l level : Crawl the identifiers to a certain level, valid values are:
                 "tile"    for just enough to print a collection page, including the thumbnail image
                 "metadata" and the full metadata, which will be useful once local search is implemented
@@ -181,6 +192,7 @@ function _tasks() {
         // noinspection JSUnresolvedVariable
         tasks = config.apps.crawl.tasks; // Default or configured tasks
     } else {
+        opts.crawl = true;  // Specifying identifiers implies --crawl
         // We have positional arguments, use default details search
         function f(depthnow, depth) { // Recurses
             return depth
@@ -204,7 +216,7 @@ function _tasks() {
 
 function connect(cb) {
     //TODO-MERGE review this, using apps.crawl.connect when using for both apps.crawl adn apps.http see above as well
-    const connectOpts = config.apps.crawl.connect;
+    const connectOpts = config.apps.crawl.connect; //TODO-MERGE with config.apps.http.connect into common connect opts
     //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
     if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
         try {
@@ -221,11 +233,13 @@ function connect(cb) {
     if (!opts.dummy) {
         DwebTransports.connect(connectOpts, unusedErr => {
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-            DwebTransports.http().supportFunctions.push("createReadStream");
+            const Thttp = DwebTransports.http();
+            if (Thttp) Thttp.supportFunctions.push("createReadStream"); //TODO-MERGE move this into a connect.http option and check prefers webtorrent for streams
             cb(unusedErr);
         });
     }
 }
+
 function crawl(cb) {
     //TODO-MERGE repeat this above for mirrorHttp, there may be no optsallowed
     // Group explicit crawl opts from config, and any other opts that CrawlManager accepts, overriding existing defaults
@@ -244,11 +258,16 @@ let config;
 waterfall([
     cb => MirrorConfig.new((err, res) => { config = res; cb(err); }), // Load config early, so can use in opts processing
     cb => cb(optsToConfig()), // Currently synchronous returning err||null
-    cb => { MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore}); cb(null) },
+    cb => { MirrorFS.init({
+                directories: config.directories,
+                httpServer: httpOrHttps+"://localhost:"+config.apps.http.port,
+                urlUrlstore: config.transports.ipfs.urlUrlstore});
+            cb(null); },
     cb => connect(cb),
-    cb => crawl(cb),
-    //TODO-MERGE start server here
-    cb => DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb)
+    // Start server before crawler as crawler takes time before returning
+    cb => if (opts.server) { mirrorHttp(config, cb); } else { cb(null); },
+    cb => if (opts.crawl) { crawl(cb); } else { cb(null); },
+    cb => if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }
 ],(err) => {
     if (err) {
         debug("Failed: %s", err.message)
@@ -256,10 +275,3 @@ waterfall([
         debug('Completed')
     }
 });
-/* TODO-MERGE https://github.com/internetarchive/dweb-mirror/issues/105
-[ ] Add CrawlManager to mirrorHttp
-    [ ] Provide URLs to activate it /crawl/start
-    [ ] Other URLs crawl/stop crawl/status
-    [ ] Make task processing update a status array (maybe use deduplicator)
-[ ] UI to show status with button for start/stop
- */
