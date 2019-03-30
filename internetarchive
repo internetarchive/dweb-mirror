@@ -4,10 +4,10 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 
 // TODO-MIRROR check using GUN for metadata
 /* TODO-MERGE https://github.com/internetarchive/dweb-mirror/issues/105
-[ ] Add CrawlManager to mirrorHttp
-    [ ] Provide URLs to activate it /crawl/start
-    [ ] Other URLs crawl/stop crawl/status
-    [ ] Make task processing update a status array (maybe use deduplicator)
+TODO-MERGE    [ ] TEST - MERGE OF CRAWL & MIRRR
+TODO-MERGE    [ ] Provide URLs to activate it /crawl/start
+TODO-MERGE    [ ] Other URLs crawl/stop crawl/status
+TODO-MERGE    [ ] Make task processing update a status array (maybe use deduplicator)
 [ ] UI to show status with button for start/stop
  */
 
@@ -156,7 +156,7 @@ function optsToConfig() {
         );
     }
 
-    // Map - if specified: apps.crawl.connect.transport = opts.transport //TODO-MERGE maybe move from apps.crawl.transport to .transport
+    // Map - if specified: config.connect.transport = opts.transport
     if (opts.transport.length) {
         config.setOpts({apps: {crawl: {connect: {transport: opts.transport}}}}) // Code cares about case
     }
@@ -215,8 +215,7 @@ function _tasks() {
 }
 
 function connect(cb) {
-    //TODO-MERGE review this, using apps.crawl.connect when using for both apps.crawl adn apps.http see above as well
-    const connectOpts = config.apps.crawl.connect; //TODO-MERGE with config.apps.http.connect into common connect opts
+    const connectOpts = config.connect;
     //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
     if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
         try {
@@ -246,7 +245,7 @@ function crawl(cb) {
     const crawlopts = Object.assign({},
         config.apps.crawl.opts,
         Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
-    const tasks = _tasks(opts, config);
+    const tasks = _tasks(); // draws from opts and config.apps.crawl.tasks
     if (opts.verbose || opts.dummy) {
         debug( "Crawl configuration: crawlopts=%o tasks=%O", crawlopts, tasks);
     }

@@ -56,10 +56,6 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 const app = express();
-/*
-TODO-MERGE: Pass it config - which fields
-    [ ] config.directories config.apps.http  config.upstream,
- */
 export default function mirrorHttp(config, cb) {
     debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 // noinspection JSUnresolvedVariable
@@ -438,7 +434,7 @@ MirrorConfig.new((err, config) => {
             urlUrlstore: config.transports.ipfs.urlUrlstore
         });
 
-        const connectOpts = config.apps.http.connect; // Setup in yaml defaults, can be user overridden
+        const connectOpts = config.connect; // Setup in yaml defaults, can be user overridden
 
 //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
         if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {

@@ -169,7 +169,7 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
 
         const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
 
-        const connectOpts = config.apps.crawl.connect;
+        const connectOpts = config.connect;
 
         //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
         if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {

@@ -14,20 +14,20 @@ archiveui: # Where to find the ArchiveUI relative to the directory this file and
     - ../dweb-archive/dist # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
     - node_modules/@internetarchive/dweb-archive/dist # Or a repo cloned during 'npm install'
 # The apps group include configuration only used by one application
+connect:
+  transports:
+    - 'HTTP'
+    - 'IPFS'
+    #- 'WEBTORRENT'
+    #- 'GUN'
+    #- 'WORT'
+  webtorrent:
+    tracker: 'wrtc'   # May or may not work on different platforms
 apps:
   # mirrorHttp.js uses these
   http:
     port: 4244
     morgan: ':method :url :req[range] :status :res[content-length] :response-time ms'
-    connect:
-      transports:
-        - 'HTTP'
-        - 'IPFS'
-        #- 'WEBTORRENT'
-        #- 'GUN'
-        #- 'WORT'
-      webtorrent:
-        tracker: 'wrtc'   # May or may not work on different platforms
   # crawl.js uses these
   crawl:
     # An array of tasks each consists of { identifier, level, and optional search & related
@@ -56,14 +56,7 @@ apps:
         sort: '-downloads'
         rows: 6
         level: tile
-    connect:
-      transports:
-        - 'HTTP'
-        #- 'IPFS'
-        #- 'WEBTORRENT'
-        #- 'GUN'
-        #- 'WORT'
-      # copyDirectory: /Volumes/Transcend/test2 # Testing only
+    # copyDirectory: /Volumes/Transcend/test2 # Testing only
 #============== Dont edit anything from here on down ============================
 # Information about specific URLs for services at archive.org, - should not need changing
 archiveorg:
