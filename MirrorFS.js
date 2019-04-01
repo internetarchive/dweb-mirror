@@ -317,8 +317,12 @@ class MirrorFS {
             haveExistingFile(existingFilePath);
         } else {
             this.checkWhereValidFile(relFilePath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err, existingFilePath) => {
-                if (err) { //Doesn't match
-                    _notcached.call(this);
+                if (err) {  //Doesn't match
+                    if (!urls || (Array.isArray(urls) && !urls.length)) {
+                        cb(err); // Dont have it (which is reasonable, as caller such as AF.cacheOrStream might then find URLS and try again)
+                    } else { // Have urls, retrieve and cache
+                        _notcached.call(this);
+                    }
                 } else { // sha1 matched, skip fetching, just stream from saved
                     haveExistingFile.call(this, existingFilePath)
                 }

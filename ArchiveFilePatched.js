@@ -18,24 +18,37 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStre
      */
     const itemid = this.itemid; // Not available in events otherwise
     const filename = this.metadata.name;
-    this.urls((err, urls) => {
-        if (err) {
-            cb(err);
-        } else {
-            const debugname = [itemid, filename].join('/');
-            MirrorFS.cacheAndOrStream({
-                urls, skipFetchFile, wantStream, start, end, debugname,
-                sha1: this.metadata.sha1,
-                relFilePath: path.join(itemid, filename),
-                expectsize: this.metadata.size,
-                ipfs: this.metadata.ipfs, // Will usually be undefined as not currently retrieving
-            }, (err, streamOrUndefined)=> {
+    const debugname = [itemid, filename].join('/');
+    MirrorFS.cacheAndOrStream({ // Try first time without Urls, keep local
+        skipFetchFile, wantStream, start, end, debugname,
+        sha1: this.metadata.sha1,
+        relFilePath: path.join(itemid, filename),
+        expectsize: this.metadata.size,
+        ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
+    }, (err, streamOrUndefined) => {
+        if (err) { // Unable to retrieve locally, lets get urls and try again
+            this.urls((err, urls) => {
                 if (err) {
-                    debug("Unable to cacheOrStream %s",debugname); cb(err);
+                    cb(err);
                 } else {
-                    cb(null, wantStream ? streamOrUndefined : this);
+                    MirrorFS.cacheAndOrStream({
+                        urls, skipFetchFile, wantStream, start, end, debugname,
+                        sha1: this.metadata.sha1,
+                        relFilePath: path.join(itemid, filename),
+                        expectsize: this.metadata.size,
+                        ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
+                    }, (err, streamOrUndefined) => {
+                        if (err) {
+                            debug("Unable to cacheOrStream %s", debugname);
+                            cb(err);
+                        } else {
+                            cb(null, wantStream ? streamOrUndefined : this);
+                        }
+                    });
                 }
-            });
+            })
+        } else {
+            cb(null, wantStream ? streamOrUndefined : this);
         }
     })
 };
