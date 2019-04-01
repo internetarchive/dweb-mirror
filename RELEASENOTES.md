@@ -50,3 +50,4 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 * 0.2.8: Bug fix
 * 0.2.9: Bug fixes including not retrying local IPFS if not installed, and fix to not require a package that was moved
 * 0.2.10: Bookreader working offline; Improved installation documentation; 
+* 0.2.11: Better fully offline handling of relateditems and metadata for files
