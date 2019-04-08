@@ -10,8 +10,7 @@
   "description": "Rachel install file for dweb-mirror",
   "dependencies": {
     "@internetarchive/dweb-archive": "^0.1.48",
-    "@internetarchive/dweb-mirror": "^0.2.2",
-    "node-pre-gyp": "latest"
+    "@internetarchive/dweb-mirror": "^0.2.2"
   },
   "devDependencies": {
   },
@@ -19,6 +18,9 @@
   "keywords": [],
   "license": "AGPL-3.0",
   "name": "ia_appliance_install",
+  "optionalDependencies": {
+    "node-pre-gyp": "latest"
+  },
   "scripts": {
   },
   "version": "0.2.1"
