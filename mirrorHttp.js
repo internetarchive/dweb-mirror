@@ -56,7 +56,7 @@ const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 const app = express();
-export default function mirrorHttp(config, cb) {
+function mirrorHttp(config, cb) {
     debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
 // noinspection JSUnresolvedVariable
     app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
@@ -310,6 +310,31 @@ export default function mirrorHttp(config, cb) {
             query: {transport: "HTTP", mirror: req.headers.host}
         }))
     });
+    app.post('/admin/setconfig', function (req, res, next) {
+        debug("Testing setconfig %O", req.body);
+        config.writeUser(req.body, err => {
+            if (err) {
+                next(err);
+            } else {
+                sendInfo(req, res);  // Send info again, as UI will need to display this
+            }
+        });
+    });
+    app.get('/admin/crawl/start', (req, res) => {
+       CrawlManager.restart(config.apps.crawl.tasks);
+    });
+    app.get('/admin/crawl/pause', (req, res) => {
+        CrawlManager.pause();
+    });
+    app.get('/admin/crawl/resume', (req, res) => {
+        CrawlManager.resume();
+    });
+    app.get('/admin/crawl/empty', (req, res) => {
+        CrawlManager.empty();
+    });
+    app.get('/admin/crawl/status', (req, res) => {
+        res.json(CrawlManager.status());
+    })
     app.get('/arc/archive.org', (req, res) => {
         res.redirect(url.format({pathname: "/archive/archive.html", query: req.query}));
     });
@@ -405,17 +430,6 @@ export default function mirrorHttp(config, cb) {
 // noinspection JSUnresolvedFunction
     app.get('/info', sendInfo);
 
-    app.post('/setconfig', function (req, res, next) {
-        debug("Testing setconfig %O", req.body);
-        config.writeUser(req.body, err => {
-            if (err) {
-                next(err);
-            } else {
-                sendInfo(req, res);  // Send info again, as UI will need to display this
-            }
-        });
-    });
-
     app.use((req, res, next) => {
         debug("FAILING: %s", req.url);
         next();
@@ -425,6 +439,8 @@ export default function mirrorHttp(config, cb) {
     app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
     cb(null);   // Just in case this becomes async
 }
+/* OBS:  Now done through internetarchive.js
+
 // Make "config" available in rest of mirrorHttp setup
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
@@ -455,5 +471,5 @@ MirrorConfig.new((err, config) => {
         mirrorHttp(config, (err) => {});
     } // Config load success
 } ); // config load
-
+*/
 exports = module.exports = mirrorHttp;

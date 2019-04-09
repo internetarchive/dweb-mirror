@@ -43,12 +43,8 @@ class CrawlManager {
 
     constructor({copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
                     maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={}) {
-        this._uniqItems = {};
-        this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
-        this.errors = [];
+        this.clearState();
         this.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated});
-        this.completed = 0;
-        this.pushedCount = 0;
         this._taskQ = queue((task, cb) => {
             task.process((err)=> {
                 this.completed++;
@@ -58,11 +54,38 @@ class CrawlManager {
         }, this.concurrency);
         this._taskQ.drain = () => this.drained.call(this);
     }
-    push(task) {
+    clearState() {
+        // Clear out any state before running/re-running.
+        this._uniqItems = {};
+        this._uniqFiles = {}; // This is actually needed since an Item might be crawled a second time at a deeper level
+        this.errors = [];
+        this.completed = 0;
+        this.pushedCount = 0;
+    }
+    _push(task) {
+        /*
+            task:   { CrawlItem | CrawlFile } or [ task ]
+            Push a task onto the queue
+         */
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
-            this._taskQ.push(task);
+                this._taskQ.push(task);
         } else {
             debug("Skipping %s as reached maximum of %d tasks", task.debugname, this.limitTotalTasks)
+        }
+    }
+    pushTask(task) {
+        /*
+            task:   { identifier, ... } args to CrawlItem
+            Create a new CrawlItem
+            If identifier is an array, then expand into multiple tasks.
+            If task is an array, iterate over it
+         */
+        if (Array.isArray(task)) {
+            task.forEach(t => this.pushTask(t));
+        } else if (Array.isArray(task.identifier)) {
+            this._push(t.identifier.map(identifier => new CrawlItem(Object.assign({}, t, {identifier}), [])));
+        } else {
+            this._push(new CrawlItem(task, parent));
         }
     }
     setopts(opts={}) {
@@ -82,13 +105,7 @@ class CrawlManager {
         } else {
             debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", MirrorFS.directories);
         }
-        initialItemTaskList.forEach( task => {
-            if (Array.isArray(task.identifier)) {
-                CM.push(task.identifier.map(identifier => new CrawlItem(Object.assign({},  task, {identifier}), parent)));
-            } else {
-                CM.push(new CrawlItem(task, parent));
-            }
-        });
+        CM.pushTask(initialItemTaskList);
         CM.drainedCb = cb;
     }
     drained() {
@@ -96,6 +113,35 @@ class CrawlManager {
         this.errors.forEach(e => debug("ERR:%o %s %o %o %s",
             e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || "", e.task.related || "", e.error.message));
         if (this.drainedCb) this.drainedCb()
+    }
+    static restart(tasks) {
+        this.empty();   // Note there may be some un-stoppable file retrievals happening
+        this.cm.clearState();
+        this.cm.pushTasks(tasks);
+    }
+    static pause() {
+        this.cm._taskQ.pause();
+    }
+    static resume() {
+        this.cm._taskQ.resume();
+    }
+    static empty() {
+        this.cm._taskQ.remove(o=>true); // Passed {data, priority} but removing all anyway
+    }
+    static status() {
+        return {
+            queue: {
+                length: this.cm._taskQ.length(),    // How many waiting to run
+                running: this.cm._taskQ.running(),  // How many being run by tasks
+                workersList: this.cm._taskQ.workersList(), //TODO-MERGE figure out what get here and document
+                concurrency: this.cm._taskQ.concurrency,
+                completed:  this.cm.completed,      // May want to split into files and items
+                pushed: this.cm.pushed, // Should be length + running + completed
+            },
+            opts: Object.fromEntries(this.optsallowed.map(k => [k, this.cm[k]])),
+            config: config.apps.crawl,
+            errors: this.errors, // [ { task, error } ]
+        }
     }
 }
 CrawlManager._levels = ["tile", "metadata", "details", "all"]; //  *** NOTE THIS LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js

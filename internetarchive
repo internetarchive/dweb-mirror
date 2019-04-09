@@ -5,11 +5,8 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 // TODO-MIRROR check using GUN for metadata
 /* TODO-MERGE https://github.com/internetarchive/dweb-mirror/issues/105
 TODO-MERGE    [ ] TEST - MERGE OF CRAWL & MIRRR
-TODO-MERGE    [ ] Provide URLs to activate it /crawl/start
-TODO-MERGE    [ ] Other URLs crawl/stop crawl/status
-TODO-MERGE    [ ] Make task processing update a status array (maybe use deduplicator)
-[ ] UI to show status with button for start/stop
- */
+TODO-MERGE    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+*/
 
 const debug = require('debug')("dweb-mirror:crawl");
 const getopts = require('getopts');
@@ -40,8 +37,8 @@ const optsUpperCase = ["transport"]; // Always want uppercase
 const optsJson = ["search", "related"]; // Can be provided as JSON rather than individual sub-opts
 
 //XXX make depth max of depth, level-1, rows
-const opts = getopts("--dummy --level details commute".split(" "),{ // Just for testing different options
-//const opts = getopts(process.argv.slice(2),{
+//const opts = getopts("--dummy --level details commute".split(" "),{ // Just for testing different options
+const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth", c: "crawl", s: "server",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
@@ -263,9 +260,9 @@ waterfall([
             cb(null); },
     cb => connect(cb),
     // Start server before crawler as crawler takes time before returning
-    cb => if (opts.server) { mirrorHttp(config, cb); } else { cb(null); },
-    cb => if (opts.crawl) { crawl(cb); } else { cb(null); },
-    cb => if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }
+    cb => { if (opts.server) { mirrorHttp(config, cb); } else { cb(null); }},
+    cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
+    cb => { if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {
     if (err) {
         debug("Failed: %s", err.message)
