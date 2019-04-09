@@ -188,10 +188,9 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
         }
 
         if (!opts.dummy) { // Note almost same code in collectionpreseed.js
-                MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
+                MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore, preferredStreamTransports: config.connect.preferredStreamTransports});
                     DwebTransports.connect(connectOpts, (unusederr, unused) => {
                         //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-                        DwebTransports.http().supportFunctions.push("createReadStream");
                         CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
                             DwebTransports.p_stop(t => debug("%s is stopped", t.name))
                         });

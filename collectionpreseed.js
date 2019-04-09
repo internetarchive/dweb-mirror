@@ -50,14 +50,13 @@ const crawlOptions = {
 
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
-        MirrorFS.init({directories: config.directories}); // Not passing in httpServer or urlUrlstore, we aren't using them here
+        MirrorFS.init({directories: config.directories, preferredStreamTransports: config.connect.preferredStreamTransports}); // Not passing in httpServer or urlUrlstore, we aren't using them here
         DwebTransports.connect({
             //transports: ["HTTP", "WEBTORRENT", "IPFS"],
             transports: ["HTTP"],
             //webtorrent: {tracker: { wrtc }},
         }, (unusederr, unused) => {
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-            DwebTransports.http().supportFunctions.push("createReadStream");
             CrawlManager.startCrawl(crawlTasks, crawlOptions, (unusederr, unusedres) => {
                 DwebTransports.p_stop(t => debug("%s is stopped", t.name))});
             // Note the callback doesn't get called for IPFS https://github.com/ipfs/js-ipfs/issues/1168

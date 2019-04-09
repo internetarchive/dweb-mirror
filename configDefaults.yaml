@@ -20,9 +20,13 @@ connect:
     - 'IPFS'
     #- 'WEBTORRENT'
     #- 'GUN'
-    #- 'WORT'
+    #- 'WOLK'
   webtorrent:
     tracker: 'wrtc'   # May or may not work on different platforms
+  preferredStreamTransports:
+    - 'WEBTORRENT'
+    - 'HTTP'
+    - 'IPFS'
 apps:
   # mirrorHttp.js uses these
   http:

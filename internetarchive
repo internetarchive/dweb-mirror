@@ -233,14 +233,12 @@ function connect(cb) {
         DwebTransports.connect(connectOpts, unusedErr => {
             //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
             const Thttp = DwebTransports.http();
-            if (Thttp) Thttp.supportFunctions.push("createReadStream"); //TODO-MERGE move this into a connect.http option and check prefers webtorrent for streams
             cb(unusedErr);
         });
     }
 }
 
 function crawl(cb) {
-    //TODO-MERGE repeat this above for mirrorHttp, there may be no optsallowed
     // Group explicit crawl opts from config, and any other opts that CrawlManager accepts, overriding existing defaults
     const crawlopts = Object.assign({},
         config.apps.crawl.opts,
@@ -250,7 +248,7 @@ function crawl(cb) {
         debug( "Crawl configuration: crawlopts=%o tasks=%O", crawlopts, tasks);
     }
     if (!opts.dummy) {
-        CrawlManager.startCrawl(tasks, crawlopts, cb); //TODO-MERGE where does it get tasks
+        CrawlManager.startCrawl(tasks, crawlopts, cb);
     }
 }
 let config;
@@ -260,6 +258,7 @@ waterfall([
     cb => { MirrorFS.init({
                 directories: config.directories,
                 httpServer: httpOrHttps+"://localhost:"+config.apps.http.port,
+                preferredStreamTransports: config.connect.preferredStreamTransports,
                 urlUrlstore: config.transports.ipfs.urlUrlstore});
             cb(null); },
     cb => connect(cb),

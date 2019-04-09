@@ -18,13 +18,13 @@ const ParallelStream = require('parallel-streams');
 const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
 //Should always be defined in caller prior to requiring dweb-objects
 
-// other packages in this repo
+// other packages in this repo - note it is intentional that this does not depend on config
 const HashStore = require('./HashStore');
 
 function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
 
 
-class MirrorFS {
+class MirrorFS { //TODO-API needs uodating
     /*
     Utility subclass that knows about the file system.
 
@@ -34,10 +34,11 @@ class MirrorFS {
 
      */
 
-    static init({directories, httpServer, urlUrlstore, }) { // Not a constructor, all methods are static
+    static init({directories, httpServer, urlUrlstore, preferredStreamTransports=[] }) { // Not a constructor, all methods are static
         this.directories = directories;
         this.httpServer = httpServer;
         this.urlUrlstore = urlUrlstore;
+        this.preferredStreamTransports = preferredStreamTransports; // Order in which to select possible stream transports
         this.hashstores = Object.fromEntries(               // Mapping
             this.directories.map(d =>                         // of each config.directories
                 [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
@@ -372,9 +373,9 @@ class MirrorFS {
                 console.assert(wantStream || !partial,"ArchiveFile.cacheAndOrStream - it makes no sense to request a partial fetch without a stream output");
                 if (partial) {  // start or end undefined dont satisfy this test
                     debug("Not caching %s because specifying a range %s:%s and wantStream", debugname, start, end);
-                    DwebTransports.createReadStream(urls, {start, end}, cb); // Dont cache a byte range, just return it
+                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, cb); // Dont cache a byte range, just return it
                 } else {
-                    DwebTransports.createReadStream(urls, {start, end}, (err, s) => { //Returns a promise, but not waiting for it
+                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, (err, s) => { //Returns a promise, but not waiting for it
                         if (err) {
                             debug("cacheAndOrStream had error reading", debugname, err.message);
                             cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream

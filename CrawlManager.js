@@ -4,13 +4,14 @@ const each = require('async/each');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
 
-const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter etc
+const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter, Object.fromEntries etc
 // Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
 require('./ArchiveFilePatched');
 require('./ArchiveMemberPatched');
 require('./ArchiveMemberSearchPatched');
 const MirrorFS = require('./MirrorFS');
+// Note CrawlManager is not dependent on config, that should be handled at a higher level.
 /*
   Manage crawls
 

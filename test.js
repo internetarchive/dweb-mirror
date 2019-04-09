@@ -28,7 +28,7 @@ const HashStore = require('./HashStore');
 MirrorConfig.new((err, config) => {
 
 // noinspection JSUnresolvedVariable
-MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
+MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore, preferredStreamTransports: config.connect.preferredStreamTransports});
 
 
 /*
@@ -75,7 +75,6 @@ DwebTransports.connect({
     //webtorrent: {tracker: { wrtc }},
 }, (err, unused) => {
     //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-    DwebTransports.http().supportFunctions.push("createReadStream");
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
     CrawlManager.startCrawl(testCrawl,
         {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300,

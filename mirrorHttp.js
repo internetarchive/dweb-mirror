@@ -112,7 +112,7 @@ export default function mirrorHttp(config, cb) {
 
     function proxyUrl(req, res, next, url, headers = {}) {
         // Proxy a request to somewhere under urlbase, which should NOT end with /
-        DwebTransports.createReadStream(url, req.streamOpts, (err, s) => {
+        DwebTransports.createReadStream(url, Object.assign({}, req.streamOpts, {preferredTransports: preferredStreamTransports}), (err, s) => {
             _proxy(req, res, next, err, s, headers);
         })
     }
@@ -431,7 +431,8 @@ MirrorConfig.new((err, config) => {
         MirrorFS.init({
             directories: config.directories,
             httpServer: httpOrHttps + "://localhost:" + config.apps.http.port,
-            urlUrlstore: config.transports.ipfs.urlUrlstore
+            urlUrlstore: config.transports.ipfs.urlUrlstore,
+            preferredStreamTransports: config.connect.preferredStreamTransports
         });
 
         const connectOpts = config.connect; // Setup in yaml defaults, can be user overridden
@@ -449,7 +450,6 @@ MirrorConfig.new((err, config) => {
 
         DwebTransports.p_connect(connectOpts).then(() => {
             const Thttp = DwebTransports.http();
-            if (Thttp) Thttp.supportFunctions.push("createReadStream");
         }); // Async, handling may fail while this is happening
 
         mirrorHttp(config, (err) => {});
