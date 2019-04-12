@@ -207,9 +207,9 @@ function streamQuery(req, res, next) {
         o = new ArchiveItem({sort: req.query.sort, itemid, query: `collection:${itemid}`})
     } else if (req.query.q && req.query.q.startsWith("identifier:")
         && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
-        && (req.query.q.lastIndexOf(':') === 10)) {
+        && (req.query.q.lastIndexOf(':(') === 10)) {
         // Special case: query just looking for fields on a list of identifiers
-        const ids = req.query.q.slice(11).split(' OR '); // ["foo","bar"]
+        const ids = req.query.q.slice(12, -1).split(' OR '); // ["foo","bar"]
         o = new ArchiveItem();
         o.members = ids.map(identifier => new ArchiveMember({identifier}, {unexpanded: true}));
         // The members will be expanded by fetch_query either from local cache or by querying upstream
