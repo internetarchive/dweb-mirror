@@ -9,7 +9,6 @@ const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // incl
 const ArchiveItem = require('./ArchiveItemPatched');
 require('./ArchiveFilePatched');
 require('./ArchiveMemberPatched');
-require('./ArchiveMemberSearchPatched');
 const MirrorFS = require('./MirrorFS');
 /*
   Manage crawls

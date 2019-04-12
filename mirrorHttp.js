@@ -51,8 +51,6 @@ const MirrorConfig = require('./MirrorConfig');
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const ArchiveMember = require('./ArchiveMemberPatched');
-// noinspection JSUnusedLocalSymbols
-const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 
 const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 const app = express();
@@ -213,7 +211,7 @@ function streamQuery(req, res, next) {
         // Special case: query just looking for fields on a list of identifiers
         const ids = req.query.q.slice(11).split(' OR '); // ["foo","bar"]
         o = new ArchiveItem();
-        o.members = ids.map(identifier => new ArchiveMember({identifier}));
+        o.members = ids.map(identifier => new ArchiveMember({identifier}, {unexpanded: true}));
         // The members will be expanded by fetch_query either from local cache or by querying upstream
     } else {
         o = new ArchiveItem({sort: req.query.sort, query: req.query.q});

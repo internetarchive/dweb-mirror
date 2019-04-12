@@ -15,10 +15,7 @@ global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initia
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols
 const ArchiveFile = require('./ArchiveFilePatched');
-// noinspection JSUnusedLocalSymbols
 const ArchiveMember = require('./ArchiveMemberPatched');
-// noinspection JSUnusedLocalSymbols
-const ArchiveMemberSearch = require('./ArchiveMemberSearchPatched');
 const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 const HashStore = require('./HashStore');

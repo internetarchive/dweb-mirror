@@ -52,9 +52,9 @@ Metadata is stored in specially named files.
 |<IDENTIFIER>.reviews.json|ArchiveItem.reviews|On disk is format returned by API
 |<IDENTIFIER>.files.json|ArchiveItem.files|
 |<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, is_dark, dir, server}|
-|<IDENTIFIER>.member.json|ArchiveMemberSearch|As retrieved in a search
+|<IDENTIFIER>.member.json|ArchiveMember|As retrieved in a search
 |<IDENTIFIER>.members.json|List of members - this file is a normal ArchiveFile in fav-* collections|
-|<IDENTIFIER>.members_cached.json|ArchiveMemberSearch.*|All the search results for this item retrieved so far
+|<IDENTIFIER>.members_cached.json|ArchiveMember.*|All the search results for this item retrieved so far
 |__ia_thumb.jpg|Image file ~10kbytes|
 
 TODO-SORT In future the different sorts will have their own caches
@@ -153,7 +153,7 @@ Save the related items to the cache
 cb(err, obj)  Callback on completion with related items object or stream
 ```
 
-## ArchiveMember 
+## ArchiveMember
 
 ##### static read({identifier = undefined}, cb)
 Read member info for an item
@@ -166,9 +166,6 @@ Read member info for an item from the cache.
 ```
 cb(err, data structure from file)
 ```
-
-## ArchiveMemberSearch
-
 ##### save(opts = {}, cb)
 Save the results of a search as a `<IDENTIFIER>_member.json` file
 ```

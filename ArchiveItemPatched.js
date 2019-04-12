@@ -11,8 +11,7 @@ const waterfall = require('async/waterfall');
 const each = require('async/each');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
-const ArchiveMemberFav = require('@internetarchive/dweb-archivecontroller/ArchiveMemberFav');
-const ArchiveMemberSearch = require('@internetarchive/dweb-archivecontroller/ArchiveMemberSearch');
+const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
@@ -57,7 +56,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
         .reviews -> <IDENTIFIER>.reviews.json
         .files -> <IDENTIFIER>.files.json
         {collection_titles, collecton_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
-        and .member_cached.json is saved from ArchiveMemberSearch not from ArchiveItems
+        and .member_cached.json is saved from ArchiveMember not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
 
@@ -394,7 +393,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                             if (!err) {
                                 try {
                                     const data = canonicaljson.parse(jsonstring);
-                                    this.members = data.map(o => o.publicdate ? new ArchiveMemberSearch(o) : new ArchiveMemberFav(o));
+                                    this.members = data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
                                 } catch(err) {
                                     debug("Cant parse json in %s: %s", relFilePath, err.message);
                                     this.members = []
@@ -410,9 +409,12 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     if (this.members) {
                         Util.asyncMap(this.members,
                             (ams,cb2) => {
-                                if (ams instanceof ArchiveMemberSearch) { cb2(null, ams) }
-                                else { ams.read({},(err, o) => cb2(null, o ? new ArchiveMemberSearch(o) : ams)); }}   ,
-                            (err, arr) => {this.members=arr; cb() }); // Expand where possible
+                                if (ams instanceof ArchiveMember) { // Expanded or unexpanded
+                                    cb2(null, ams)
+                                } else { ams.read({},(err, o) =>
+                                    cb2(null, o ? new ArchiveMember(o) : ams)); }},
+                            (err, arr) => {
+                            this.members=arr; cb() }); // Expand where possible
                     } else {
                         cb();
                     }
@@ -433,7 +435,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                 (arr, cb) => { // Save members
                     if (this.members) {
                         // noinspection JSUnusedLocalSymbols
-                        this.members.filter(ams => ams instanceof ArchiveMemberSearch).forEach(ams=>ams.save((unusederr)=>{})); } // Note this returns before they are saved
+                        this.members.filter(ams => ams.isExpanded()).forEach(ams=>ams.save((unusederr)=>{})); } // Note this returns before they are saved
                     cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
                                    // Not that arr may or may not be wrapped in response by _fetch_query depending on opts
                 }
@@ -536,7 +538,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
                     const rels = canonicaljson.parse(res);
                     if (wantMembers) {
                         // Same code in ArchiveItem.relatedItems
-                        ArchiveMemberSearch.expand(rels.hits.hits.map(r => r._id), (err, searchmembersdict) => {
+                        ArchiveMember.expand(rels.hits.hits.map(r => r._id), (err, searchmembersdict) => {
                             if (err) {
                                 cb(err)
                             } else {
