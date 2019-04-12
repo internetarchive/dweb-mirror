@@ -310,7 +310,7 @@ maxFileSize int||undefined              If set, constrains maximum size of any o
 concurrency int||1                      Sets the number of tasks that can be processed at a time
 limitTotalTasks:int||undefined          If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
 ```
-#### new CrawlManager({skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks}={})
+#### new CrawlManager({skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks}={}) TODO-API needs update
 
 See attributes for meaning of arguments.
 

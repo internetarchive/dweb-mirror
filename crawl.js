@@ -23,7 +23,7 @@ const MirrorFS = require('./MirrorFS');
 const MirrorConfig = require('./MirrorConfig');
 
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
-const optsArray = ["level", "transport", "rows"];
+const optsArray = ["level", "transport", "rows"]; // Options that can be arrays
 
 //XXX make depth max of depth, level-1, rows
 //const opts = getopts("--level all zandvoort.newspapers.1992.zandvoorts.nieuwsblad".split(" "),{ // Just for testing different options
@@ -169,7 +169,7 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
 
         const crawlopts = Object.assign({}, config.apps.crawl.opts, Object.filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
 
-        const connectOpts = config.apps.crawl.connect;
+        const connectOpts = config.connect;
 
         //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
         if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
@@ -188,10 +188,9 @@ MirrorConfig.new((err, config) => { // Load config early, so can use in opts pro
         }
 
         if (!opts.dummy) { // Note almost same code in collectionpreseed.js
-                MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore});
+                MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, urlUrlstore: config.transports.ipfs.urlUrlstore, preferredStreamTransports: config.connect.preferredStreamTransports});
                     DwebTransports.connect(connectOpts, (unusederr, unused) => {
                         //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-                        DwebTransports.http().supportFunctions.push("createReadStream");
                         CrawlManager.startCrawl(tasks, crawlopts, (unusederr, unusedres) => {
                             DwebTransports.p_stop(t => debug("%s is stopped", t.name))
                         });

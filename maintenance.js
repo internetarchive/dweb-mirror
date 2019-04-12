@@ -26,7 +26,8 @@ MirrorConfig.new((err, config) => {
     MirrorFS.init({
         directories: config.directories,
         httpServer: "http://localhost:" + config.apps.http.port,
-        urlUrlstore: config.transports.ipfs.urlUrlstore
+        urlUrlstore: config.transports.ipfs.urlUrlstore,
+        preferredStreamTransports: config.connect.preferredStreamTransports
     });
     MirrorFS.maintenance({ipfs: true}, (err, res) => console.log("maintenance done", err, res));
 
@@ -42,8 +43,6 @@ MirrorConfig.new((err, config) => {
         if (err) {
             debug("Failed to connect");
         } else {
-            //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-            DwebTransports.http().supportFunctions.push("createReadStream");
         }
     });
     */
