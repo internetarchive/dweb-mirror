@@ -4,7 +4,6 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 
 // TODO-MIRROR check using GUN for metadata
 /* TODO-MERGE https://github.com/internetarchive/dweb-mirror/issues/105
-TODO-MERGE    [ ] TEST - MERGE OF CRAWL & MIRRR
 TODO-MERGE    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
 */
 
@@ -39,20 +38,20 @@ const optsJson = ["search", "related"]; // Can be provided as JSON rather than i
 //XXX make depth max of depth, level-1, rows
 //const opts = getopts("--dummy --level details commute".split(" "),{ // Just for testing different options
 const opts = getopts(process.argv.slice(2),{
-    alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth", c: "crawl", s: "server",
+    alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth", c: "crawl", s: "server", m: "maintenance",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
     string: ["directory", "search", "related", "transport", "level"], // Not debugidentifier because undefined and "" are not the same.
     //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
-    "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'crawl.js -h' for help"); process.exit()} }
+    "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'internetarchive -h' for help"); process.exit()} }
 });
 const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
 
 //TODO allow specifying "crawl item/filename" to get just one file see https://github.com/internetarchive/dweb-mirror/issues/108
 
 const help = `
-usage: internetarchive [-hvsc] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
+usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
     [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*
     [--skipfetchfile] [--skipcache] [--dummy] [identifier]*
 
@@ -61,6 +60,7 @@ usage: internetarchive [-hvsc] [-l level] [-r rows] [ -d depth ] [--directory pa
     q : quiet (TODO implement this)
     s : server run http server
     c : crawl run crawler
+    m : maintenance check for things like 0 length files or partials etc and ensure in IPFS
     l level : Crawl the identifiers to a certain level, valid values are:
                 "tile"    for just enough to print a collection page, including the thumbnail image
                 "metadata" and the full metadata, which will be useful once local search is implemented
@@ -261,6 +261,7 @@ waterfall([
     cb => connect(cb),
     // Start server before crawler as crawler takes time before returning
     cb => { if (opts.server) { mirrorHttp(config, cb); } else { cb(null); }},
+    cb => { if (opts.maintainance) { MirrorFS.maintenance({ipfs: true}, cb) }); // Must be after server start since needs for IPFS, should be before crawl
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
     cb => { if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {

@@ -28,11 +28,11 @@ connect:
     - 'HTTP'
     - 'IPFS'
 apps:
-  # mirrorHttp.js uses these
+  # internetarchive --server uses these
   http:
     port: 4244
     morgan: ':method :url :req[range] :status :res[content-length] :response-time ms'
-  # crawl.js uses these
+  # internetarchive --crawl  uses these
   crawl:
     # An array of tasks each consists of { identifier, level, and optional search & related
     # level is one of:

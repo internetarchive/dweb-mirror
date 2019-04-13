@@ -163,7 +163,7 @@ Note that directories specified in the config file can be written using with she
 ### 5. Test browsing
 
 * From a command line:
-* `cd <wherever>/dweb-mirror && ./mirrorHttp.js &` # starts the HTTP server
+* `cd <wherever>/dweb-mirror && ./internetarchive --server &` # starts the HTTP server
   * the startup is a little slow but you'll see some debugging when its live.
 * If you are working directly on the machine (e.g. its your Mac) then
   * `open http://localhost:4244` will open the UI in the browser and it should see the Archive UI.
@@ -179,7 +179,7 @@ Expect, on slower machines, to see no images the first time, refresh after a lit
 ### 6. Test crawling
 
 * cd <wherever>/dweb-mirror
-* ./crawl.js
+* ./internetarchive --crawl
 
 Without arguments, crawl will read a set of files into into the first (already existing) directory configured in `~/dweb-mirror.config.yaml` or if there are 
 none there, in `<wherever>/dweb-mirror/configDefaults.yaml`. 

@@ -562,6 +562,7 @@ class MirrorFS { //TODO-API needs uodating
                     cb(err);
                 } else {
                     debug("Added %s to IPFS key=", relFilePath, res.Key);
+                    // Check for mismatch - this isn't an error, for example it could be an updated file, old IPFS hash will now fail, but is out of date and shouldnt be shared
                     if (ipfs && ipfs !== res.Key) {  debug("ipfs hash doesnt match expected metadata has %s daemon returned %s", ipfs, res.Key); }
                     //TODO-IPFS store res.Key in metadata - though not using for anything currently
                     cb(null, res)

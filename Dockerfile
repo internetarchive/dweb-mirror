@@ -33,7 +33,7 @@ COPY . /app
 # tell the world we use port 4244, doesnt actually make docker do anything
 EXPOSE 4244
 # TODO add command line override of port or get from an ENV variable
-CMD ["node", "./mirrorHttp.js"]
+CMD ["node", "./internetarchive", "--server"]
 #Replace CMD above with this if want to test on the machine
 #CMD /bin/bash
 

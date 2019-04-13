@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /* Serve the mirrored files via HTTP
 
 This is intended as a fairly generic server for a number of cases, with some configuration to allow for different situations,
@@ -437,37 +436,5 @@ function mirrorHttp(config, cb) {
     app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
     cb(null);   // Just in case this becomes async
 }
-/* OBS:  Now done through internetarchive.js
 
-// Make "config" available in rest of mirrorHttp setup
-MirrorConfig.new((err, config) => {
-    if (err) { debug("Exiting because of error", err.message);} else {
-        MirrorFS.init({
-            directories: config.directories,
-            httpServer: httpOrHttps + "://localhost:" + config.apps.http.port,
-            urlUrlstore: config.transports.ipfs.urlUrlstore,
-            preferredStreamTransports: config.connect.preferredStreamTransports
-        });
-
-        const connectOpts = config.connect; // Setup in yaml defaults, can be user overridden
-
-//wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
-        if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
-            try {
-                wrtc = require('wrtc');
-                if (wrtc) connectOpts.webtorrent.tracker = wrtc;
-            } catch (err) {
-                debug("wrtc requested but not present");
-                delete connectOpts.webtorrent.tracker;
-            }
-        }
-
-        DwebTransports.p_connect(connectOpts).then(() => {
-            const Thttp = DwebTransports.http();
-        }); // Async, handling may fail while this is happening
-
-        mirrorHttp(config, (err) => {});
-    } // Config load success
-} ); // config load
-*/
 exports = module.exports = mirrorHttp;

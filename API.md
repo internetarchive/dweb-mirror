@@ -10,7 +10,7 @@ This document covers the API for v0.1.0 of dweb-mirror which will be the first s
 * A set of classes that provide higher level support esp:
   CrawlManager; HashStore; MirrorFS;
 * A set of applications that use the APIs above, but which are themselves forkable:
-  crawl.js; mirrorHttp;
+  internetarchive; collectionpreseed.js
 
 #### Expected API changes
 
@@ -33,8 +33,8 @@ directories: [ path* ] # List of places to look for the Cache directory - expand
 archiveui: # Anything relating to display of the Archive UI
   directory: [ ... ] # Where to look for the files for the Archive UI - uses first - expands ~/xx and ./xx and * etc
   apps: # Each application can have its own configuration
-    http: # Relating to mirrorHttp.js
-    crawl: # Relating to crawl.js
+    http: # Relating to serving
+    crawl: # Relating to crawling 
   upstream: "dweb.me" # Where to find an upstream server, typically "dweb.me"
 ```
 
@@ -502,17 +502,17 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
    
    Examples:
     
-   crawl.js prelinger # Gets the default crawl for the prelinger collection, (details on prelinger, then tiles for top 40 items in the collection and 6 related items)
-   crawl.js --level details --rows 100 prelinger   # Would pull the top 100 items in prelinger (just the tiles)
-   crawl.js --level all commute  # Fetches all the files in the commute item 
+   internetarchive --crawl prelinger # Gets the default crawl for the prelinger collection, (details on prelinger, then tiles for top 40 items in the collection and 6 related items)
+   internetarchive --crawl --level details --rows 100 prelinger   # Would pull the top 100 items in prelinger (just the tiles)
+   internetarchive --crawl  --level all commute  # Fetches all the files in the commute item 
    
    Specifying level, or rows more than once will apply that result to the searches, so for example: 
    
-   crawl.js --level details --rows 10 --level details prelinger # Gets the movies for the first 10 movies in prelinger
-   crawl.js --level details --rows 100 --level tiles --rows 100 --level tiles movies # Gets the top 100 items in movies, and then crawls any of those items that are collections 
-   crawl.js --rows 100 --depth 2 movies # Is a shortcut to do the same thing
+   internetarchive --crawl  --level details --rows 10 --level details prelinger # Gets the movies for the first 10 movies in prelinger
+   internetarchive --crawl  --level details --rows 100 --level tiles --rows 100 --level tiles movies # Gets the top 100 items in movies, and then crawls any of those items that are collections 
+   internetarchive --crawl  --rows 100 --depth 2 movies # Is a shortcut to do the same thing
    
-    Running crawl with no options will run the default crawls in the configuration file with no modifications, which is good for example if running under cron.
+    Running internetarchive --crawl  with no options will run the default crawls in the configuration file with no modifications, which is good for example if running under cron.
 ```
 A useful hint is to experiment with arguments, but add the `--dummy` argument to output a JSON description of the search task(s) to be carried out.
 
