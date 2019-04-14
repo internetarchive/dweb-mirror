@@ -23,6 +23,8 @@ connect:
     #- 'WOLK'
   webtorrent:
     tracker: 'wrtc'   # May or may not work on different platforms
+  ipfs:
+    urlUrlstore: 'http://localhost:5001/api/v0/urlstore/add'
   preferredStreamTransports:
     - 'WEBTORRENT'
     - 'HTTP'
@@ -70,6 +72,3 @@ archiveorg:
   mds: 'https://be-api.us.archive.org/mds'
 # Generic upstream server, should be able to parse urls like /arc or /contenthash - should not need changing
 upstream: 'https://dweb.me'
-transports:
-  ipfs:
-    urlUrlstore: 'http://localhost:5001/api/v0/urlstore/add'

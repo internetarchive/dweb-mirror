@@ -47,7 +47,7 @@ const crawlOptions = {
 
 MirrorConfig.new((err, config) => {
     if (err) { debug("Exiting because of error", err.message);} else {
-        MirrorFS.init({directories: config.directories, preferredStreamTransports: config.connect.preferredStreamTransports}); // Not passing in httpServer or urlUrlstore, we aren't using them here
+        MirrorFS.init({directories: config.directories, preferredStreamTransports: config.connect.preferredStreamTransports}); // Not passing in httpServer or urlUrlstore (check this wont disable IPFS but omitting IPFS transport will), we aren't using them here
         DwebTransports.connect({
             //transports: ["HTTP", "WEBTORRENT", "IPFS"],
             transports: ["HTTP"],

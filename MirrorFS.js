@@ -34,10 +34,9 @@ class MirrorFS { //TODO-API needs uodating
 
      */
 
-    static init({directories, httpServer, urlUrlstore, preferredStreamTransports=[] }) { // Not a constructor, all methods are static
+    static init({directories, httpServer, preferredStreamTransports=[] }) { // Not a constructor, all methods are static
         this.directories = directories;
         this.httpServer = httpServer;
-        this.urlUrlstore = urlUrlstore;
         this.preferredStreamTransports = preferredStreamTransports; // Order in which to select possible stream transports
         this.hashstores = Object.fromEntries(               // Mapping
             this.directories.map(d =>                         // of each config.directories
@@ -414,11 +413,11 @@ class MirrorFS { //TODO-API needs uodating
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
                                                     this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath);
-                                                    this.addIPFS({relFilePath}, (err, res) => { });
-                                                    //Ignore err & res, its ok to fail to add to IPFS and will be logged inside addIPFS()
-                                                    // Also - its running background, we arent waiting for it to complete
-                                                    // noinspection JSUnresolvedVariable
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
+                                                    this.seed({relFilePath, directory: this._copyDirectory()}, (err, res) => { }); // Seed to IPFS, WebTorrent etc
+                                                    //Ignore err & res, its ok to fail to seed and will be logged inside seed()
+                                                    // Also - its running background, we arent making caller wait for it to complete
+                                                    // noinspection JSUnresolvedVariable
                                                     if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
                                                         callbackEmptyOrData(newFilePath);
                                                     }
@@ -517,59 +516,28 @@ class MirrorFS { //TODO-API needs uodating
                                     }
                                 }),
                                 {name: "Hashstore", async: true, paralleloptions: {limit: 100, silentwait: true}})
-                            .map((relFilePath, cb3) => { if (ipfs && !this.isSpecialFile(relFilePath)) { this.addIPFS({relFilePath}, cb3); } else { cb3(); }},
-                                {name: "addIPFS", async: true, justReportError: true, paralleloptions: {limit: 0}})
-                            .reduce(undefined, undefined, cb1);
+                            .map((relFilePath, cb3) => { if (ipfs && !this.isSpecialFile(relFilePath)) {
+                                this.seed({directory: cacheDirectory, relFilePath}, cb3); } else { cb3(); }},
+                                {name: "seed", async: true, justReportError: true, paralleloptions: {limit: 0}})
+                            .reduce(undefined, undefined, unusedRes => cb1(null));
                     }
                 })
             },
             cb)
     }
 
-    /* TODO https://github.com/internetarchive/dweb-mirror/issues/103
-    In ...there are calls to addIPFS, which uses httptools to send a query to local server . This should be via TransportIPFS
-    [] Work out appropriate API for Transports & ideally same for TransportIPFS
-    [] dweb-transports/TransportIPFS: Add urlstore call from API
-    [] dweb-transports/Transports: Add urlstore call
-    [] dweb-mirror/addIPFS replace with call to Transports
-    */
-
-    static addIPFS({relFilePath, ipfs}, cb) {
-        /* Add a file to IPFS, it should end up with a hash that matches that generated on dweb.me, allowing IPFS network splits to be healed.
-        TODO document args
-        Working around IPFS limitation in https://github.com/ipfs/go-ipfs/issues/4224
-        relFilePath: ITEMID/FILENAME
-        ipfs:       IPFS hash if known (usually not known)
-         */
-        /*
-        check if filename is relative to $HOME
-        if not then symlink and convert path to use symlink
-        call js-api to write it
-        check hash matches that in the metadata
-         */
-
-        // This is the URL that the IPFS server uses to get the file from the local mirrorHttp
-        if (!this.urlUrlstore) { // Not doing IPFS
-            cb(null,undefined); // OK not to do it
-        } else {
-            const url2file = [this.httpServer + ACUtil.gateway.urlDownload, relFilePath].join('/'); // This is arc/archive.org/download/
-            const url = `${this.urlUrlstore}?arg=${encodeURIComponent(url2file)}`;
-            // Have to be careful to avoid loops, the call to addIPFS should only be after file is retrieved and cached, and then addIPFS shouldnt be called if already cached
-            // TODO-IPFS pass a parameter to p_GET that tells it not to loop retrying
-            DwebTransports.httptools.p_GET(url, {retries:0}, (err, res) => {
-                if (err) {
-                    debug("addIPFS for %s failed in http: %s", url2file, err.message);
-                    cb(err);
-                } else {
-                    debug("Added %s to IPFS key=", relFilePath, res.Key);
-                    // Check for mismatch - this isn't an error, for example it could be an updated file, old IPFS hash will now fail, but is out of date and shouldnt be shared
-                    if (ipfs && ipfs !== res.Key) {  debug("ipfs hash doesnt match expected metadata has %s daemon returned %s", ipfs, res.Key); }
-                    //TODO-IPFS store res.Key in metadata - though not using for anything currently
-                    cb(null, res)
-                }
-            })
-        }
+    static seed({directory, relFilePath, ipfs}, cb) {
+        const pp = relFilePath.split(path.sep);
+        DwebTransports.seed( {
+            directoryPath: path.join(directory, pp[0]), // e.g. /Volumes/x/archiveorg/<IDENTIFIER>
+            fileRelativePath: path.join(...pp.slice(1)),    // e.g. <FILENAME> or thumbs/image001.jpg
+            ipfsHash: ipfs,
+            urlToFile: [this.httpServer + ACUtil.gateway.urlDownload, relFilePath].join('/'), // Normally http://localhost:4244/arc/archive.org/download/IDENTIFIER/FILE
+        }, (unusederr, res) => {
+            cb(null, res);
+        });
     }
+
     static isSpecialFile(relFilePath) { // Note special files should match between MirrorFS.isSpecialFile and ArchiveItemPatched.save
         return ["_meta.json", "_extra.json", "_member.json", "_members_cached.json", "_members.json","_files.json","_extra.json","_reviews.json", ".part", "_related.json"].some(ending=>relFilePath.endsWith(ending));
     }

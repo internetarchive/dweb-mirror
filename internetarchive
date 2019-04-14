@@ -7,7 +7,7 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 TODO-MERGE    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
 */
 
-const debug = require('debug')("dweb-mirror:crawl");
+const debug = require('debug')("dweb-mirror:internetarchive");
 const getopts = require('getopts');
 const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
@@ -255,13 +255,12 @@ waterfall([
     cb => { MirrorFS.init({
                 directories: config.directories,
                 httpServer: httpOrHttps+"://localhost:"+config.apps.http.port,
-                preferredStreamTransports: config.connect.preferredStreamTransports,
-                urlUrlstore: config.transports.ipfs.urlUrlstore});
+                preferredStreamTransports: config.connect.preferredStreamTransports});
             cb(null); },
     cb => connect(cb),
     // Start server before crawler as crawler takes time before returning
     cb => { if (opts.server) { mirrorHttp(config, cb); } else { cb(null); }},
-    cb => { if (opts.maintainance) { MirrorFS.maintenance({ipfs: true}, cb) }); // Must be after server start since needs for IPFS, should be before crawl
+    cb => { if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) }}, // Must be after server start since needs for IPFS, should be before crawl
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
     cb => { if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {

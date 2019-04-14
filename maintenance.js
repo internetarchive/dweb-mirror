@@ -26,7 +26,6 @@ MirrorConfig.new((err, config) => {
     MirrorFS.init({
         directories: config.directories,
         httpServer: "http://localhost:" + config.apps.http.port,
-        urlUrlstore: config.transports.ipfs.urlUrlstore,
         preferredStreamTransports: config.connect.preferredStreamTransports
     });
     MirrorFS.maintenance({ipfs: true}, (err, res) => console.log("maintenance done", err, res));

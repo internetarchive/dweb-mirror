@@ -52,4 +52,6 @@ See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current 
 * 0.2.10: Bookreader working offline; Improved installation documentation; 
 * 0.2.11: Better fully offline handling of relateditems and metadata for files
 * 0.2.12: Merge mirrorHttp and crawl into internetarchive
-* 0.2.12: Refactor to remove subclasses of ArchiveMember reqs archivecontroller >= v0.1.51 
+* 0.2.12: Refactor to remove subclasses of ArchiveMember reqs archivecontroller >= v0.1.51
+* 0.2.13: Refactor to move seed support to dweb-transports reqs dweb-transport >= v0.1.40
+ 
