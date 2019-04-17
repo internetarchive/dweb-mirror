@@ -100,6 +100,15 @@ function mirrorHttp(config, cb) {
         );
     }
 
+    function sendPlaylist(req, res, next) {
+        const ai = new ArchiveItem({itemid: req.params[0]});
+        waterfall([
+                (cb) => ai.fetch_metadata(cb),
+                (ai, cb) => ai.fetch_playlist({wantStream: true}, cb)
+            ], (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"})
+        );
+    }
+
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
     function proxyUpstream(req, res, next, headers = {}) {
         // Note req.url will start with "/"
@@ -385,6 +394,7 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         proxyUrl(req, res, next, [ACUtil.gateway.mds, req.params[0]].join('/'), {"Content-Type": "application/json"})
     });
+    app.get('/arc/archive.org/playlist/*', sendPlaylist);
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
 // noinspection JSUnresolvedFunction

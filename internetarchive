@@ -169,6 +169,8 @@ function optsToConfig() {
     if (opts.search && (opts.rows || opts.depth)) {
         return new Error("ERROR: Cannot specify search with rows or depth arguments");
     }
+    if (opts.debugidentifier) {
+        var debugidentifier = opts.debugidentifier };
     if (opts.verbose || opts.dummy) {
         debug( "Config:"); debug(yaml.safeDump(Object.filter(config, (key, value) => key !== "configOpts")));
     }

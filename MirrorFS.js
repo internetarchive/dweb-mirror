@@ -292,7 +292,7 @@ class MirrorFS { //TODO-API needs uodating
         Returns a stream from the cache, or the net if start/end unset cache it
         relFilePath:    Path, relative to  cache, to a file.
         existingFilePath:    If found, something else found where this file was
-        urls:           Single url or array to retrieve
+        urls:           Single url or array to retrieve (optional, if not supplied it will only check locally)
         debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
         expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
         sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
@@ -312,7 +312,6 @@ class MirrorFS { //TODO-API needs uodating
             If !wantStream, then cb will only call back (with undefined) when the file has been written to disk and the file renamed.
             In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
-        console.assert(urls);
         if (existingFilePath) {
             haveExistingFile(existingFilePath);
         } else {

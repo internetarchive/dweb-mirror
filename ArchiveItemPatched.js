@@ -9,6 +9,7 @@ const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
 const each = require('async/each');
+const parallel = require('async/parallel');
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
@@ -88,13 +89,14 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
             // noinspection JSPotentiallyInvalidUsageOfThis
             // Note all these files should be in MirrorFS.isSpecialFile
             // noinspection JSPotentiallyInvalidUsageOfThis
-            each(   // TODO move to async.forEach which has same syntax
+            each(
                 [
                     ["meta", this.metadata],    // Maybe empty if is_dark
                     ["members", this.members],
                     ["files", this.exportFiles()],
                     ["extra", Object.fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
-                    ["reviews", this.reviews]
+                    ["reviews", this.reviews],
+                    ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
                 ],
                 (i, cbInner) => { // [ part, obj ]
                     _save1file(i[0], i[1], namepart, cbInner);
@@ -153,6 +155,7 @@ function _parse_common(namepart, part, cb) {
                 // It is on the other hand an error for the JSON to be unreadable
                 debug("Failed to parse json at %s: part %s %s", namepart, part, err.message);
                 cb(err);
+                return
             }
             cb(null, o);
         }
@@ -163,41 +166,44 @@ function _parse_common(namepart, part, cb) {
 ArchiveItem.prototype.read = function(opts = {}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
-        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure suitable for "item" field of ArchiveItem
+        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure fields of ArchiveItem
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
     const res = {};
     function _parse(part, cb) { _parse_common(namepart, part, cb); }
-
-    _parse("meta", (err, o) => {
-        // errors: if called with an error when reading files
-        if (err) {
-            cb(new Error(`There is no local copy of the metadata for ${namepart}`));   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
-        } else {
+    // This is a set of parallel reads, failure of some cause the whole thing to fail; some require postprocessing; and playlist occurs after metadata&files succeed
+    parallel([
+        cb => _parse("meta",(err, o) => {
             res.metadata = o;
-            _parse("files", (err, o) => {
-                if (err) {
-                    cb(new Error(`There is no local copy of the files for ${namepart}`));   // If can't read _meta then skip to reading from net rest are possibly optional though may be dependencies elsewhere.
-                } else {
-                    res.files = o;  // Undefined if failed which would be an error
-                    res.files_count = res.files.length;
-                    _parse("reviews", (err, o) => {
-                        res.reviews = o; // Undefined if failed
-                        _parse("members", (err, o) => {
-                            res.members = o; // Undefined if failed
-                            _parse("extra", (err, o) => {
-                                // Unavailable on archive.org but there on dweb.archive.org: collection_titles
-                                // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
-                                ArchiveItem.extraFields.forEach(k => res[k] = o && o[k]);
-                                cb(null, res);
-                            });
-                        });
-                    });
-                }
-            });
-        }
-    });
+            cb(err, o); }),
+        cb => _parse("files", (err, o) => {
+            if (!err) { res.files = o; res.files_count = res.files.length; }
+            cb(err, o); }),
+        cb => _parse("reviews", (err, o) => {
+            res.reviews = o; // Undefined if failed but not an error
+            cb(null); }),
+        cb => _parse("members", (err, o) => {
+            res.members = o; // Undefined if failed but not an error
+            cb(null); }),
+        cb => _parse("extra", (err, o) => {
+            // Unavailable on archive.org but there on dweb.archive.org: collection_titles
+            // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
+            ArchiveItem.extraFields.forEach(k => res[k] = o && o[k]);
+            cb(null); }),
+    ], (err, unused) => {
+        if (err) {
+            cb(err);
+        } else { // This has to happen after the parallel because requires access to metadata
+            if (["audio", "etree", "movies"].includes(res.metadata.mediatype)) {
+                _parse("playlist", (err, o) => {
+                    res.playlist = o; // maybe undefined
+                    cb(err, res);    // Should fail if no playlist, so re-reads from server and gets playlist
+                });
+            } else { // Dont need a playlist
+                cb(null, res);
+            }
+        } } )
 };
 
 // noinspection JSUnresolvedVariable
@@ -515,6 +521,38 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
         }
     }
 };
+
+// noinspection JSUnresolvedVariable
+ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
+    /*
+    Save the related items to the cache, TODO-CACHE-AGING
+    wantStream      true if want stream) alternative is obj. obj will be processed, stream will always be raw (assuming client processes it)
+    cb(err, stream|obj)  Callback on completion with related items object (can be [])
+    */
+    const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+    if (itemid) {
+        // noinspection JSUnresolvedVariable
+        const relFilePath = path.join(this._namepart(), this._namepart()+"_playlist.json");
+        // noinspection JSUnresolvedVariable
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath,
+            wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
+            urls: `https://archive.org/embed/${itemid}?output=json`, // Hard coded, would rather have in Util.gateway.url_playlist but complex
+            debugname: itemid + "/" + itemid + "_playlist.json"
+        }, (err, res) => {
+            // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
+            if (!wantStream && !err) {
+                try {
+                    cb(null, this.processPlaylist(canonicaljson.parse(res)));
+                } catch (err) { cb(err); } // Catch bad JSON
+            } else {
+                cb(err, res);
+            }
+        });
+    } else {
+        cb(null, wantMembers ? [] : undefined);
+    }
+};
+
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=false} = {}, cb) {
     /*
@@ -538,13 +576,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
                     const rels = canonicaljson.parse(res);
                     if (wantMembers) {
                         // Same code in ArchiveItem.relatedItems
-                        ArchiveMember.expand(rels.hits.hits.map(r => r._id), (err, searchmembersdict) => {
-                            if (err) {
-                                cb(err)
-                            } else {
-                                cb(null, rels.hits.hits.map(r => searchmembersdict[r._id])); // Can be undefined, but shouldnt see rels should all be valid
-                            }
-                        });
+                        cb(null, rels.hits.hits.map(r => ArchiveMember.fromRel(r)))
                     } else {
                         cb(null, rels);
                     }

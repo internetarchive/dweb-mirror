@@ -82,7 +82,7 @@ class CrawlManager {
         if (Array.isArray(task)) {
             task.forEach(t => this.pushTask(t));
         } else if (Array.isArray(task.identifier)) {
-            this._push(t.identifier.map(identifier => new CrawlItem(Object.assign({}, t, {identifier}), [])));
+            this._push(task.identifier.map(identifier => new CrawlItem(Object.assign({}, task, {identifier}), [])));
         } else {
             this._push(new CrawlItem(task, parent));
         }
@@ -116,7 +116,7 @@ class CrawlManager {
     static restart(tasks) {
         this.empty();   // Note there may be some un-stoppable file retrievals happening
         this.cm.clearState();
-        this.cm.pushTasks(tasks);
+        this.cm.pushTask(tasks);
     }
     static pause() {
         this.cm._taskQ.pause();
@@ -309,9 +309,9 @@ class CrawlItem extends Crawlable {
                 (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     const asParent = this.asParent();
                     if (this.level === "details") { // Details
-                        this.item.minimumForUI().forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
+                        this.item.minimumForUI().forEach(af => CrawlManager.cm._push(new CrawlFile({file: af}, asParent)));
                     } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
-                        if (this.item.files) this.item.files.forEach(af => CrawlManager.cm.push(new CrawlFile({file: af}, asParent)));
+                        if (this.item.files) this.item.files.forEach(af => CrawlManager.cm._push(new CrawlFile({file: af}, asParent)));
                     }
                     cb4(null);
                 },
@@ -326,7 +326,7 @@ class CrawlItem extends Crawlable {
                                 each(searchmembers, (sm, cb1) => sm.save(cb1), (unusederr) => { // Errors reported in save
                                     searchmembers.slice(0, taskparms.rows)
                                         .forEach(sm =>
-                                            CrawlManager.cm.push(CrawlItem.fromSearchMember(sm, taskparms, this.asParent())));
+                                            CrawlManager.cm._push(CrawlItem.fromSearchMember(sm, taskparms, this.asParent())));
                                     cb5(null);
                                 });
                             }
@@ -350,7 +350,7 @@ class CrawlItem extends Crawlable {
                                     debug("ERROR in configuration - Sorry, can't (yet) mix sort types in %s ignoring %s", this.debugname, queryPage.sort)
                                 }
                                 searchMembers.slice(start, start + queryPage.rows).forEach(sm =>
-                                    CrawlManager.cm.push(
+                                    CrawlManager.cm._push(
                                         CrawlItem.fromSearchMember(sm, queryPage, this.asParent()) ));
                                 start = start + queryPage.rows;
                             });
