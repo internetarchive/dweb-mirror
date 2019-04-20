@@ -42,7 +42,7 @@ const opts = getopts(process.argv.slice(2),{
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
     boolean: ["h","v", "skipFetchFile", "skipCache", "dummy"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
-    string: ["directory", "search", "related", "transport", "level"], // Not debugidentifier because undefined and "" are not the same.
+    string: ["directory", "search", "related", "transport", "level", "debugidentifier"], // Not debugidentifier because undefined and "" are not the same.
     //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'internetarchive -h' for help"); process.exit()} }
 });
@@ -169,7 +169,7 @@ function optsToConfig() {
     if (opts.search && (opts.rows || opts.depth)) {
         return new Error("ERROR: Cannot specify search with rows or depth arguments");
     }
-    if (opts.debugidentifier) {
+    if (opts.debugidentifier.length) {
         var debugidentifier = opts.debugidentifier };
     if (opts.verbose || opts.dummy) {
         debug( "Config:"); debug(yaml.safeDump(Object.filter(config, (key, value) => key !== "configOpts")));
