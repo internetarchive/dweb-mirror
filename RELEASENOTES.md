@@ -36,22 +36,24 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
-* 0.2.0: Integrate seeding to IPFS and IPFS installation
-* 0.2.0: Integrate installation process for Rachel3+ - still not perfect but works though doesnt support IPFS yet. 
-* 0.2.1: Tidy up IPFS, GO, install; and platform specific docs & installs for Rachel3+ (which now includes IPFS)
-* 0.2.1: Working on Raspberry Pi 3 with IPFS
-* 0.2.2: Switch dependencies to our own repo's to npm releases (away from github)
-* 0.2.3: Simple button to change config crawl level for item/collection reqs dweb-archive v0.1.49
-* 0.2.4: Move transport config into YAML; IPFS fetching now supported
-* 0.2.4: Fix bug in crawling "all" for querys
-* 0.2.5: Oops - was depending on fixed version of dweb-transports
-* 0.2.6: Recognize default location for IIAB USB sticks /media/pi/*
-* 0.2.7: Bookreader support
-* 0.2.8: Bug fix
-* 0.2.9: Bug fixes including not retrying local IPFS if not installed, and fix to not require a package that was moved
-* 0.2.10: Bookreader working offline; Improved installation documentation; 
-* 0.2.11: Better fully offline handling of relateditems and metadata for files
+* 0.2.14: Add configuration for IIAB (partial)
+* 0.2.14: Use new playlist api
+* 0.2.13: Refactor to move seed support to dweb-transports reqs dweb-transport >= v0.1.40
 * 0.2.12: Merge mirrorHttp and crawl into internetarchive
 * 0.2.12: Refactor to remove subclasses of ArchiveMember reqs archivecontroller >= v0.1.51
-* 0.2.13: Refactor to move seed support to dweb-transports reqs dweb-transport >= v0.1.40
- 
+* 0.2.11: Better fully offline handling of relateditems and metadata for files
+* 0.2.10: Bookreader working offline; Improved installation documentation; 
+* 0.2.9: Bug fixes including not retrying local IPFS if not installed, and fix to not require a package that was moved
+* 0.2.8: Bug fix
+* 0.2.7: Bookreader support
+* 0.2.6: Recognize default location for IIAB USB sticks /media/pi/*
+* 0.2.5: Oops - was depending on fixed version of dweb-transports
+* 0.2.4: Move transport config into YAML; IPFS fetching now supported
+* 0.2.4: Fix bug in crawling "all" for querys
+* 0.2.3: Simple button to change config crawl level for item/collection reqs dweb-archive v0.1.49
+* 0.2.2: Switch dependencies to our own repo's to npm releases (away from github)
+* 0.2.1: Tidy up IPFS, GO, install; and platform specific docs & installs for Rachel3+ (which now includes IPFS)
+* 0.2.1: Working on Raspberry Pi 3 with IPFS
+* 0.2.0: Integrate seeding to IPFS and IPFS installation
+* 0.2.0: Integrate installation process for Rachel3+ - still not perfect but works though doesnt support IPFS yet. 
+
