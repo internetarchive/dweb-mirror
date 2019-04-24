@@ -44,16 +44,16 @@ At the moment this is one set for developing, or use, later I'll split it when i
 Please check for a platform specific README (for Rachel or RaspberryPi with NOOBS or Internet In A Box) as these instructions dont work for some of the smaller platforms.
 
 ### 1. Prelim - getting your machine ready.
-* You'll need git, node, npm, which should be on most Linux machines.
+* ###### You'll need git, node, npm, yarn, which should be on most Linux machines.
 
 #### Mac OSX
 * TODO Mac specific instructions to add these (need a clean machine to test on)
 
 #### Rachel 3+ (32 bit intel box from World Possible)
-This is complex, the OS with the box is seriously out of date, see README-rachel.md
+This is complex, the OS with the box is seriously out of date, see [./README-rachel.md]
 
 #### Raspberry Pi 3 with or without Internet In A Box (IIAB)
-This is complex, see [README-raspberrypi.md] then come back here to finish
+This is complex, see [./README-raspberrypi.md] then come back here to finish
 
 #### Anything else
 * This is only tested on current versions, so I recommend updating before installing.
@@ -113,14 +113,14 @@ From a command line:
 * cd /path/to/install #  # Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
 * `git clone “https://github.com/internetarchive/dweb-archive”`
 * `cd dweb-archive`
-* `npm install` # Expect this to take a while and generate error messages. 
+* `yarn install` # Expect this to take a while and generate error messages. 
 * `cd ..`       # Back to /path/to/install
 
 Repeat for any of dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports if you plan on developing on them.
 
 Please check current versions of README.md in those packages, as they may have changed.
 
-You can come back and do this again later, but will need to rerun `cd /path/to/install/dweb-mirror; npm install` so that it recognizes the dev versions.
+You can come back and do this again later, but will need to rerun `cd /path/to/install/dweb-mirror; yarn install` so that it recognizes the dev versions.
 
 ##### 3b2 Install dweb-mirror from GIT
 
@@ -129,18 +129,15 @@ From a command line:
 * cd <directory where you want to put dweb-mirror> #  Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
 * `git clone "https://github.com/internetarchive/dweb-mirror"`
 * `cd dweb-mirror`
-* `npm install` # Expect this to take a while and generate error messages. 
-   * On MacOS Mojave you'll need to sudo mkdir ~/.npm; sudo chown <YOUR USER NAME> ~/.npm
-   If you see an issue with EACCESS on ~/.npm you'll need to create that directory possible via sudo
-   If npm finishes with a recommendation to update then follow them
-* `npm install` # Second time will help understand if error messages are significant
+* `yarn install` # Expect this to take a while and generate error messages. 
+* `yarn install` # Second time will help understand if error messages are significant
 * `cd ..`
 
-(Note: `npm install` will run the script install.sh which can be safely run multiple times.)
+(Note: `yarn install` will run the script install.sh which can be safely run multiple times.)
 
 It will add links to Javascript webpack-ed bundles into the dist directory, 
 from the git cloned repos such as dweb-archive etc if you chose to install them above, 
-otherwise to those automatically brought in by `npm install`
+otherwise to those automatically brought in by `yarn install`
 
 
 ### 4. Edit configuration

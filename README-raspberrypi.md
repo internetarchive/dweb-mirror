@@ -2,6 +2,11 @@
 
 This is a work in progress - rewritten after first clean run on a new OS.
 
+If they dont work please email mitra@archive.org
+
+#IMPORTANT - THESE INSTRUCTIONS ARE ABOUT TO CHANGE FOR INTERNET IN A BOX 
+TALK TO ME BEFORE FOLLOWING THEM
+
 ## See also
 TODO-RPI find meta-task and document below
 * [https://github.com/internetarchive/dweb-mirror/issues/xx] for meta task for anything Raspberry related.
