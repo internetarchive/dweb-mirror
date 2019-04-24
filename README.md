@@ -41,7 +41,13 @@ This is an ongoing project, continually adding support for new Internet Archive 
  
 At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-Please check for a platform specific README (for Rachel or RaspberryPi with NOOBS or Internet In A Box) as these instructions dont work for some of the smaller platforms.
+Please check for a platform specific README for some platforms. Specifially:
+ * [./README-rachel.md] for Rachel 
+ * [./README-iiab-raspberrypi.md] for Internet In A Box (IIAB) on a RaspberryPi
+ * [./README-raspberrypi.md] for RaspberryPi if you don't want Internet In A Box
+ 
+This is important, as these instructions dont work without some prelimis for some of the smaller platforms
+and because we've modified the IIAB installer to include dweb-mirror.
 
 ### 1. Prelim - getting your machine ready.
 * ###### You'll need git, node, npm, yarn, which should be on most Linux machines.
@@ -52,7 +58,7 @@ Please check for a platform specific README (for Rachel or RaspberryPi with NOOB
 #### Rachel 3+ (32 bit intel box from World Possible)
 This is complex, the OS with the box is seriously out of date, see [./README-rachel.md]
 
-#### Raspberry Pi 3 with or without Internet In A Box (IIAB)
+#### Raspberry Pi 3 without Internet In A Box (IIAB)
 This is complex, see [./README-raspberrypi.md] then come back here to finish
 
 #### Anything else
@@ -226,26 +232,6 @@ yarn upgrade    # Upgrade all packages
 * git pull      # Unfortunately this step can muck with your config file, so make sure to save, or look if you get merge errors.
 * npm update
 * npm run update # Note there is an intentional feature/bug, in npm in that it that doesnt automatically run an "update" script. 
-
-## Classes
-Rough idea, might not be like this
-
-class|status|notes
------|-----|---
-Errors|Incrementally editing|Definitions of Error classes
-HashStore|Working|Generic store on top of "level", could equally well be on top of Redis.
-MirrorFS|Stub|Wraps the local disk in an API
-MirrorUIconfig|Stub|User Interface to configuration and actions
-MirrorUIviewer|needs stub|User Interface to view collections - based on, or using, archive.html in dweb-archive
-Mirror|Stub|One class to rule them all
-
-#### Actual class hierarchy as built so far ...
-
-* collectionpressed.js and mirrored.js: applications using this
-* stream.Transform
-    * ParallelStream - a transform stream that can run tasks in a configurable parallel manner
-    * _MirrorXxxStream - a set of StreamTools to allow array like functions on a stream    
-* s - StreamTools task that creates _MirrorXxxStream classes
 
 ## Key Notes
 #### Crawling via Dweb

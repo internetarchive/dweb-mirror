@@ -4,70 +4,17 @@ This is a work in progress - rewritten after first clean run on a new OS.
 
 If they dont work please email mitra@archive.org
 
-#IMPORTANT - THESE INSTRUCTIONS ARE ABOUT TO CHANGE FOR INTERNET IN A BOX 
-TALK TO ME BEFORE FOLLOWING THEM
-
 ## See also
-TODO-RPI find meta-task and document below
-* [https://github.com/internetarchive/dweb-mirror/issues/xx] for meta task for anything Raspberry related.
-
-## Initial setup
+* [https://github.com/internetarchive/dweb-mirror/issues/110] for meta task for anything Raspberry related.
 
 There are several alternatives
-* Raspbian -> Internet In A Box -> dweb-mirror
-* NOOBS -> dweb-mirror (see [./README-raspberrypi-noobs.md]
-
-### A. Raspbian -> Internet In A Box -> dweb-mirror
-
-TODO-IIAB TODO-RPI incorporate installer for node then dweb-mirror into IIAB installer
-
-If your intention is to run on Internet In A Box then follow these two steps, 
-
-#### Getting Raspbian working
-Internet in a Box's site is short on the initial details, especially if your RPi comes with NOOBS as mine did. 
-So this is what I did. (Edits welcome, if your experience differed)
-
-* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) 1GB
-* On a Mac, downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
-* Ran Etcher (its supposed to be able to use the zip, thoguh for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
-* Inserted into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
-* I would have inserted Ethernet, but dont have anything faster than WiFi
-* Powered up
-* It prompted me for soem getting started things, 
-* Accepted "Next to get started" though I suspect IIAB's comprehensive install gets some of them as well.
-* Selected your country, language, keyboard - it shouldnt matter which.
-* Changed password since RPis get hacked on default password
-* Connected to WiFi (not neccessary if you have Ethernet connected)
-* It automatically Updated OS - this is big - take a break :-)
-    * Note that this process failed for me with failures of size and sha, but a restart, after the prompts for password etc, 
-    got me to a partially completed download so didn't have to start from scratch
-* You might want to ... Menu/Preferences/Config / Set display to highest resolution
-
-#### Internet In A Box
-* Follow steps in [http://d.iiab.io/install.txt] with attention to [http://wiki.laptop.org/go/IIAB/FAQ]
-    * Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, and some bugs in the installer
-* On a terminal window `curl d.iiab.io/install.txt | sudo bash`
-    * Selected 1 for choice of min/medium/max install, others should work as well
-    * Did not edit the .yml file
-    * Update of OS was quick as it probably duplicated the step in the auto-setup above
-    * expect it to fail, and keep running `sudo iiab` to get it to complete.    
-    * It will prompt to reset password from default `iiab-admin/g0admin`
-    * It enables SSH; 
+* Raspbian -> Internet In A Box -> dweb-mirror (see [./README-iiab-raspberry.md])
+* NOOBS -> dweb-mirror (see this document)
 
 
-Try login to `http://box.lan/admin`   id=`iiab-admin` pw=`whatever you set password to during install`
+## NOOBS -> dweb-mirror
 
-Also see [http://wiki.laptop.org/go/IIAB/FAQ]
-
-And if you want to run as a local WiFi hotspot (recommended) then..
-```
-iiab-hotspot-on
-```
-
-
-### B. NOOBS -> dweb-mirror (i.e. without Internet In A Box)
-
-Otherwise if you just want dweb-mirror running on a NOOBS based RPi try this. 
+If you just want dweb-mirror running on a NOOBS based RPi (and don't want Internet In A Box) try this. 
 
 While it is unlikely that the process below is particularly fussy about a roughly normally configured RPi, 
 the following notes might aid in a speedy setup on a new RPi.
@@ -90,11 +37,9 @@ sudo apt-get update
 sudo apt full-upgrade -y 
 ```
 
-### Both platforms ... install dweb-mirror
-
 ## Preliminaries to install
 
-Both platforms (Raspbian/IIAB and NOOBS) need a current version of node, 
+We need a current version of node, 
 and we are in transition from npm to yarn so install both. 
 
 
@@ -121,26 +66,6 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 sudo apt-get update && sudo apt-get install yarn
 ```
 
-### On IIAB only need to open the port
-```
-cd /usr/bin
-sudo nano /opt/iiab/iiab/roles/network/templates/gateway/iiab-gen-iptables
-```
-* Around line 101 you'll find lines like
-`$IPTABLES -A INPUT -p tcp --dport $kiwix_port -m state --state NEW -i $wan -j ACCEPT`
-* Duplicate this line and replace `$kwix_port` with `4244`
-* Save 
-```
-cd /opt/iiab/iiab && sudo ./runrole network # Runs iiab-gen-iptables towards end
-```
-You may have to do this any time you update IIAB until dweb-mirror is built into it.
-
-TODO-IIAB integrate into final version
-
-Also there is currently a bug in IIAB that requires a reboot after these installs or DNS lookup doesn't work.
-
 ## Install dweb-mirror
 
-
-Now follow the instructions in [README.md], come back here to finish things off
-
+Now follow the instructions in [README.md]
