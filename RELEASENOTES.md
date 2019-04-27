@@ -36,6 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
+* 0.2.15: bookreader bug when not cached and bug in installer
 * 0.2.14: Add configuration for IIAB (partial)
 * 0.2.14: Use new playlist api
 * 0.2.13: Refactor to move seed support to dweb-transports reqs dweb-transport >= v0.1.40
