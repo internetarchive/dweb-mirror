@@ -220,6 +220,13 @@ class MirrorFS { //TODO-API needs uodating
     */
 
     static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined}, cb) {
+        /*
+            relFileDir: Item's dir
+            file:       File within dir
+            scale:      scale wanted at
+            rotate:     rotation wanted
+            cb(err, filepath) - Careful, its err,undefined if not found unlike checkWhereValidFile
+         */
         const scales = [];
         for(let i=Math.floor(scale); i>0; i--) { scales.push(i); };  // A = e.g. [ 8...1 ]
         detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),

@@ -300,14 +300,15 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
                 : "https://" + ai.server + reqUrl;
             const debugname = `${this.itemid}_${file}`;
             const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
-            if (page) {
+            if (page) { // This is the cover , its not scaled or rotated
                 MirrorFS.cacheAndOrStream({ urls, wantStream, debugname, relFilePath}, cbw)
-            } else {
-                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate,
+            } else { // Looking for page by number with scale and rotation
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
-                    (err, relFilePath) => {
+                    (err, relFilePath2) => { // undefined if not found
+                        // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
                         //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
-                        MirrorFS.cacheAndOrStream({urls, wantStream, relFilePath, debugname}, cbw)
+                        MirrorFS.cacheAndOrStream({urls, wantStream, debugname, relFilePath: relFilePath2 || relFilePath }, cbw)
                     }
                 )
             } }
