@@ -44,6 +44,9 @@ lnfirst . ../../dweb-objects/dist/dweb-objects-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-objects/dist/dweb-objects.bundle.js
 lnfirst . ../../dweb-transports/dist/dweb-transports-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-transports/dist/dweb-transports.bundle.js
+lnfirst . ../../bookreader/BookReader \
+	../../dweb-mirror/node_modules/@internetarchive/bookreader/BookReader
+
 popd
 #ls -al ${ARCHIVEUI}
 ./install_ipfs.sh   # IPFS install in a seperate script as its prone to failure
