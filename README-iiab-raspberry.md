@@ -16,9 +16,11 @@ otherwise if it comes with NOOBS (as most do now) you'll need to replace it with
 Internet in a Box's site is short on the initial details, especially if your RPi comes with NOOBS as mine did. 
 So this is what I did. (Edits welcome, if your experience differed)
 
-* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) 1GB
-* On a Mac, downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
-* Ran Etcher (its supposed to be able to use the zip, thoguh for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
+* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop 1GB
+* On a Mac:
+  * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
+  * Run Etcher (its supposed to be able to use the zip, thoguh for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
+* On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
 * Inserted into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
 * Powered up
@@ -46,6 +48,7 @@ Note its strongly recommended to connect your RPi to the Ethernet, rather than W
     * At about line 179 change `git clone https://github.com/iiab/iiab --depth 1` 
     * to `git clone https://github.com/mitra42/iiab -b distweb --depth 1`
     * which will get IIAB from my temporary distro.
+    * `iiab` to run the install script
 
 #### Once Internet Archives is in the default repo, you'll be able to do
     
