@@ -84,7 +84,7 @@ class CrawlManager {
         } else if (Array.isArray(task.identifier)) {
             this._push(task.identifier.map(identifier => new CrawlItem(Object.assign({}, task, {identifier}), [])));
         } else {
-            this._push(new CrawlItem(task, parent));
+            this._push(new CrawlItem(task, []));
         }
     }
     setopts(opts={}) {
