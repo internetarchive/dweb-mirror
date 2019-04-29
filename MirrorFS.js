@@ -320,7 +320,7 @@ class MirrorFS { //TODO-API needs uodating
             In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
         if (existingFilePath) {
-            haveExistingFile(existingFilePath);
+            haveExistingFile(existingFilePath, sha1);
         } else {
             this.checkWhereValidFile(relFilePath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err, existingFilePath) => {
                 if (err) {  //Doesn't match
@@ -330,11 +330,11 @@ class MirrorFS { //TODO-API needs uodating
                         _notcached.call(this);
                     }
                 } else { // sha1 matched, skip fetching, just stream from saved
-                    haveExistingFile.call(this, existingFilePath)
+                    haveExistingFile.call(this, existingFilePath, sha1)
                 }
             });
         }
-        function haveExistingFile(existingFilePath) {
+        function haveExistingFile(existingFilePath, sha1) {
             if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
                 const copyFilePath = path.join(this.copyDirectory, relFilePath);
                 fs.copyFile(existingFilePath, copyFilePath , (err) => {
@@ -343,10 +343,10 @@ class MirrorFS { //TODO-API needs uodating
                     } else {
                         debug("copied cached file to %s", copyFilePath);
                     }
-                    callbackEmptyOrDataOrStream(existingFilePath);
+                    callbackEmptyOrDataOrStream(existingFilePath, sha1);
                 })
             } else {
-                callbackEmptyOrDataOrStream(existingFilePath);
+                callbackEmptyOrDataOrStream(existingFilePath, sha1);
             }
         }
        function callbackEmptyOrData(existingFilePath) {
@@ -356,12 +356,12 @@ class MirrorFS { //TODO-API needs uodating
                 cb();
             }
         }
-        function callbackEmptyOrDataOrStream(existingFilePath) {
+        function callbackEmptyOrDataOrStream(existingFilePath, sha1) {
             if (wantStream) {
-                debug("streaming from cached", existingFilePath, "as sha1 matches");
+                debug("streaming %s from cache as %s", existingFilePath, sha1 ? "sha1 matches" : "sha1 not specified");
                 cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
             } else {
-                debug("Already cached", existingFilePath, "with correct sha1");
+                debug("Already cached %s %s", existingFilePath, sha1 ? "with correct sha1" : "sha1 not specified");
                 callbackEmptyOrData(existingFilePath);
             }
         }
