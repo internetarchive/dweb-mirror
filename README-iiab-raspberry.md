@@ -5,8 +5,8 @@ This is a work in progress - rewritten after first clean run on a new OS.
 If they dont work please email mitra@archive.org
 
 ## See also
-* [https://github.com/internetarchive/dweb-mirror/issues/111] for meta task for anything IIAB.
-* [./README-raspberrypi.md] for a non IIAB install of dweb-mirror
+* [issue #111](https://github.com/internetarchive/dweb-mirror/issues/111) for meta task for anything IIAB.
+* [README-raspberrypi.md](./README-raspberrypi.md) for a non IIAB install of dweb-mirror
 
 ## Initial setup - getting Raspbian
 
@@ -40,30 +40,34 @@ I'm following (but editing) steps in [http://d.iiab.io/install.txt] with attenti
 
 Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, and some bugs in the IIAB installer
 
-#### Until Internet Archive is in the default IIAB distribution do this ...
+#### Until Internet Archive is in the default IIAB distribution do this
     
-    * `sudo bash` # All of this needs to run as root
-    * `curl -o /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab`
-    * `nano /usr/sbin/iiab`
-    * At about line 179 change `git clone https://github.com/iiab/iiab --depth 1` 
-    * to `git clone https://github.com/mitra42/iiab -b distweb --depth 1`
-    * which will get IIAB from my temporary distro.
-    * `iiab` to run the install script
+* `sudo bash` # All of this needs to run as root
+* `curl -o /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab`
+* `nano /usr/sbin/iiab`
+* At about line 179 change `git clone https://github.com/iiab/iiab --depth 1` 
+* to `git clone https://github.com/mitra42/iiab -b distweb --depth 1`
+* which will get IIAB from my temporary distro.
+* `iiab` to run the install script
 
 #### Once Internet Archives is in the default repo, you'll be able to do
     
-    * `sudo curl d.iiab.io/install.txt | sudo bash`
+* `sudo curl d.iiab.io/install.txt | sudo bash`
 
 #### Either way ... 
 
-    * Selected 1 for choice of min/medium/max install, others should work as well
-    * Did not edit the .yml file
-    * Update of OS was quick as it probably duplicated the step in the auto-setup above
-    * expect it to fail, and keep running `sudo iiab` to get it to complete.    
-    * It will prompt to reset password from default `iiab-admin/g0admin`
-    * In theory it enables SSH, but sometimes after the OS upgrade to enable it I've had to:
-      * login from an attached keyboard, 
-      * Preferences > Services > SSH > enable
+* Selected 1 for choice of min/medium/max install, others should work as well
+* When it prompts you to edit `/etc/iiab/local_vars.yml` file say yes and set 
+```
+internetarchive_install: False
+internetarchive_enabled: False
+```
+* Update of OS was quick as it probably duplicated the step in the auto-setup above
+* expect it to fail, and keep running `sudo iiab` to get it to complete.    
+* It will prompt to reset password from default `iiab-admin/g0admin`
+* In theory it enables SSH, but sometimes after the OS upgrade to enable it I've had to:
+  * login from an attached keyboard, 
+  * Preferences > Services > SSH > enable
 
 #### Check it worked 
 
