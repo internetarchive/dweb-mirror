@@ -10,7 +10,6 @@ const ArchiveItem = require('./ArchiveItemPatched');
 require('./ArchiveFilePatched');
 require('./ArchiveMemberPatched');
 const MirrorFS = require('./MirrorFS');
-// Note CrawlManager is not dependent on config, that should be handled at a higher level.
 /*
   Manage crawls
 

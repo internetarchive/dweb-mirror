@@ -10,8 +10,11 @@ const yaml = require('js-yaml'); //https://www.npmjs.com/package/js-yaml
 // noinspection JSUnusedLocalSymbols
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util.js'); //for Object.deeperAssign
 
-const defaultConfigFiles = [ "./configDefaults.yaml", "~/dweb-mirror.config.yaml"]; // config files (later override earlier)
-
+const userConfigFile =   "~/dweb-mirror.config.yaml"; // Overwritten by writeUser below
+// config files (later override earlier) note the userConfigFile is always appended
+// If this is ever more than one file in defaultConfigFiles then the code in dweb-archive that for statusFromConfig will need editing as assumes userConfigFile returned in position 1
+const defaultConfigFiles = [ "./configDefaults.yaml"];
+const defaultUserConfig = {apps: { crawl: { tasks: [] }}};
 class MirrorConfig {
     /*
     A set of tools to manage and work on configuration data structures and to map to storage or UI
@@ -25,24 +28,45 @@ class MirrorConfig {
         this.setOpts(...objs);
     }
 
+    // Initialize user config if reqd
+    static initializeUserConfig(cb) {
+        const f = this.resolve(userConfigFile);
+        this.readYaml(f, (err, res) => {
+            if (err) {
+                this.writeYaml(f, defaultUserConfig,(err) => {
+                    if (err) debug("Unable to initialize User config file %s", f);
+                    cb(err, defaultUserConfig);
+                });
+            } else {
+                cb(res);
+            }
+        });
+    }
+
     static new(filenames, cb) { //TODO-API
         /* build a new MirrorConfig from a set of options loaded from YAML files,
             filename: filename of file, may use ., .., ~ etc, parameters in later override those in earlier.
         */
         if (typeof filenames === "function") { cb = filenames; filenames = undefined}
-        if (!(filenames && filenames.length)) { filenames = defaultConfigFiles; }
+        if (!(filenames && filenames.length)) { filenames = defaultConfigFiles; } // Doesnt incude userConfigFile
+
         asyncMap(this.resolves(filenames),
             (filename, cb2) => {
                 this.readYaml(filename, (err, res) => cb2(null, res)); // Ignore err, and res should be {} if error
             },
             (err, configobjs) => { // [ {...}* ]
                 if (err) { cb(err, null); } else {
-                    const config =  new MirrorConfig(...configobjs);
-                    // noinspection JSUnresolvedVariable
-                    debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
-                    cb(null, config);
-                }
-            })
+                    this.initializeUserConfig((err, userConfig) => {
+                        if (err) { cb(err, null); } else {
+                            const config =  new MirrorConfig(...configobjs, userConfig);
+                            // noinspection JSUnresolvedVariable
+                            debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
+                            cb(null, config);
+                        }
+                    });
+                };
+            }
+        );
     }
 
     static resolve(v) { // Handle ~ or . or .. in a path
@@ -98,7 +122,7 @@ class MirrorConfig {
         this.setOpts(obj);                               // Merge into this.
         // By now sendInfo will send correct result back
         // And write to user's file
-        MirrorConfig.writeYaml(MirrorConfig.resolve(defaultConfigFiles[defaultConfigFiles.length-1]), obj, cb);
+        MirrorConfig.writeYaml(MirrorConfig.resolve(userConfigFile), obj, cb);
     }
 
     static writeYaml(filename, obj, cb) {
