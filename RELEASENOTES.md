@@ -36,7 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
-* 0.2.17: Iniitalize user config file if not there
+* 0.2.18: Iniitalize user config file if not there
 * 0.2.16: Improved behavior standalone or when cant see gateway, installation documentation
 * 0.2.15: bookreader bug when not cached and bug in installer
 * 0.2.14: Add configuration for IIAB (partial)

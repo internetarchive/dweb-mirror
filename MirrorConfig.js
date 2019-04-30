@@ -38,7 +38,7 @@ class MirrorConfig {
                     cb(err, defaultUserConfig);
                 });
             } else {
-                cb(res);
+                cb(null, res);
             }
         });
     }
