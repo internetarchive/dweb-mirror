@@ -33,6 +33,7 @@ function lnfirst { # lnfirst destn source1 source2 source3 ...
 		fi
 		shift
 	done
+	echo "UNABLE TO FIND ANY POSSIBLE LINKS SUCH AS ${POSS}"
 }
 # Where to serve the ARCHIVEUI from , this must be the same list as in <config>/archiveui/directory
 # Note the ./dweb-archive/dist works whether this directory is in node_modules or just installed via git clone
@@ -44,9 +45,10 @@ lnfirst . ../../dweb-objects/dist/dweb-objects-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-objects/dist/dweb-objects.bundle.js
 lnfirst . ../../dweb-transports/dist/dweb-transports-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-transports/dist/dweb-transports.bundle.js
-lnfirst . ../../bookreader/BookReader \
-	../../dweb-mirror/node_modules/@internetarchive/bookreader/BookReader
-
+pushd bookreader
+lnfirst . ../../../bookreader/BookReader \
+	../../../dweb-mirror/node_modules/@internetarchive/bookreader/BookReader
+popd
 popd
 #ls -al ${ARCHIVEUI}
 ./install_ipfs.sh   # IPFS install in a seperate script as its prone to failure
