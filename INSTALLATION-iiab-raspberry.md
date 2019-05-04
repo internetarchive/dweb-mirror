@@ -1,12 +1,12 @@
-# dweb-mirror on IIAB on Raspberry Pi 3
+# Installation instructions for dweb-mirror on IIAB on Raspberry Pi 3
 
-This is a work in progress - rewritten after first clean run on a new OS.
+Note that these will change once IIAB integrates into their main repo.
 
 If they dont work please email mitra@archive.org
 
 ## See also
 * [issue #111](https://github.com/internetarchive/dweb-mirror/issues/111) for meta task for anything IIAB.
-* [README-raspberrypi.md](./README-raspberrypi.md) for a non IIAB install of dweb-mirror
+* [INSTALLATION-raspberrypi.md](INSTALLATION-raspberrypi.md) for a non IIAB install of dweb-mirror
 
 ## Initial setup - getting Raspbian
 
@@ -87,5 +87,5 @@ iiab-hotspot-on
 
 #### Configuration
 
-You may want to look at step 4 (Edit configuration) on [./README.md] though the default configuration should be correct unless you want to do something odd.
+You may want to look at step 4 (Edit configuration) on [./INSTALLATION.md] though the default configuration should be correct unless you want to do something odd.
 

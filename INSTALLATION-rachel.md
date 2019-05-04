@@ -102,7 +102,7 @@ sudo apt install yq -y
 # or go get gopkg.in/mikefarah/yq.v2
 ```
 
-## Now continue from the general README.md
+## Now continue from the general INSTALLATION.md
 
 ## Auto running
 * TODO-RACHEL - hook into supervisorctl etc [http://community.rachelfriends.org/t/starting-at-boot-supervisorctl/1202]

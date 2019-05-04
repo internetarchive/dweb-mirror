@@ -8,7 +8,7 @@ If they dont work please email mitra@archive.org
 * [https://github.com/internetarchive/dweb-mirror/issues/110] for meta task for anything Raspberry related.
 
 There are several alternatives
-* Raspbian -> Internet In A Box -> dweb-mirror (see [./README-iiab-raspberry.md])
+* Raspbian -> Internet In A Box -> dweb-mirror (see [./INSTALLATION-iiab-raspberry.md])
 * NOOBS -> dweb-mirror (see this document)
 
 
@@ -68,4 +68,4 @@ sudo apt-get update && sudo apt-get install yarn
 
 ## Install dweb-mirror
 
-Now follow the instructions in [README.md]
+Now follow the instructions in [INSTALLATION.md]

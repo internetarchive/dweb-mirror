@@ -11,30 +11,30 @@ directories:
   - /.data/archiveorg # This is where Rachel3+ puts its data
   - /library/archiveorg # This is where IIAB wants content
 archiveui: # Where to find the ArchiveUI relative to the directory this file and the code resides in
-  directories: # Note code uses "directory" which is first of these to exist - note this should match the list in install.sh TODO figure out how to read this yaml in install.sh
+  directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh TODO figure out how to read this yaml in install.sh
     - ../dweb-archive/dist # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
     - node_modules/@internetarchive/dweb-archive/dist # Or a repo cloned during 'npm install'
-# The apps group include configuration only used by one application
 connect:
-  transports:
+  transports: # This is the list of transports that the server or crawler will use to fetch files
     - 'HTTP'
     - 'IPFS'
     #- 'WEBTORRENT'
     #- 'GUN'
     #- 'WOLK'
-  webtorrent:
+  webtorrent: # Options to webtorrent
     tracker: 'wrtc'   # May or may not work on different platforms
-  ipfs:
+  ipfs: # Options to IPFS
     urlUrlstore: 'http://localhost:5001/api/v0/urlstore/add'
-  preferredStreamTransports:
+  preferredStreamTransports: # A list, in order of preference of transports to use for streams, only works if they are listed in "connect" above.
     - 'WEBTORRENT'
     - 'HTTP'
     - 'IPFS'
+# The apps group include configuration only used by one application
 apps:
   # internetarchive --server uses these
   http:
     port: 4244
-    morgan: ':method :url :req[range] :status :res[content-length] :response-time ms'
+    morgan: ':method :url :req[range] :status :res[content-length] :response-time ms' # Used for logging
   # internetarchive --crawl  uses these
   crawl:
     # An array of tasks each consists of { identifier, level, and optional search & related

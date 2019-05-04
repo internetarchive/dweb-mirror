@@ -530,10 +530,9 @@ The following files are present in `dweb-mirror` but, as of v0.1.0 are still a w
 
 The following files are present in `dweb-mirror` but are still a work in progress and not yet defined and will probably change a lot. 
 
-* index.html - skeleton for UI, will most likely be entirely rewritten and does not yet work.
-* LICENCE - GNU Alfredo licence
-* mirrorHttp_rachel - a version of mirrorHttp edited to work on the Rachel platform (under construction)
-* README.md - main documentation
-* RELEASENOTES.md - history of releases
+* [LICENCE] - GNU Alfredo licence
+* [INSTALLATION.md]
+* [README.md] - main documentation
+* [RELEASENOTES.md] - history of releases
 * test.js - used to run test code against specific problems, not specified.
-* URL_MAPPING.md - how universal urls flow through the different mappings in mirrorHttp and elsewhere.
+* [URL_MAPPING.md] - how universal urls flow through the different mappings in mirrorHttp and elsewhere.

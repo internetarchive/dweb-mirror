@@ -20,7 +20,7 @@ but has some hopefully useful functionality, in particular.
 
 See [Milestone v0.1.0 on Github](https://github.com/internetarchive/dweb-mirror/milestone/3) for the up to date list of what needs completing
 
-* Crawler first release - see [README.md](./README.md)
+* Crawler first release - see [INSTALLATION.md](./INSTALLATION.md)
 
 ### Minor releases
 
