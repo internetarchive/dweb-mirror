@@ -142,7 +142,8 @@ class CrawlManager {
         }
     }
 }
-CrawlManager._levels = ["tile", "metadata", "details", "all"]; //  *** NOTE THIS LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js
+//  *** NOTE THIS _levels LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js && assumptions about it in dweb-archive/dweb-archive-styles.css
+CrawlManager._levels = ["tile", "metadata", "details", "all"];
 CrawlManager.cm = new CrawlManager();   // For now there is only one CrawlManager, at some point might start passing as a parameter to tasks.
 CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory", "defaultDetailsSearch", "defaultDetailsRelated"];
 // q.drain = function() { console.log('all items have been processed'); }; // assign a callback *

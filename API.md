@@ -147,8 +147,8 @@ Save a thumbnail to the cache,
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
-##### relatedItems({wantStream=false} = {}, cb)
-Save the related items to the cache
+##### relatedItems({wantStream=false wantMembers=false} = {}, cb)
+Extend ArchiveItem.relatedItems, saves related items to the cache and returns either members or a stream
 ```
 cb(err, obj)  Callback on completion with related items object or stream
 ```
