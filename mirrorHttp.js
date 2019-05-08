@@ -95,8 +95,10 @@ function mirrorHttp(config, cb) {
         const ai = new ArchiveItem({itemid: req.params[0]});
         waterfall([
                 (cb) => ai.fetch_metadata(cb),
-                (ai, cb) => ai.relatedItems({wantStream: true}, cb)
-            ], (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"})
+                (ai, cb) => ai.relatedItems({wantMembers: false}, cb),
+                (res, cb) =>
+                        ArchiveMember.addCrawlInfoRelated(res, {config}, (err) => cb(err, res)),
+            ], (err, obj) => res.json(obj)
         );
     }
 
@@ -197,11 +199,12 @@ function mirrorHttp(config, cb) {
             // Special case: query just looking for fields on a list of identifiers
             const ids = req.query.q.slice(12,-1).split(' OR '); // ["foo","bar"]
             o = new ArchiveItem();
-            o.members = ids.map(identifier => new ArchiveMember({identifier}, {unexpanded: true}));
+            o.members = ids.map(identifier => ArchiveMember.fromIdentifier(identifier));
             // The members will be expanded by fetch_query either from local cache or by querying upstream
         } else {
             o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
         }
+        // By this point via any route above, we have o as an object with either a .query or .members as array of unexpanded members (which fetch_query|_fetch_query will get)
         o.rows = parseInt(req.query.rows, 10);
         o.page = parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
         o.and = req.query.and; // I dont believe this is used anywhere
@@ -210,13 +213,15 @@ function mirrorHttp(config, cb) {
                 debug('streamQuery could not fetch metadata for %s', o.itemid);
                 next(err);
             } else {
-                o.fetch_query({wantFullResp: true}, (err, resp) => {
+                o.fetch_query({wantFullResp: true}, (err, resp) => { // [ArchiveMember*]
                     if (err) {
                         debug('streamQuery for q="%s" failed with %s', o.query, err.message);
                         res.status(404).send(err.message);
                         next(err);
                     } else {
-                        res.json(resp);
+                        o.addCrawlInfo({config}, (unusederr, unusedmembers) => {
+                            res.json(resp);
+                        });
                     }
                 });
             }
@@ -316,9 +321,20 @@ function mirrorHttp(config, cb) {
             query: {transport: "HTTP", mirror: req.headers.host}
         }))
     });
+    // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
     app.post('/admin/setconfig', function (req, res, next) {
         debug("Testing setconfig %O", req.body);
-        config.writeUser(req.body, err => {
+        config.setAndWriteUser(req.body, err => {
+            if (err) {
+                next(err);
+            } else {
+                sendInfo(req, res);  // Send info again, as UI will need to display this
+            }
+        });
+    });
+    app.get('/admin/setconfig/:identifier/:level', function (req, res, next) {
+        debug("Testing setconfig %s level=%s", req.params["identifier"], req.params["level"]);
+        config.writeUserTaskLevel( req.params["identifier"],  req.params["level"], err => {
             if (err) {
                 next(err);
             } else {
@@ -368,6 +384,7 @@ function mirrorHttp(config, cb) {
     app.get(ACUtil.gateway.urlDownload + '/:itemid/*', streamArchiveFile);
 
 // noinspection JSUnresolvedFunction
+    // This is used by bookreader
     app.get('/arc/archive.org/images/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         _sendFileFromDir(req, res, next, config.archiveui.directory + "/images");
     });
@@ -380,7 +397,9 @@ function mirrorHttp(config, cb) {
                 if (err) {
                     res.status(404).send(err.message); // Its neither local, nor from server
                 } else {
-                    res.json(ai.exportMetadataAPI());
+                    ai.addCrawlInfo({config}, (unusederr) => {
+                        res.json(ai.exportMetadataAPI());
+                    })
                 }
             })
     });

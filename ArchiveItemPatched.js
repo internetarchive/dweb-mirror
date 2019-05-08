@@ -8,8 +8,10 @@ const path = require('path');
 const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
-const each = require('async/each');
-const parallel = require('async/parallel');
+const each = require('async/each'); // https://caolan.github.io/async/docs.html#each
+const every = require('async/every'); // https://caolan.github.io/async/docs.html#every
+const parallel = require('async/parallel'); //https://caolan.github.io/async/docs.html#parallel
+
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
@@ -17,6 +19,7 @@ const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/R
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
+const MirrorConfig = require('./MirrorConfig');
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
@@ -176,10 +179,21 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
     parallel([
         cb => _parse("meta",(err, o) => {
             res.metadata = o;
-            cb(err, o); }),
+            if (err) {
+                cb(err);
+            } else {
+                if (["audio", "etree", "movies"].includes(res.metadata.mediatype)) {
+                    _parse("playlist", (err, o) => {
+                        res.playlist = o; // maybe undefined
+                        cb(err);    // Should fail if no playlist, so re-reads from server and gets playlist
+                    });
+                } else {
+                    cb(null);
+                }
+            }}),
         cb => _parse("files", (err, o) => {
             if (!err) { res.files = o; res.files_count = res.files.length; }
-            cb(err, o); }),
+            cb(err); }),
         cb => _parse("reviews", (err, o) => {
             res.reviews = o; // Undefined if failed but not an error
             cb(null); }),
@@ -191,19 +205,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
             // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
             ArchiveItem.extraFields.forEach(k => res[k] = o && o[k]);
             cb(null); }),
-    ], (err, unused) => {
-        if (err) {
-            cb(err);
-        } else { // This has to happen after the parallel because requires access to metadata
-            if (["audio", "etree", "movies"].includes(res.metadata.mediatype)) {
-                _parse("playlist", (err, o) => {
-                    res.playlist = o; // maybe undefined
-                    cb(err, res);    // Should fail if no playlist, so re-reads from server and gets playlist
-                });
-            } else { // Dont need a playlist
-                cb(null, res);
-            }
-        } } )
+    ], (err, unused) => cb(err, res));
 };
 
 // noinspection JSUnresolvedVariable
@@ -313,16 +315,18 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
                 )
             } }
     ], cb);
-}
+};
+
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
+ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API add skipNet
     /*
     Fetch the metadata for this item if it hasn't already been.
     More flexible version than dweb-archive.ArchiveItem
     Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
     Alternatives:
-    skipCache:          load from net
+    skipCache:          dont load from cache (only net)
+    skipNet             dont load from net (only cache)
     cached:             return from cache
     !cached:            Load from net, save to cache
 
@@ -330,7 +334,6 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     Errors              TransportError (404)
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-    const skipCache = opts.skipCache;           // If set will not try and read cache
     // noinspection JSUnresolvedVariable
     if (cb) { try { f.call(this, cb) } catch(err) {
         cb(err)}}
@@ -340,17 +343,21 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     }
     function f(cb) {
         if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
-            if (!skipCache) { // We have a cache directory to look in
+            if (!opts.skipCache) { // We have a cache directory to look in
                 //TODO-CACHE-AGING need timing of how long use old metadata
                 this.read((err, metadata) => {
                     if (err) { // No cached version
-                        this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
-                            if (err) {
-                                cb(err); // Failed to read & failed to fetch
-                            } else {
-                                ai.save({}, (err, res) => cb(errOrDark(null), res));
-                            }  // Save data fetched (de-fjorded)
-                        });    // resolves to this
+                        if (opts.skipNet) {
+                            cb(err);
+                        } else {
+                            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
+                                if (err) {
+                                    cb(err); // Failed to read & failed to fetch
+                                } else {
+                                    ai.save({}, (err, res) => cb(errOrDark(null), res));
+                                }  // Save data fetched (de-fjorded)
+                            });    // resolves to this
+                        }
                     } else {    // Local read succeeded.
                         this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
                         if (MirrorFS.copyDirectory) { // If copyDirectory explicitly specified then save to it.
@@ -416,10 +423,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     if (this.members) {
                         Util.asyncMap(this.members,
                             (ams,cb2) => {
-                                if (ams instanceof ArchiveMember) { // Expanded or unexpanded
+                                if (ams instanceof ArchiveMember && ams.isExpanded()) { // Expanded or unexpanded
                                     cb2(null, ams)
                                 } else { ams.read({},(err, o) =>
-                                    cb2(null, o ? new ArchiveMember(o) : ams)); }},
+                                    cb2(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
                             (err, arr) => {
                             this.members=arr; cb() }); // Expand where possible
                     } else {
@@ -550,7 +557,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
             }
         });
     } else {
-        cb(null, wantMembers ? [] : undefined);
+        cb(null, wantStream ? undefined : [] );
     }
 };
 
@@ -558,7 +565,9 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
 ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=false} = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
-    wantStream      true if want stream) alternative is obj
+    wantStream      true => cb(err, stream)
+    wantMembers     true => cb(err, [ArchiveMember*]
+    !wantStream && !wantMembers => cb(err, { hits: hit: [ {}* ]  }
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
     const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
@@ -591,5 +600,65 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
     }
 };
 
+ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
+    // In place add
+    Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata.mediatype)});
+    parallel([
+        cb4 => {
+            if (!this.files) { cb4(null); } else {
+                each(this.files,
+                    // relatively expensive reads metadata files for each member,
+                    (af, cb3) => af.isDownloaded(cb3),
+                    cb4)
+            }
+        },
+        cb4 => {
+            if (!this.members) { cb4(null); } else {
+                parallel([
+                    cb2 => each(this.members,
+                        (member, cb3) => member.addCrawlInfo({config}, cb3),
+                        cb2),
+                    cb2 => each(this.members,
+                        // relatively expensive reads metadata files for each member,
+                        (member, cb3) => ArchiveItem.isDownloaded(member.identifier, {level: "details"}, (err, res) => {
+                            member.downloaded = res;
+                            cb3(err);
+                        }),
+                        cb2)
+                ], cb4);
+            }
+        }
+    ], (err) => {
+        if (err) { cb(err)
+        } else {
+            this.isDownloaded({level: "details"}, (unusederr, res) => {
+                this.downloaded = res;
+                cb(null, this);
+            })
+        }
+    });
+};
+
+ArchiveItem.prototype.isDownloaded = function({level=undefined}={}, cb) { // TODO use level //TODO-API
+    console.assert(level === "details", "isDownloaded is only defined for level=details but supplied "+level);
+    this.fetch_metadata({skipNet: true}, (err, unusedRes) => {
+        if (err) {
+            cb(null, false);
+        } else {
+            every(
+                this.minimumForUI(), // [ArchiveFile*]
+                (af, cb3) => af.isDownloaded(cb3),
+                (err, res) => cb (null, !!err || res)
+            );
+        }
+    });
+};
+ArchiveItem.isDownloaded = function(identifier, {level="details"}={}, cb) {
+    new ArchiveItem({itemid: identifier}).isDownloaded({level}, cb);
+};
+
+ArchiveItem.prototype.exportFiles = function() {  // Note overridden in dweb-mirror.ArchiveItemPatched
+    return this.files.map(f => Object.assign({downloaded: f.downloaded}, f.metadata));
+}
 
 exports = module.exports = ArchiveItem;

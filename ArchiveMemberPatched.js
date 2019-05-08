@@ -7,6 +7,8 @@
 const path = require('path');
 const canonicaljson = require('@stratumn/canonicaljson');
 const debug = require('debug')('dweb-mirror:ArchiveMemberPatched');
+const each = require('async/each');
+
 // Other IA repos
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const Util = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
@@ -43,6 +45,20 @@ ArchiveMember.read = function({identifier = undefined}, cb) {
         }
     });
 };
+ArchiveMember.prototype.addCrawlInfo = function({config}, cb) {
+    Object.assign(this, {crawl: config.crawlInfo(this.identifier)});
+    cb(null);
+}
+ArchiveMember.addCrawlInfo = function(arr, {config=undefined}={}, cb) { // Should work on an [ArchiveMember*] or [{}*] as same structure
+    each(arr, (memb, cb2)  => memb.addCrawlInfo({config}, cb2), cb);
+}
+ArchiveMember.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) { // Should work on an [ArchiveMember*] or [{}*] as same structure
+    const arr = rels.hits.hits;
+    each(arr, (rel, cb2)  => {
+        Object.assign(rel._source, {crawl: config.crawlInfo(rel._id)});
+        cb2(null);
+    }, cb);
+}
 ArchiveMember.prototype.read = function(unusedopts = {}, cb) {
     if (typeof unusedopts === "function") { cb = unusedopts; unusedopts={}; }
     ArchiveMember.read({identifier: this.identifier}, cb);

@@ -12,7 +12,7 @@ const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile
 const MirrorFS = require('./MirrorFS');
 
 // noinspection JSUnresolvedVariable
-ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb) {
+ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, start=0, end=undefined} = {}, cb) { //TODO-API skipNet
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
      */
@@ -26,7 +26,9 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStre
         expectsize: this.metadata.size,
         ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
     }, (err, streamOrUndefined) => {
-        if (err) { // Unable to retrieve locally, lets get urls and try again
+        if (err && skipNet) {
+            cb(err);
+        } else if (err) { // Unable to retrieve locally, lets get urls and try again
             this.urls((err, urls) => {
                 if (err) {
                     cb(err);
@@ -48,11 +50,15 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, wantStre
                 }
             })
         } else {
+            this.downloaded = true;
             cb(null, wantStream ? streamOrUndefined : this);
         }
     })
 };
 
-
+ArchiveFile.prototype.isDownloaded = function(cb) {
+    this.cacheAndOrStream({skipNet: true, wantStream: false}, (err, res) => {
+        this.downloaded = !err; cb(null, !err)});
+};
 
 exports = module.exports = ArchiveFile;

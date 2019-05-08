@@ -1,136 +1,98 @@
-// Careful not to introduce too many dependencies in here, as called very early in applications
-const os = require('os');
-const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const path = require('path');
-const glob = require('glob');
 const debug = require('debug')('dweb-mirror:MirrorConfig');
-const asyncMap = require('async/map');
-//const canonicaljson = require('@stratumn/canonicaljson');
-const yaml = require('js-yaml'); //https://www.npmjs.com/package/js-yaml
-// noinspection JSUnusedLocalSymbols
-const ACUtil = require('@internetarchive/dweb-archivecontroller/Util.js'); //for Object.deeperAssign
+const ConfigController = require('./ConfigController');
+const CrawlManager = require('./CrawlManager');
+const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for Object.deeperassign
 
-const userConfigFile =   "~/dweb-mirror.config.yaml"; // Overwritten by writeUser below
-// config files (later override earlier) note the userConfigFile is always appended
-// If this is ever more than one file in defaultConfigFiles then the code in dweb-archive that for statusFromConfig will need editing as assumes userConfigFile returned in position 1
-const defaultConfigFiles = [ "./configDefaults.yaml"];
-const defaultUserConfig = {apps: { crawl: { tasks: [] }}};
-class MirrorConfig {
+class MirrorConfig extends ConfigController { //TODO-API split from ConfigController
     /*
-    A set of tools to manage and work on configuration data structures and to map to storage or UI
-
-    Note the API for this is in flux as build the first few use cases
-
-    Note this makes extensive use of the fact that the last of the ...objs can be edited, set back with setopts and leave this changed as expected.
-    */
+    Subclass of ConfigController specific to mirroring
+     */
     constructor(...objs) {
-        this.configOpts = objs; // For info query
-        this.setOpts(...objs);
+        super(...objs);
     }
 
     // Initialize user config if reqd
     static initializeUserConfig(cb) {
-        const f = this.resolve(userConfigFile);
-        this.readYaml(f, (err, res) => {
-            if (err) {
-                this.writeYaml(f, defaultUserConfig,(err) => {
-                    if (err) debug("Unable to initialize User config file %s", f);
-                    cb(err, defaultUserConfig);
-                });
-            } else {
-                cb(null, res);
-            }
-        });
+        this.initializeUserConfigFile(this.userConfigFile, this.defaultUserConfig, cb);
     }
 
-    static new(filenames, cb) { //TODO-API
-        /* build a new MirrorConfig from a set of options loaded from YAML files,
-            filename: filename of file, may use ., .., ~ etc, parameters in later override those in earlier.
-        */
+    static new(filenames, cb) {
         if (typeof filenames === "function") { cb = filenames; filenames = undefined}
-        if (!(filenames && filenames.length)) { filenames = defaultConfigFiles; } // Doesnt incude userConfigFile
-
-        asyncMap(this.resolves(filenames),
-            (filename, cb2) => {
-                this.readYaml(filename, (err, res) => cb2(null, res)); // Ignore err, and res should be {} if error
-            },
-            (err, configobjs) => { // [ {...}* ]
-                if (err) { cb(err, null); } else {
-                    this.initializeUserConfig((err, userConfig) => {
-                        if (err) { cb(err, null); } else {
-                            const config =  new MirrorConfig(...configobjs, userConfig);
-                            // noinspection JSUnresolvedVariable
-                            debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
-                            cb(null, config);
-                        }
-                    });
-                };
-            }
-        );
-    }
-
-    static resolve(v) { // Handle ~ or . or .. in a path
-        // noinspection JSUnresolvedVariable
-        return (v.startsWith("~/") ? path.resolve(os.homedir(), v.slice(2)) : path.resolve(process.cwd(), v)); }
-
-    static resolves(vv) {
-        return [].concat(...  // flatten result
-            vv.map(v => this.resolve(v))    // Handle ~ or . or ..
-                .map(p => glob.sync(p)));           // And expand * etc (to an array of arrays)
-    }
-    static firstExisting(arr) {
-            // Find the first of arr that exists, args can be relative to the process directory .../dweb-mirror
-            // returns undefined if none found
-            // noinspection JSUnresolvedVariable
-            return this.resolves(arr).find(p=>fs.existsSync(p));
+        if (!(filenames && filenames.length)) { filenames = this.defaultConfigFiles; } // Doesnt include userConfigFile
+        super.new(filenames, cb);
     }
 
     setOpts(...opts) {
-        Object.deeperAssign(this, ...opts);
-        this.directories = MirrorConfig.resolves(this.directories); // Handle ~/ ./ ../ and expand * or ?? etc
+        // Extend base class to handle specific derivations of opts
+        super.setOpts(...opts);
+        this.directories = ConfigController.resolves(this.directories); // Handle ~/ ./ ../ and expand * or ?? etc
         // noinspection JSUnresolvedVariable
-        this.archiveui.directory = MirrorConfig.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
+        this.archiveui.directory = ConfigController.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    static readYamlSync(filename) {
-        try {
-            return yaml.safeLoad(fs.readFileSync(MirrorConfig.resolve(filename), 'utf8'));
-        } catch(err) {
-            debug("Error reading user configuration: %s", err.message);
-            return {};    // Caller is free to ignore err and treat {} as an empty set of config params
+    setAndWriteUser(obj, cb) {
+        this.setAndWriteUserFile(MirrorConfig.userConfigFile, obj, cb);
+    }
+
+    writeUser(cb) {
+        this.writeUserFile(MirrorConfig.userConfigFile, cb);
+    }
+
+    deleteUserTask(identifier) {
+        let task = this.findTask(identifier);  // TODO-UXLOCAL this is not quite correct, it should find hte task, and if necessary split before writing
+        if (task) {
+            if (Array.isArray(task.identifier) && (task.identifier.length > 1)) {
+                task.identifier.splice(task.identifier.indexOf(identifier), 1); // Old task - remove identifier
+            } else {  // Single identifier or array length=1
+                this.apps.crawl.tasks.splice(this.apps.crawl.tasks.indexOf(task), 1);
+            }
         }
     }
-    static readYaml(filename, cb) {
-        fs.readFile(filename, 'utf8', (err, yamlstr) => {
-            if (err) {
-                debug("Unable to read %s: %s", filename, err.message);
-                cb (err, {});
-            } else {
-                try {
-                    const o = yaml.safeLoad(yamlstr);
-                    try { cb(null, o); } catch(err) { console.error("Uncaught err in readYaml cb ", err); }
-                } catch(err) {
-                    debug("Unable to pass yaml: %s", err.message);
-                    cb(err, {});
+    writeUserTaskLevel(identifier, level, cb) {
+        if (level === "none") {
+            this.deleteUserTask(identifier);
+        } else {
+            let task = this.findTask(identifier);  // TODO-UXLOCAL this is not quite correct, it should find hte task, and if necessary split before writing
+            if (!task) {
+                Object.deeperAssign(this, {apps: {crawl: {}}});
+                if (!this.apps.crawl.tasks) {
+                    this.apps.crawl.tasks = []
                 }
+                task = {identifier};
+                this.apps.crawl.tasks.push(task);
+            } else if (Array.isArray(task.identifier) && (task.identifier.length > 1)) {
+                task.identifier.splice(task.identifier.indexOf(identifier), 1); // Old task - remove identifier
+                task = Object.assign({}, task, {identifier}); // New task for just this identifier
+                this.apps.crawl.tasks.push(task);
             }
-        })
+            // By this point this.apps.crawl.tasks[] should have a task {identifier}, possibly with old state i.e. findTask(identifier) would now succeed
+            task.level = level;     // Only change level of that task
+        }
+        this.writeUser(cb)  // And write back current state
     }
-    writeUser(obj, cb) {
-        this.configOpts[this.configOpts.length-1] = obj;
-        this.setOpts(obj);                               // Merge into this.
-        // By now sendInfo will send correct result back
-        // And write to user's file
-        MirrorConfig.writeYaml(MirrorConfig.resolve(userConfigFile), obj, cb);
+    findTask(identifier) {
+        return this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
     }
-
-    static writeYaml(filename, obj, cb) {
-        fs.writeFile(filename, yaml.safeDump(obj), {encoding: 'utf8'}, (err) => {
-            if (err) { debug("Unable to write yaml to %s: %s", filename, err.message); }
-            cb(err);
-        });
+    // TODO-UXLOCAL merge with similar code in dweb-archive/ConfigDetailsComponent/stateFromInfo
+    crawlInfo(identifier, mediatype=undefined) { //TODO-API
+        /*
+           Check if member being crawled and return info suitable for adding into ArchiveMember and usable by the UI
+         */
+        let task = this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
+        if (!task) {
+            task = {}
+        } else {
+                const isDetailsOrMore = CrawlManager._levels.indexOf(task.level) >= CrawlManager._levels.indexOf("details");
+                const isSearch = mediatype === "collection"; //TODO-UXLOCAL need to catch searches
+                task.search = task.search || (isDetailsOrMore && isSearch && this.apps.crawl.opts.defaultDetailsSearch);
+        }
+        return task;
     }
-
 }
+MirrorConfig.userConfigFile =   "~/dweb-mirror.config.yaml"; // contents overwritten by writeUser or setAndWriteUser
+MirrorConfig.defaultUserConfig = {apps: { crawl: { tasks: [] }}};
+// config files (later override earlier) note the userConfigFile is always appended
+// If this is ever more than one file in defaultConfigFiles then the code in dweb-archive that for statusFromConfig will need editing as assumes userConfigFile returned in position 1
+MirrorConfig.defaultConfigFiles = [ "./configDefaults.yaml"];
+
 exports = module.exports = MirrorConfig;
