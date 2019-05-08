@@ -73,22 +73,25 @@ through three levels:
 
 ### Disks
 
-The server checks for disks in all the likely places, the list of places it
-checks, in an unmodified installation can be seen at 
-`https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml#L7`
+The server checks for caches of content in directories called `archiveorg` in all the likely places, 
+in particular it looks for any inserted USB drives on most systems,
+and if none are found, it uses `/library/archiveorg`.
 
-This includes top level directories on usb drives on most machines on IIAB at `/media/pi/*/archiveorg`
+The list of places it checks, in an unmodified installation can be seen at 
+`https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml#L7`.
 
 You can override this in `dweb-mirror.config.yaml` in the home directory of the
-user that runs the server, e.g. on IIAB this is currently `/root/dweb-mirror.config.yaml`
+user that runs the server, this is currently `/root/dweb-mirror.config.yaml`
 (see 'Advanced' below)
 
-Items are stored in subdirectories of the first of these directories found, but
-read from any of the locations. 
+Archive's `Items` are stored in subdirectories of the first of these directories found, but
+are read from any of the locations. 
 
-If you disk space is getting full, its perfectly safe to delete any
-subdirectories, except the `.hashstore` at the top level of each, the server
-will refetch what it needs if you browse to the item again when connected to
+If you disk space is getting full, its perfectly safe to delete any subdirectories, or to move them 
+to an attached USB.  Its also safe to move attached USB's from one device to another.
+
+The one directory you should not move or delete is `archiveorg/.hashstore` in any of these locations,
+the server will refetch anything else it needs if you browse to the item again when connected to
 the internet. 
 
 ### Maintenance
