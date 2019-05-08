@@ -261,7 +261,7 @@ waterfall([
             cb(null); },
     cb => connect(cb),
     // Start server before crawler as crawler takes time before returning
-    cb => { if (opts.server) { mirrorHttp(config, cb); } else { cb(null); }},
+    cb => { if (opts.server || opts.maintenance || opts.crawl) { mirrorHttp(config, cb); } else { cb(null); }},
     cb => { if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}}, // Must be after server start since needs for IPFS, should be before crawl
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
     cb => { if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
