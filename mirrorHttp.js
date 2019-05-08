@@ -443,7 +443,15 @@ function mirrorHttp(config, cb) {
     });
 
 // noinspection JSUnresolvedVariable
-    app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
+    const server = app.listen(config.apps.http.port); // Intentionally same port as Python gateway defaults to, api should converge
+    server.on('error', (err) => {
+        if (err.code === "EADDRINUSE") {
+            debug("A server, probably another copy of internetarchive is already listening on port %s", config.apps.http.port);
+        } else {
+            debug("Server hit error %o", err);
+            throw(err); // Will be uncaught exception
+        }
+    });
     cb(null);   // Just in case this becomes async
 }
 
