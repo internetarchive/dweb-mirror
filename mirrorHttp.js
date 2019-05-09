@@ -452,7 +452,7 @@ function mirrorHttp(config, cb) {
             throw(err); // Will be uncaught exception
         }
     });
-    cb(null);   // Just in case this becomes async
+    cb(null, server);   // Just in case this becomes async
 }
 
 exports = module.exports = mirrorHttp;

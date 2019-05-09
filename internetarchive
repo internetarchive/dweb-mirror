@@ -251,6 +251,7 @@ function crawl(cb) {
     }
 }
 let config;
+let server;
 waterfall([
     cb => MirrorConfig.new((err, res) => { config = res; cb(err); }), // Load config early, so can use in opts processing
     cb => cb(optsToConfig()), // Currently synchronous returning err||null
@@ -261,10 +262,14 @@ waterfall([
             cb(null); },
     cb => connect(cb),
     // Start server before crawler as crawler takes time before returning
-    cb => { if (opts.server || opts.maintenance || opts.crawl) { mirrorHttp(config, cb); } else { cb(null); }},
+    cb => { if (opts.server || opts.maintenance || opts.crawl) { mirrorHttp(config, (err, serv) => {server = serv; cb(err); }) } else { cb(null); }},
     cb => { if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}}, // Must be after server start since needs for IPFS, should be before crawl
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
-    cb => { if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
+    //TODO need way to stop mirrorHttp so crawl and maintenance exit
+    cb => {
+    if (!opts.server && server) {server.close(cb)} else { cb(null); } }, // Stop express server unless explicit -s option
+    cb => {
+    if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {
     if (err) {
         debug("Failed: %s", err.message)
