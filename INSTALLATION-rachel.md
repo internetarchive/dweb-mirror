@@ -10,7 +10,7 @@ way to give it a full factory reset.
 
 There are docs that come with the Rachel box and are worth reading, however they are inadequate for this task set.
 
-If you have permission to do this then you'll know the passwords so we aren't putting it in this public repo! 
+If you have permission to do this then you'll know the passwords so we are not putting it in this public repo! 
 
 * There are two ways to physically connect the Rachel3+ to the internet either directly via the Internet or via your laptop's Wifi.
 

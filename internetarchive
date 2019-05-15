@@ -46,7 +46,7 @@ const opts = getopts(process.argv.slice(2),{
     //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
     "unknown": option => { if (!optsInt.includes(option)) { console.log("Unknown option", option, ", 'internetarchive -h' for help"); process.exit()} }
 });
-const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
+const httpOrHttps = "http"; // This server is running on http, not https (at least currently)
 
 //TODO allow specifying "crawl item/filename" to get just one file see https://github.com/internetarchive/dweb-mirror/issues/108
 
@@ -170,9 +170,10 @@ function optsToConfig() {
         return new Error("ERROR: Cannot specify search with rows or depth arguments");
     }
     if (opts.debugidentifier.length) {
-        var debugidentifier = opts.debugidentifier };
+        // noinspection ES6ConvertVarToLetConst
+        var debugidentifier = opts.debugidentifier }
     if (opts.verbose || opts.dummy) {
-        debug( "Config:"); debug(yaml.safeDump(Object.filter(config, (key, value) => key !== "configOpts")));
+        debug( "Config:"); debug(yaml.safeDump(Object.filter(config, (key, unusedValue) => key !== "configOpts")));
     }
     return null;
 }
@@ -230,8 +231,6 @@ function connect(cb) {
     }
     if (!opts.dummy) {
         DwebTransports.connect(connectOpts, unusedErr => {
-            //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
-            const Thttp = DwebTransports.http();
             cb(unusedErr);
         });
     }

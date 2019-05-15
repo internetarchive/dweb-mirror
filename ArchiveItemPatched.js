@@ -19,7 +19,6 @@ const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/R
 const Util = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
-const MirrorConfig = require('./MirrorConfig');
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
@@ -59,7 +58,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
         .members -> <IDENTIFIER>.members.json
         .reviews -> <IDENTIFIER>.reviews.json
         .files -> <IDENTIFIER>.files.json
-        {collection_titles, collecton_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
+        {collection_titles, collection_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
         and .member_cached.json is saved from ArchiveMember not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
@@ -537,15 +536,15 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
     wantStream      true if want stream) alternative is obj. obj will be processed, stream will always be raw (assuming client processes it)
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
-    const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    if (itemid) {
+    const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+    if (identifier) {
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_playlist.json");
         // noinspection JSUnresolvedVariable
         MirrorFS.cacheAndOrStream({wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
-            urls: `https://archive.org/embed/${itemid}?output=json`, // Hard coded, would rather have in Util.gateway.url_playlist but complex
-            debugname: itemid + "/" + itemid + "_playlist.json"
+            urls: `https://archive.org/embed/${identifier}?output=json`, // Hard coded, would rather have in Util.gateway.url_playlist but complex
+            debugname: identifier + "/" + identifier + "_playlist.json"
         }, (err, res) => {
             // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
             if (!wantStream && !err) {
@@ -570,15 +569,15 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
     !wantStream && !wantMembers => cb(err, { hits: hit: [ {}* ]  }
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
-    const itemid = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    if (itemid) {
+    const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+    if (identifier) {
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
         MirrorFS.cacheAndOrStream({wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
-            urls: Util.gateway.url_related + itemid, //url_related currently ends in /
-            debugname: itemid + "/" + itemid + "_related.json"
+            urls: Util.gateway.url_related + identifier, //url_related currently ends in /
+            debugname: identifier + "/" + identifier + "_related.json"
         }, (err, res) => {
             // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
             if (!wantStream && !err) {

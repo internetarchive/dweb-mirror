@@ -14,7 +14,7 @@ DONE file, need pass on
 
 See URL_MAPPING.md for summary of below rules plus what they call.
 
-TODO-GATEWAY - special case for both metadportata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
+TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
 TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
  */
 // External packages
@@ -28,14 +28,11 @@ const express = require('express'); //http://expressjs.com/
 const morgan = require('morgan'); //https://www.npmjs.com/package/morgan
 const path = require('path');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
-const ParallelStream = require('parallel-streams');
+//const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 
 // IA packages
-global.DwebTransports = require('@internetarchive/dweb-transports'); // Must be before DwebObjects
-// noinspection JSUndefinedPropertyAssignment
-global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
 //auto test for presence of wrtc, its not available on rachel
 let wrtc;
@@ -46,12 +43,12 @@ try {
 }
 // Local files
 const MirrorFS = require('./MirrorFS');
-const MirrorConfig = require('./MirrorConfig');
+const CrawlManager = require('./CrawlManager');
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const ArchiveMember = require('./ArchiveMemberPatched');
 
-const httpOrHttps = "http"; // This server is running on http, not https (at least currenty)
+const httpOrHttps = "http"; // This server is running on http, not https (at least currently)
 const app = express();
 function mirrorHttp(config, cb) {
     debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
@@ -120,7 +117,7 @@ function mirrorHttp(config, cb) {
 
     function proxyUrl(req, res, next, url, headers = {}) {
         // Proxy a request to somewhere under urlbase, which should NOT end with /
-        DwebTransports.createReadStream(url, Object.assign({}, req.streamOpts, {preferredTransports: preferredStreamTransports}), (err, s) => {
+        DwebTransports.createReadStream(url, Object.assign({}, req.streamOpts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
             _proxy(req, res, next, err, s, headers);
         })
     }
@@ -356,7 +353,7 @@ function mirrorHttp(config, cb) {
     });
     app.get('/admin/crawl/status', (req, res) => {
         res.json(CrawlManager.status());
-    })
+    });
     app.get('/arc/archive.org', (req, res) => {
         res.redirect(url.format({pathname: "/archive/archive.html", query: req.query}));
     });
@@ -421,7 +418,7 @@ function mirrorHttp(config, cb) {
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 // noinspection JSUnresolvedFunction
-    app.get('/archive/bookreader/BookReader/*', function (req, res, next) { //TODO-BOOK this isnt generic for all platforms use same technique as for config.archiveui.directory
+    app.get('/archive/bookreader/BookReader/*', function (req, res, next) { //TODO-BOOK this is not generic for all platforms use same technique as for config.archiveui.directory
         _sendFileFromDir(req, res, next, "/usr/local/node_modules/@internetarchive/bookreader/BookReader");
     });
     app.get('/archive/*', function (req, res, next) { // noinspection JSUnresolvedVariable

@@ -38,7 +38,7 @@ browse to [http://localhost:4244] which will open the UI in the browser and it s
 
 If you are remote from the machine, then browser to: `http://<IP of machine>:4244`
 
-On IIAB the server can be accessed at [http://box.lan:4244] (try [http://box.local:4244] if that doesn't work)
+On IIAB the server can be accessed at [http://box.lan:4244] (try [http://box.local:4244] if that does not work)
 If you don’t get a Archive UI then look at the server log (in browser console)
 to see for any “FAILING” log lines which indicate a problem. 
 
@@ -139,7 +139,7 @@ As the project develops, this file will be editable via a UI.
 Dweb-Mirror is installable on most Linux based systems. Specific installation instructions are available for: 
  [RACHEL 3+ from World Possible](INSTALLATION-rachel.md); [Internet In A Box on Raspberry Pi](INSTALLATION-iiab-raspberry.md); and [directly on Raspberry PI](INSTALLATION-raspberrypi.md). 
  
-For anything else (incuding MacOSX), please follow [generic instructions](INSTALLATION.md) and please let us know how it went.
+For anything else (including MacOSX), please follow [generic instructions](INSTALLATION.md) and please let us know how it went.
 
 ## Update
 

@@ -11,6 +11,7 @@ const detect = require('async/detect');
 const detectSeries = require('async/detectSeries');
 const each = require('async/each');
 const waterfall = require('async/waterfall');
+// noinspection ES6ConvertVarToLetConst
 var exec = require('child_process').exec;
 
 // other packages of ours
@@ -24,7 +25,7 @@ const HashStore = require('./HashStore');
 function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
 
 
-class MirrorFS { //TODO-API needs uodating
+class MirrorFS { //TODO-API needs updating
     /*
     Utility subclass that knows about the file system.
 
@@ -228,9 +229,9 @@ class MirrorFS { //TODO-API needs uodating
             cb(err, filepath) - Careful, its err,undefined if not found unlike checkWhereValidFile
          */
         const scales = [];
-        for(let i=Math.floor(scale); i>0; i--) { scales.push(i); };  // A = e.g. [ 8...1 ]
+        for(let i=Math.floor(scale); i>0; i--) { scales.push(i); }  // A = e.g. [ 8...1 ]
         detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
-            (rel, cb2) => this.checkWhereValidFile(rel, {}, (err, res) => cb2(null, !err)), // Find the first place having a file bigger or same size as
+            (rel, cb2) => this.checkWhereValidFile(rel, {}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger or same size as
             cb
         )
     }
@@ -422,7 +423,7 @@ class MirrorFS { //TODO-API needs uodating
                                                     debug(`Closed ${debugname} size=${writable.bytesWritten}`);
                                                     this.seed({relFilePath, directory: this._copyDirectory()}, (err, res) => { }); // Seed to IPFS, WebTorrent etc
                                                     //Ignore err & res, its ok to fail to seed and will be logged inside seed()
-                                                    // Also - its running background, we arent making caller wait for it to complete
+                                                    // Also - its running background, we are not making caller wait for it to complete
                                                     // noinspection JSUnresolvedVariable
                                                     if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
                                                         callbackEmptyOrData(newFilePath);
@@ -490,7 +491,7 @@ class MirrorFS { //TODO-API needs uodating
         const tablename = `${algorithm}.relfilepath`;
         each( (cacheDirectories && cacheDirectories.length) ? cacheDirectories : this.directories,
             (cacheDirectory, cb1) => {
-                this.hashstores[cacheDirectory].destroy(tablename, (err, res)=> {
+                this.hashstores[cacheDirectory].destroy(tablename, (err, unusedRes)=> {
                     if (err) {
                         debug("Unable to destroy hashstore %s in %s", tablename,cacheDirectory);
                         cb1(err);
@@ -514,7 +515,7 @@ class MirrorFS { //TODO-API needs uodating
                                         debug("loadHashTable saw error: %s", err.message);
                                         cb2(err);
                                     } else {
-                                        this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, (err, res) => {
+                                        this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, (err, unusedRes) => {
                                             if (err) { debug("failed to put table:%s key:%s val:%s %s", tablename, multiHash, relFilePath, err.message); cb2(err); } else {
                                                 cb2(null, relFilePath)
                                             }

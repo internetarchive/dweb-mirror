@@ -89,7 +89,6 @@ class ConfigController {
         // This is subclassed in MirrorConfig to handle specific derivations
     }
 
-    // noinspection JSUnusedGlobalSymbols
     static readYamlSync(filename) {
         try {
             return yaml.safeLoad(fs.readFileSync(this.resolve(filename), 'utf8'));

@@ -124,7 +124,7 @@ class CrawlManager {
         this.cm._taskQ.resume();
     }
     static empty() {
-        this.cm._taskQ.remove(o=>true); // Passed {data, priority} but removing all anyway
+        this.cm._taskQ.remove(task=>true); // Passed {data, priority} but removing all anyway
     }
     static status() {
         return {
@@ -281,6 +281,7 @@ class CrawlItem extends Crawlable {
             return true;
         }
     }
+
     process(cb) {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({itemid: this.identifier, query: this.query});

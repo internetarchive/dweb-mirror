@@ -18,7 +18,7 @@ echo "===== Starting IPFS daemon at `date` ================="
 
 # If running as root && specified a IPFS_USER then relaunch as that user.
 #DOCKER runs as root, but doesnt specify a user,
-#DWEB-MIRROR may specifiy 'ipfs' or might just run as the logged in user (not sudo-ed)
+#DWEB-MIRROR may specify 'ipfs' or might just run as the logged in user (not sudo-ed)
 if [ `id -u` -eq 0 ]; then
     if [ -n "${IPFS_USER}" ]; then
         echo "Changing user to ${IPFS_USER}"

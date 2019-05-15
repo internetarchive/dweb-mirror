@@ -19,7 +19,7 @@ So this is what I did. (Edits welcome, if your experience differed)
 * Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop 1GB
 * On a Mac:
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
-  * Run Etcher (its supposed to be able to use the zip, thoguh for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
+  * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
 * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
 * Inserted into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
@@ -28,10 +28,10 @@ So this is what I did. (Edits welcome, if your experience differed)
 * Accepted "Next to get started" though I suspect IIAB's comprehensive install gets some of them as well.
 * Selected your country, language, keyboard - it shouldnt matter which.
 * Changed password since RPis get hacked on default password
-* Connected to WiFi (not neccessary if you have Ethernet connected)
+* Connected to WiFi (not necessary if you have Ethernet connected)
 * It automatically Updated OS - this is big - take a break :-)
     * Note that this process failed for me with failures of size and sha, but a restart, after the prompts for password etc, 
-    got me to a partially completed download so didn't have to start from scratch
+    got me to a partially completed download so I did not have to start from scratch
 * You might want to ... Menu/Preferences/Config / Set display to highest resolution
 
 ## Install Internet In A Box
@@ -73,7 +73,7 @@ internetarchive_enabled: False
 
 In a browser open: `http://box.lan/admin`   id=`iiab-admin` pw=`whatever you set password to during install`
 
-* Note that I've found that `box.lan` doesn't work as documented, and that `box.local` is required instead. 
+* Note that I've found that `box.lan` does not work as documented, and that `box.local` is required instead. 
   See [IIAB Issue#1583](https://github.com/iiab/iiab/issues/1583)
   
 Now check dweb-mirror was installed by opening `http://box.local:4244`

@@ -51,4 +51,4 @@ lnfirst . ../../../bookreader/BookReader \
 popd
 popd
 #ls -al ${ARCHIVEUI}
-./install_ipfs.sh   # IPFS install in a seperate script as its prone to failure
+./install_ipfs.sh   # IPFS install in a separate script as its prone to failure

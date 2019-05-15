@@ -6,7 +6,7 @@ See [README.md] for more info
  
 At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-Please check for a platform specific INSTALLATION for some platforms. Specifially:
+Please check for a platform specific INSTALLATION for some platforms. Specifically:
  * [./INSTALLATION-rachel.md] for Rachel 
  * [./INSTALLATION-iiab-raspberrypi.md] for Internet In A Box (IIAB) on a RaspberryPi
  * [./INSTALLATION-raspberrypi.md] for RaspberryPi if you don't want Internet In A Box
@@ -63,7 +63,7 @@ sudo yarn install
 # If it fails, then running it again is safe.
 ```
 The example above would install dweb-mirror as `/usr/local/node_modules/@internetarchive/dweb-mirror`
-which is refered to as `<wherever>/dweb-mirror` in the rest of this INSTALLATION
+which is referred to as `<wherever>/dweb-mirror` in the rest of this INSTALLATION
 
 Now skip to step 4
 
