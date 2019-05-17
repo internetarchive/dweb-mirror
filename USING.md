@@ -42,7 +42,7 @@ but there are a few differences to support offline use.
 Each tile on this page represents an item that your server will check for when it “crawls”.  
 First time you access the server this will depend on what the installer setup and there may be none. 
 
-In addition there will be  (TODO) a way to get to the main Archive page, 
+[issue#134](https://github.com/internetarchive/dweb-mirror/issues/134) needs a button to get to main Archive page
 and  (TODO) ways to access settings 
 [issue#132](https://github.com/internetarchive/dweb-mirror/issues/132) add a way to start/stop/control the crawler. 
 
