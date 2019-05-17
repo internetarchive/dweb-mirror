@@ -601,7 +601,8 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
 
 ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
     // In place add
-    Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata.mediatype)});
+    // Note that .itemid &| .metadata may be undefined
+    Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata && this.metadata.mediatype)});
     parallel([
         cb4 => {
             if (!this.files) { cb4(null); } else {
