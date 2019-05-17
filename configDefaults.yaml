@@ -17,7 +17,7 @@ archiveui: # Where to find the ArchiveUI relative to the directory this file and
 connect:
   transports: # This is the list of transports that the server or crawler will use to fetch files
     - 'HTTP'
-    - 'IPFS'
+    # - 'IPFS'
     #- 'WEBTORRENT'
     #- 'GUN'
     #- 'WOLK'
