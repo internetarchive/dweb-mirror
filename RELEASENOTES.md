@@ -36,7 +36,8 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
-* 0.2.20: Installation doc reorganization; better manage http server; support config and downloaded fields; 
+* 0.2.21: USING.md and some bug fixes (with 0.2.20), dont enable IPFS by default
+* 0.2.20: Installation doc reorganization; better manage http server; support crawl and downloaded fields; 
 * 0.2.19: Installer for bookreader
 * 0.2.18: Initialize user config file if not there
 * 0.2.16: Improved behavior standalone or when cant see gateway, installation documentation
