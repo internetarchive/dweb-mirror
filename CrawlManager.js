@@ -213,8 +213,8 @@ class CrawlItem extends Crawlable {
         this.query = query;
         this.search = search;
         this.related = related;
-        if (this.identifier === "/" || (this.identifier === "" && !this.query)) {
-            this.identifier = ""; this.debugname = "HOME"; this.query = AICUtil.homeQuery;
+        if (this.identifier === "/" || this.identifier === "home" ||(this.identifier === "" && !this.query)) {
+            this.identifier = "home"; this.debugname = "home"; this.query = homeQuery;
         }
         if ( ["details","full"].includes(this.level)) {
             if (!this.search)    this.search = CrawlManager.cm.defaultDetailsSearch;

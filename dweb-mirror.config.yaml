@@ -4,7 +4,7 @@ apps:
     crawl:
         tasks:
         - identifier: # Iterate over each of these identifiers
-          - "/"
+          - "home"
           - "image"
           - "movies"
           level: "details" # Getting enough to show the details page - i.e. all the thumbnails
