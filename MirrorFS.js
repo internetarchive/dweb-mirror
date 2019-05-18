@@ -16,7 +16,7 @@ var exec = require('child_process').exec;
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
-const ACUtil = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
+const {gateway, Object_fromEntries} = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
 //Should always be defined in caller prior to requiring dweb-objects
 
 // other packages in this repo - note it is intentional that this does not depend on config
@@ -39,7 +39,7 @@ class MirrorFS { //TODO-API needs updating
         this.directories = directories;
         this.httpServer = httpServer;
         this.preferredStreamTransports = preferredStreamTransports; // Order in which to select possible stream transports
-        this.hashstores = Object.fromEntries(               // Mapping
+        this.hashstores = Object_fromEntries(               // Mapping
             this.directories.map(d =>                         // of each config.directories
                 [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
     }
@@ -539,7 +539,7 @@ class MirrorFS { //TODO-API needs updating
             directoryPath: path.join(directory, pp[0]), // e.g. /Volumes/x/archiveorg/<IDENTIFIER>
             fileRelativePath: path.join(...pp.slice(1)),    // e.g. <FILENAME> or thumbs/image001.jpg
             ipfsHash: ipfs,
-            urlToFile: [this.httpServer + ACUtil.gateway.urlDownload, relFilePath].join('/'), // Normally http://localhost:4244/arc/archive.org/download/IDENTIFIER/FILE
+            urlToFile: [this.httpServer + gateway.urlDownload, relFilePath].join('/'), // Normally http://localhost:4244/arc/archive.org/download/IDENTIFIER/FILE
         }, (unusederr, res) => {
             cb(null, res);
         });

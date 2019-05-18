@@ -1,7 +1,7 @@
 const debug = require('debug')('dweb-mirror:MirrorConfig');
 const ConfigController = require('./ConfigController');
 const CrawlManager = require('./CrawlManager');
-const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for Object.deeperassign
+const {Object_deeperAssign} = require('@internetarchive/dweb-archivecontroller/Util');
 
 class MirrorConfig extends ConfigController { //TODO-API split from ConfigController
     /*
@@ -54,7 +54,7 @@ class MirrorConfig extends ConfigController { //TODO-API split from ConfigContro
         } else {
             let task = this.findTask(identifier);  // TODO-UXLOCAL this is not quite correct, it should find hte task, and if necessary split before writing
             if (!task) {
-                Object.deeperAssign(this, {apps: {crawl: {}}});
+                Object_deeperAssign(this, {apps: {crawl: {}}});
                 if (!this.apps.crawl.tasks) {
                     this.apps.crawl.tasks = []
                 }

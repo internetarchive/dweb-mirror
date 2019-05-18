@@ -8,7 +8,7 @@ const asyncMap = require('async/map');
 //const canonicaljson = require('@stratumn/canonicaljson');
 const yaml = require('js-yaml'); //https://www.npmjs.com/package/js-yaml
 // noinspection JSUnusedLocalSymbols
-const ACUtil = require('@internetarchive/dweb-archivecontroller/Util.js'); //for Object.deeperAssign
+const {Object_deeperAssign} = require('@internetarchive/dweb-archivecontroller/Util.js');
 
 class ConfigController {
     /*
@@ -85,7 +85,7 @@ class ConfigController {
     }
 
     setOpts(...opts) {
-        Object.deeperAssign(this, ...opts);
+        Object_deeperAssign(this, ...opts);
         // This is subclassed in MirrorConfig to handle specific derivations
     }
 

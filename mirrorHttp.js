@@ -33,7 +33,7 @@ const waterfall = require('async/waterfall');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 
 // IA packages
-const ACUtil = require('@internetarchive/dweb-archivecontroller/Util'); // for ACUtil.gateway
+const {gateway} = require('@internetarchive/dweb-archivecontroller/Util');
 //auto test for presence of wrtc, its not available on rachel
 let wrtc;
 try {
@@ -376,9 +376,9 @@ function mirrorHttp(config, cb) {
         })); // Move itemid into query and redirect to the html file
     });
 // noinspection JSUnresolvedFunction
-    app.get(ACUtil.gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-    app.get(ACUtil.gateway.urlDownload + '/:itemid/page/:page', sendBookReaderImages);
-    app.get(ACUtil.gateway.urlDownload + '/:itemid/*', streamArchiveFile);
+    app.get(gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+    app.get(gateway.urlDownload + '/:itemid/page/:page', sendBookReaderImages);
+    app.get(gateway.urlDownload + '/:itemid/*', streamArchiveFile);
 
 // noinspection JSUnresolvedFunction
     // This is used by bookreader
@@ -408,7 +408,7 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
-        proxyUrl(req, res, next, [ACUtil.gateway.mds, req.params[0]].join('/'), {"Content-Type": "application/json"})
+        proxyUrl(req, res, next, [gateway.mds, req.params[0]].join('/'), {"Content-Type": "application/json"})
     });
     app.get('/arc/archive.org/playlist/*', sendPlaylist);
 // noinspection JSUnresolvedFunction

@@ -56,6 +56,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
     })
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveFile.prototype.isDownloaded = function(cb) {
     this.cacheAndOrStream({skipNet: true, wantStream: false}, (err, res) => {
         this.downloaded = !err; cb(null, !err)});

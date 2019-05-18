@@ -11,12 +11,13 @@ const waterfall = require('async/waterfall');
 const each = require('async/each'); // https://caolan.github.io/async/docs.html#each
 const every = require('async/every'); // https://caolan.github.io/async/docs.html#every
 const parallel = require('async/parallel'); //https://caolan.github.io/async/docs.html#parallel
+const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
 
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
-const Util = require('@internetarchive/dweb-archivecontroller/Util');
+const {gateway, gatewayServer, parmsFrom, Object_fromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 
@@ -96,7 +97,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
                     ["meta", this.metadata],    // Maybe empty if is_dark
                     ["members", this.members],
                     ["files", this.exportFiles()],
-                    ["extra", Object.fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
+                    ["extra", Object_fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
                     ["reviews", this.reviews],
                     ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
                 ],
@@ -229,6 +230,7 @@ ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
         }
     });
 };
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
     /*
     Fetch the bookreader data for this item if it hasn't already been.
@@ -286,6 +288,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
     }
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined, zip=undefined, file=undefined, scale=undefined, rotate=undefined, page=undefined}={}, cb) {
     /* Fetch a page from the item, caching it
         cb(err, data || stream) returns either data, or if wantStream then a stream
@@ -297,7 +300,7 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
         (ai, cbw) => {
             // request URLs dont have server, and need to add datanode anyway - note passes scale & rotate
             const urls = page
-                ? `https://${ai.server}/BookReader/BookReaderPreview.php?${Util.parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
+                ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
                 : "https://" + ai.server + reqUrl;
             const debugname = `${this.itemid}_${file}`;
             const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
@@ -420,7 +423,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
                     // a direct req from client to server for identifier:...
                     // or for identifier=fav-* when members loaded with unexpanded
                     if (this.members) {
-                        Util.asyncMap(this.members,
+                        map(this.members,
                             (ams,cb2) => {
                                 if (ams instanceof ArchiveMember && ams.isExpanded()) { // Expanded or unexpanded
                                     cb2(null, ams)
@@ -509,7 +512,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
             recursable(null, null);
         } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
             // noinspection JSUnresolvedVariable
-            const servicesurl = `${Util.gatewayServer()}${Util.gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
+            const servicesurl = `${gatewayServer()}${gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
             // Include direct link to services
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
@@ -576,7 +579,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
         // noinspection JSUnresolvedVariable
         MirrorFS.cacheAndOrStream({wantStream, relFilePath,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
-            urls: Util.gateway.url_related + identifier, //url_related currently ends in /
+            urls: gateway.url_related + identifier, //url_related currently ends in /
             debugname: identifier + "/" + identifier + "_related.json"
         }, (err, res) => {
             // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
@@ -599,6 +602,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
     }
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
     // In place add
     // Note that .itemid &| .metadata may be undefined
@@ -639,6 +643,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
     });
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.isDownloaded = function({level=undefined}={}, cb) { // TODO use level //TODO-API
     console.assert(level === "details", "isDownloaded is only defined for level=details but supplied "+level);
     this.fetch_metadata({skipNet: true}, (err, unusedRes) => {
@@ -657,8 +662,9 @@ ArchiveItem.isDownloaded = function(identifier, {level="details"}={}, cb) {
     new ArchiveItem({itemid: identifier}).isDownloaded({level}, cb);
 };
 
+// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.exportFiles = function() {  // Note overridden in dweb-mirror.ArchiveItemPatched
     return this.files.map(f => Object.assign({downloaded: f.downloaded}, f.metadata));
-}
+};
 
 exports = module.exports = ArchiveItem;

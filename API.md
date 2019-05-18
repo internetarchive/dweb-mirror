@@ -246,7 +246,7 @@ Create a new config by reading YAML from filenames in order, (later overriding e
 Set some fields of configuration from passed object,
 it expands paths such as ~/foo and ./foo where appropriate.
 
-Note this currently overwrites anything at the path, but may be modified to use Object.deeperassign in future. 
+Note this currently overwrites anything at the path, but may be modified to use Object_deeperassign in future. 
 
 ##### static readYamlSync(filename)
 

@@ -11,10 +11,11 @@ const each = require('async/each');
 
 // Other IA repos
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
-const Util = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
+const {gateway, Object_filter} = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 
+// noinspection JSUnresolvedVariable
 ArchiveMember.prototype.save = function({} = {}, cb) {
     cb(new Error("Shouldnt be trying to save ArchiveMember, only ArchiveMember"));
 };
@@ -71,9 +72,9 @@ ArchiveMember.prototype.save = function(opts = {}, cb) {
     if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function f(cb) {
         const namepart = this.identifier; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-        const savedkeys = Util.gateway.url_default_fl;
+        const savedkeys = gateway.url_default_fl;
         // noinspection JSUnusedLocalSymbols
-        const jsonToSave = canonicaljson.stringify(Object.filter(this, (k, v) => savedkeys.includes(k)));
+        const jsonToSave = canonicaljson.stringify(Object_filter(this, (k, v) => savedkeys.includes(k)));
         //MirrorFS._mkdir(dirpath, (err) => { //Not mkdir any more
         const relFilePath = path.join(namepart, namepart + "_member.json");
         MirrorFS.writeFile(relFilePath, jsonToSave, (err) => {

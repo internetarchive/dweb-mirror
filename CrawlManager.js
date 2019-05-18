@@ -3,8 +3,7 @@ const waterfall = require('async/waterfall');
 const each = require('async/each');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
-
-const AICUtil = require('@internetarchive/dweb-archivecontroller/Util'); // includes Object.filter, Object.fromEntries etc
+const {homeQuery, Object_filter, Object_fromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
 // Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
 require('./ArchiveFilePatched');
@@ -97,7 +96,7 @@ class CrawlManager {
         const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
         CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
-            Object.filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
+            Object_filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (MirrorFS.copyDirectory) {
             debug("Will use %s for the crawl and %o as a cache",MirrorFS.copyDirectory, MirrorFS.directories);
         } else {
@@ -136,8 +135,8 @@ class CrawlManager {
                 completed:  this.cm.completed,      // May want to split into files and items
                 pushed: this.cm.pushed, // Should be length + running + completed
             },
-            opts: Object.fromEntries(this.optsallowed.map(k => [k, this.cm[k]])),
-            config: config.apps.crawl,
+            opts: Object_fromEntries(this.optsallowed.map(k => [k, this.cm[k]])),
+            config: config.apps.crawl, //TODO this wont work - config is not global
             errors: this.errors, // [ { task, error } ]
         }
     }

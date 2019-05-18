@@ -20,7 +20,7 @@ function firstof {
 	done
 }
 function lnfirst { # lnfirst destn source1 source2 source3 ...
-    # Symlink the first source found to the desn
+    # Symlink the first source found to the destn
 	DEST="$1"
 	shift
 	while (( "$#" )); do
