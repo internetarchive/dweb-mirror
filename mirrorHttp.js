@@ -242,27 +242,34 @@ function mirrorHttp(config, cb) {
 
         const itemid = req.params['itemid'];
         debug('Sending Thumbnail for %s', itemid);
-        MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {}, (err, existingFilePath) => {
-            if (!err) {
-                sendJpegStream(fs.createReadStream(existingFilePath));
-            } else {
-                // We dont already have the file
-                const ai = new ArchiveItem({itemid});
-                waterfall([
-                        (cb) => ai.fetch_metadata(cb),
-                        (archiveitem, cb2) => archiveitem.saveThumbnail({wantStream: true}, cb2)
-                    ],
-                    (err, s) => {
-                        if (err) {
-                            debug("Failed to stream Thumbnail for %s: %s", itemid, err.message);
-                            next(err)
-                        } else {
-                            sendJpegStream(s);
+
+        if (itemid === "home") {
+            res.redirect(url.format({
+                pathname: "/archive/images/archivelogo246x246.jpg",
+            }))
+        } else {
+            MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {}, (err, existingFilePath) => {
+                if (!err) {
+                    sendJpegStream(fs.createReadStream(existingFilePath));
+                } else {
+                    // We dont already have the file
+                    const ai = new ArchiveItem({itemid});
+                    waterfall([
+                            (cb) => ai.fetch_metadata(cb),
+                            (archiveitem, cb2) => archiveitem.saveThumbnail({wantStream: true}, cb2)
+                        ],
+                        (err, s) => {
+                            if (err) {
+                                debug("Failed to stream Thumbnail for %s: %s", itemid, err.message);
+                                next(err)
+                            } else {
+                                sendJpegStream(s);
+                            }
                         }
-                    }
-                );
-            }
-        });
+                    );
+                }
+            });
+        }
     }
 
     function sendInfo(req, res) {
