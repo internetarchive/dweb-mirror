@@ -419,16 +419,16 @@ class MirrorFS { //TODO-API needs updating
                                                     console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
-                                                    this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath);
-                                                    debug(`Closed ${debugname} size=${writable.bytesWritten}`);
-                                                    this.seed({relFilePath, directory: this._copyDirectory()}, (err, res) => { }); // Seed to IPFS, WebTorrent etc
-                                                    //Ignore err & res, its ok to fail to seed and will be logged inside seed()
-                                                    // Also - its running background, we are not making caller wait for it to complete
-                                                    // noinspection JSUnresolvedVariable
-                                                    if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
-                                                        callbackEmptyOrData(newFilePath);
-                                                    }
-
+                                                    this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath, (err)=>{
+                                                        debug(`Closed ${debugname} size=${writable.bytesWritten} %s`,err ? err.message : "");
+                                                        this.seed({relFilePath, directory: this._copyDirectory()}, (err, res) => { }); // Seed to IPFS, WebTorrent etc
+                                                        //Ignore err & res, its ok to fail to seed and will be logged inside seed()
+                                                        // Also - its running background, we are not making caller wait for it to complete
+                                                        // noinspection JSUnresolvedVariable
+                                                        if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
+                                                            callbackEmptyOrData(newFilePath);
+                                                        }
+                                                    });
                                                 }
                                             })
                                         }

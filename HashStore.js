@@ -1,6 +1,7 @@
 const level = require('level');
 const debug = require("debug")("dweb-mirror:HashStore");
 const each = require('async/each');
+const waterfall = require('async/waterfall');
 
 class HashStore {
     /*
@@ -16,11 +17,21 @@ class HashStore {
     _tablepath(table) {  // Return the file system path to where we have, or will create, a table
         return `${this.config.dir}${table}`;
     }
-    _db(table) {
+    _db(table, cb) {
         if (!this.tables[table]) {
-            this.tables[table] = level(this._tablepath(table));
+            const tablepath = this._tablepath(table);
+            level(tablepath, {}, (err, res) => {
+                if (err) {
+                    debug("Failed to open %s: %s", tablepath, err.message);
+                    cb(err);
+                } else {
+                    this.tables[table] = res;
+                    cb(null, res)
+                }
+            });
+        } else {
+            cb(null, this.tables[table]); // Note file might not be open yet, if not any put/get/del will be queued by level till its ready
         }
-        return this.tables[table]; // Note file might not be open yet, if not any put/get/del will be queued by level till its ready
     }
     destroy(table, cb) {
         level.destroy(this._tablepath(table), cb);
@@ -39,37 +50,44 @@ class HashStore {
         if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
         function f(cb2) {
             debug("%s.%o <- %o", table, key, val);
-            if (typeof key === "object") {
-                // noinspection JSPotentiallyInvalidUsageOfClassThis
-                this._db(table).batch(Object.keys(key).map(k => {
-                        return {type: "put", key: k, value: key[k]};
-                    }),
-                    cb2
-                );
-            } else {
-                // noinspection JSPotentiallyInvalidUsageOfClassThis
-                this._db(table).put(key, val, cb2);
-            }
+            waterfall([
+                cb3 => this._db(table, cb3),
+                (db, cb3) => {
+                    if (typeof key === "object") {
+                        db.batch(Object.keys(key).map(k => {
+                            return {type: "put", key: k, value: key[k]};
+                        }), cb3);
+                    } else {
+                        db.put(key, val, cb3);
+                    } }
+            ], (err) => {
+                if (err) { debug("put %s %s <- %s failed %s", table, key, val, err.message); }
+                cb2(err);
+            });
         }
     }
+
     async get(table, key, cb) {
         if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
-        function f(cb) {
+        function f(cb2) {
             // This is similar to level.get except not finding the value is not an error, it returns undefined.
             // noinspection JSPotentiallyInvalidUsageOfClassThis
-            return this._db(table).get(key, function (err, val) {
-                if (err && (err.type === "NotFoundError")) cb(null, undefined); // Undefined is not an error
-                if (err) {
-                    cb(err);
+            return waterfall([
+                cb => this._db(table, cb),
+                (db, cb) => db.get(key, cb)
+            ], (err, val) => {
+                if (err && (err.type === "NotFoundError")) { // Undefined is not an error
+                    debug("get %s %s failed %s", table, key, err.message);
+                    cb(null, undefined);
                 } else {
-                    debug("%s.%s -> %o", table, key, val);
-                    cb(null, val);
+                    cb2(null, val);
                 }
             });
         }
     }
+
     async del(table, key) {
-        debug("del %s.%o", table, key);
+        //TODO make async, and in caller
         if (typeof key === "object") {  // Delete all keys in object
             await this._db(table).batch(Object.keys(key).map(k => {return {type: "del", key: k};}));
         } else {
@@ -80,6 +98,7 @@ class HashStore {
     async map(table, cb, {end=undefined}={}) {
         // cb(data) => data.key, data.value
         // Returns a stream so can add further .on
+        // TODO make _db async, and doesnt make sense to be both a async function, and have a cb
         // UNTESTED
         return this._db(table)
             .createReadStream()
@@ -90,14 +109,19 @@ class HashStore {
         function f(cb) {
             const keys=[];
             // noinspection JSPotentiallyInvalidUsageOfClassThis
-            const db = this._db(table);    //synchronous
-            db
-                .createKeyStream()
-                // Note close comes after End
-                .on('data', (key) => keys.push(key))
-                .on('end', ()  => {debug("%s keys on end = %o", table, keys); cb(null, keys)})    // Gets to end of stream
-                //.on('close', () =>  // Gets to end of stream, or closed from outside - not used as get "end" as well
-                .on('error', (err) => { console.error('Error in stream from',table); cb(err)});
+            const db = this._db(table, (err, db) => {
+                if (err) {
+                    debug("keys %s failed", table);
+                    cb(err);
+                } else {
+                    db
+                    .createKeyStream()
+                    // Note close comes after End
+                    .on('data', (key) => keys.push(key))
+                    .on('end', ()  => {debug("%s keys on end = %o", table, keys); cb(null, keys)})    // Gets to end of stream
+                    //.on('close', () =>  // Gets to end of stream, or closed from outside - not used as get "end" as well
+                    .on('error', (err) => { console.error('Error in stream from',table); cb(err)});
+                } });
         }
     }
     // noinspection JSUnusedGlobalSymbols

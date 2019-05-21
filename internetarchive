@@ -3,8 +3,8 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 //process.env.DEBUG=process.env.DEBUG + " bittorrent-tracker:*";  // Add Webtorrent debugging
 
 // TODO-MIRROR check using GUN for metadata
-/* TODO-MERGE https://github.com/internetarchive/dweb-mirror/issues/105
-TODO-MERGE    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+/* TODO-UXLOCAL https://github.com/internetarchive/dweb-mirror/issues/105
+TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
 */
 
 const debug = require('debug')("dweb-mirror:internetarchive");
@@ -49,6 +49,7 @@ const opts = getopts(process.argv.slice(2),{
 const httpOrHttps = "http"; // This server is running on http, not https (at least currently)
 
 //TODO allow specifying "crawl item/filename" to get just one file see https://github.com/internetarchive/dweb-mirror/issues/108
+//TODO make --maintenance also delete locks on any hashstores via new hashstores.maintenance call
 
 const help = `
 usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]

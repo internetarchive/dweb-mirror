@@ -42,7 +42,6 @@ but there are a few differences to support offline use.
 Each tile on this page represents an item that your server will check for when it “crawls”.  
 First time you access the server this will depend on what the installer setup and there may be none. 
 
-[issue#134](https://github.com/internetarchive/dweb-mirror/issues/134) needs a button to get to main Archive page
 and  (TODO) ways to access settings 
 [issue#132](https://github.com/internetarchive/dweb-mirror/issues/132) add a way to start/stop/control the crawler. 
 
@@ -51,7 +50,8 @@ Notice that most of the tiles should have a White, Green or Blue dot in the top 
 * The Green dot indicates that we are checking this item each time we crawl and getting enough to display offline. 
 * A Blue dot indicates we are crawling all the content of the item, this could be a lot of data, 
 for example a full resolution version of the video. Its rare that you’ll use this. 
-* TODO add size (MB) indicator 
+
+* [issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) add size (MB) indicator 
 
 Tiles come in two types, most shows items that can be displayed - books, videos, audio etc, 
 clicking on these will display the item. 
@@ -63,7 +63,7 @@ It should show you how many items are in the collection and TODO how many have b
 
 TODO - There is a Settings button on the page that .... 
 
-TODO - There are buttons for controlling crawling .... 
+[issue#132]((https://github.com/internetarchive/dweb-mirror/issues/132) - There should be buttons for controlling crawling .... 
 
 ## Details page - viewing a single item
 
@@ -73,16 +73,17 @@ the behavior depends on the kind of item.
 * Books display in a flip book format, pages you look at will be saved for offline use. 
 * Video and Audio will play immediately and you can skip around in them as normal
 
-The crawl button will indicate whether the object is being crawled as for a tile. 
-TODO make White version if downloaded but not crawled 
-TODO display size of download
+The crawl button will indicate whether the object is being crawled and if not, whether it has been downloaded, 
+in the same way tiles do.
+
+[issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) display size of download
 
 Click on the Crawl button till it turns Green and it will download a full copy of the book, 
 video or audio next time it crawls,  (TODO make that immediate). 
 These items will also appear on your Local page.  
 See the note above, usually you won’t want to leave it at blue.
 
-TODO need a way to get back to the “Local” page
+[issue#139](https://github.com/internetarchive/dweb-mirror/issues/new) need a way to get back to the “Local” page
 
 [issue#129](https://github.com/internetarchive/dweb-mirror/issues/129). Show date crawled and add a refresh button 
 ## Collection and Search pages - multiple items
@@ -91,7 +92,8 @@ If you click on a Collection, then we’ll display a grid of tiles for all the i
 White, Green and Blue indicators mean the same as on the Local page. 
 If you click on the crawl button till its Green then it will check this collection each time it crawls, 
 download the tiles for the first page or so, and can be configured to get some of the items as well 
-(TODO allow UI to configure). 
+
+[issue#140](https://github.com/internetarchive/dweb-mirror/issues/140) allow UI to configure. 
 
 ## Accessing Internet Archive resources
 
@@ -115,7 +117,7 @@ cd /opt/iiab/internetarchive
 ```
 There are lots of options possible, try `./internetarchive —help` to get guidance.
 
-TODO This will be controllable via the UI fairly soon.
+[issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)(This will be controllable via the UI fairly soon.
 
 ## Downloading content for a different box
 
@@ -123,8 +125,9 @@ You can copy one or more items that are downloaded to a new storage device (e.g.
 take that device to another Universal Library server, and plug it in.  
 All the content will appear as if it was downloaded there. 
 
-To put content onto a device, at the moment (TODO) requires accessing the command line on the server.
+To put content onto a device, at the moment requires accessing the command line on the server.
 
+[issue#141](https://github.com/internetarchive/dweb-mirror/issues/141)
 ``` 
 # CD into your device e.g. on an IIAB it would be 
 cd /media/pi/foo

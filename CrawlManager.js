@@ -130,7 +130,7 @@ class CrawlManager {
             queue: {
                 length: this.cm._taskQ.length(),    // How many waiting to run
                 running: this.cm._taskQ.running(),  // How many being run by tasks
-                workersList: this.cm._taskQ.workersList(), //TODO-MERGE figure out what get here and document
+                workersList: this.cm._taskQ.workersList(), //TODO-UXLOCAL figure out what get here and document
                 concurrency: this.cm._taskQ.concurrency,
                 completed:  this.cm.completed,      // May want to split into files and items
                 pushed: this.cm.pushed, // Should be length + running + completed
