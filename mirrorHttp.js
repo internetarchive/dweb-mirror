@@ -186,10 +186,12 @@ function mirrorHttp(config, cb) {
     function streamQuery(req, res, next) {
         let o;
         // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
-        if (req.query.q && req.query.q.startsWith("collection:") && (req.query.q.lastIndexOf(':') === 10)) { // Only interested in standardised q=collection:ITEMID
+        if (req.query.q && req.query.q.startsWith("collection:") && req.query.q.includes('simplelists__items:')) { // Only interested in standardised q=collection:ITEMID..
+            //TODO when Aaron has built entry point e.g. members/COLLECTION then rebuild this and dweb-archivecontroller.ArchiveItem._fetch_query to use it
             // Special case: query just looking for members of a collection
-            const itemid = req.query.q.split(':').pop();
-            o = new ArchiveItem({sort: req.query.sort, itemid, query: `collection:${itemid}`})
+            //e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
+            const itemid = req.query.q.split(' OR ')[0].split(':')[1];
+            o = new ArchiveItem({sort: req.query.sort, itemid}); // Dont set query, allow _fetch_query to build default
         } else if (req.query.q && req.query.q.startsWith("identifier:")
             && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
             && (req.query.q.lastIndexOf(':(') === 10)) {
