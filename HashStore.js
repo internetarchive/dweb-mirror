@@ -86,71 +86,72 @@ class HashStore {
         }
     }
 
+    /* UNUSED - make async with callback if going to use it
     async del(table, key) {
-        //TODO make async, and in caller
         if (typeof key === "object") {  // Delete all keys in object
             await this._db(table).batch(Object.keys(key).map(k => {return {type: "del", key: k};}));
         } else {
             await this._db(table).del(key);
         }
     }
-    // noinspection JSUnusedLocalSymbols
+     */
+/* UNUSED - make async with callback if going to use it
     async map(table, cb, {end=undefined}={}) {
         // cb(data) => data.key, data.value
         // Returns a stream so can add further .on
-        // TODO make _db async, and doesnt make sense to be both a async function, and have a cb
         // UNTESTED
         return this._db(table)
             .createReadStream()
             .on('data', cb );
     }
-    async keys(table, cb) {
-        if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
-        function f(cb) {
-            const keys=[];
-            // noinspection JSPotentiallyInvalidUsageOfClassThis
-            const db = this._db(table, (err, db) => {
-                if (err) {
-                    debug("keys %s failed", table);
-                    cb(err);
-                } else {
-                    db
-                    .createKeyStream()
-                    // Note close comes after End
-                    .on('data', (key) => keys.push(key))
-                    .on('end', ()  => {debug("%s keys on end = %o", table, keys); cb(null, keys)})    // Gets to end of stream
-                    //.on('close', () =>  // Gets to end of stream, or closed from outside - not used as get "end" as well
-                    .on('error', (err) => { console.error('Error in stream from',table); cb(err)});
-                } });
-        }
+ */
+async keys(table, cb) {
+    if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+    function f(cb) {
+        const keys=[];
+        // noinspection JSPotentiallyInvalidUsageOfClassThis
+        const db = this._db(table, (err, db) => {
+            if (err) {
+                debug("keys %s failed", table);
+                cb(err);
+            } else {
+                db
+                .createKeyStream()
+                // Note close comes after End
+                .on('data', (key) => keys.push(key))
+                .on('end', ()  => {debug("%s keys on end = %o", table, keys); cb(null, keys)})    // Gets to end of stream
+                //.on('close', () =>  // Gets to end of stream, or closed from outside - not used as get "end" as well
+                .on('error', (err) => { console.error('Error in stream from',table); cb(err)});
+            } });
     }
-    // noinspection JSUnusedGlobalSymbols
-    static async test() {
-        try {
-            this.init({dir: "testleveldb."});
-            await this.put("Testtable", "testkey", "testval");
-            let res = await this.get("Testtable", "testkey");
-            console.assert(res === "testval");
-            await this.put("Testtable", {A: "AAA", B: "BBB"});
-            res = await this.get("Testtable", "A");
-            console.assert(res === "AAA");
-            res = await this.get("Testtable", "B");
-            console.assert(res === "BBB");
-            res = await this.del("Testtable", "A");
-            res = await this.get("Testtable", "A");
-            console.assert(res === undefined);
-            res = await this.keys("Testtable");
+}
+// noinspection JSUnusedGlobalSymbols
+static async test() {
+    try {
+        this.init({dir: "testleveldb."});
+        await this.put("Testtable", "testkey", "testval");
+        let res = await this.get("Testtable", "testkey");
+        console.assert(res === "testval");
+        await this.put("Testtable", {A: "AAA", B: "BBB"});
+        res = await this.get("Testtable", "A");
+        console.assert(res === "AAA");
+        res = await this.get("Testtable", "B");
+        console.assert(res === "BBB");
+        res = await this.del("Testtable", "A");
+        res = await this.get("Testtable", "A");
+        console.assert(res === undefined);
+        res = await this.keys("Testtable");
+        console.assert(res.length === 2);
+        // Test using callback
+        res = await this.keys("Testtable", (err, res)=>{
             console.assert(res.length === 2);
-            // Test using callback
-            res = await this.keys("Testtable", (err, res)=>{
-                console.assert(res.length === 2);
-            });
-            // Now test batches
-            // Now test map
-        } catch (err) {
-            console.log("Error caught in HashStore.test", err);
-        }
+        });
+        // Now test batches
+        // Now test map
+    } catch (err) {
+        console.log("Error caught in HashStore.test", err);
     }
+}
 }
 
 exports = module.exports = HashStore;
