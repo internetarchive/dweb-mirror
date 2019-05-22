@@ -1,3 +1,6 @@
+# NOTE THIS FILE ISNT USED OR MAINTAINED FOR INSTALLATION - PLEASE REFER TO INSTALLATION.md
+# PRs to update this would be welcome but AFAIK noone is currently using dweb-mirror under Docker.
+
 # Docker reference: https://docs.docker.com/engine/reference/builder/
 # Building
 # > cd ...dweb-mirror

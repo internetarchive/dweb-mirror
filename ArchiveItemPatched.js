@@ -253,7 +253,6 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
         cb(err)}}
     else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function errOrDark(err) {
-        //TODO - this is not defined here
         return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
     }
     function f(cb) {
@@ -515,7 +514,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
             const servicesurl = `${gatewayServer()}${gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
             // Include direct link to services
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
-            const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-IMAGE Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+            const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = relFilePath;
             MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, debugname,
                 urls: this.metadata.thumbnaillinks,

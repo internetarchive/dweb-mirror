@@ -178,5 +178,3 @@ replacing `kenyanhistory` with the name of your collection.
 On the device, you can go to `kenyanhistory` and should see `foobar`.
 Hit Refresh and `foobar` should show up. 
 If `kenyanhistory` is marked for crawling it should update automatically
-
-[issue#128](https://github.com/internetarchive/dweb-mirror/issues/128) make it show up in collections.

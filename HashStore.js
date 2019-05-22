@@ -42,7 +42,7 @@ class HashStore {
 
     put(table, key, val, cb) {
         /*
-        Set a key to a val for a specific table. TODO check what gets returned
+        Set a key to a val for a specific table.
         val = any valid persistent value acceptable to level (not sure what limits are)
         key = any valid key for level (not sure what limits are)
         cb(err)

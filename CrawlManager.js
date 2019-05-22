@@ -93,7 +93,7 @@ class CrawlManager {
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={},  cb) {
         const parent = [];
-        const CM = CrawlManager.cm; //TODO for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
+        const CM = CrawlManager.cm; //Note, for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
         CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object_filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
