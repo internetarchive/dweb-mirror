@@ -34,8 +34,6 @@ The address to access will depend on your configuration.
 
 Whichever of these works it should bring you to your personal start page.
 
-[issue#133](https://github.com/internetarchive/dweb-mirror/issues/133) At the moment it goes to Archive main page, will setup forwarding from http://box.net:4244 etc to /local
-
 If you have used the Internet Archive then the interface will be familiar, 
 but there are a few differences to support offline use. 
 

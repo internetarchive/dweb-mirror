@@ -324,7 +324,7 @@ function mirrorHttp(config, cb) {
     app.get('/', (req, res) => {
         res.redirect(url.format({
             pathname: "/archive/archive.html",
-            query: {transport: "HTTP", mirror: req.headers.host}
+            query: {transport: "HTTP", mirror: req.headers.host, item: "local"}
         }))
     });
     // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
