@@ -320,7 +320,7 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API add skipNet
+ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
     /*
     Fetch the metadata for this item if it hasn't already been.
     More flexible version than dweb-archive.ArchiveItem
@@ -643,7 +643,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.isDownloaded = function({level=undefined}={}, cb) { // TODO use level //TODO-API
+ArchiveItem.prototype.isDownloaded = function({level=undefined}={}, cb) { // TODO use level
     console.assert(level === "details", "isDownloaded is only defined for level=details but supplied "+level);
     this.fetch_metadata({skipNet: true}, (err, unusedRes) => {
         if (err) {

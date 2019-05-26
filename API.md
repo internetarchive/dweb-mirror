@@ -82,15 +82,19 @@ only changes made in dweb-mirror appear here.
 
 ## ArchiveFile
 
-##### cacheAndOrStream({skipFetchFile=false, wantStream=false, start=0, end=undefined} = {}, cb)
+##### cacheAndOrStream({skipFetchFile, skipNet, wantStream, start, end}, cb)
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
 See MirrorFS.cacheAndOrStream for arguments.
 
+##### isDownloaded(cb) 
+
+Returns true (via cb) if File has been downloaded
+
 ## ArchiveItem
 
-##### save(opts = {}, cb)
+##### save(opts={}, cb)
 
 Save metadata for this file as JSON in multiple files (see File Outline)
 ```
@@ -99,31 +103,86 @@ cb(err, this)   Errors if cant fetch metadata, or save failed
 
 If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
 
+##### saveBookReader(opts={}, cb)
+
+Save `.bookreader` to `IDENTIFIER.bookreader.json`. 
+
+If `.bookreader` is undefined it will attempt to retrieve first.
+
+
 ##### read({}, cb)
 
-Read metadata, reviews, files and extra from corresponding files - see `Files on disk`
+Read metadata, playlist, reviews, files and extra from corresponding files - see `Files on disk`
 ```
 cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, server})  data structure suitable for "item" field of ArchiveItem
 ```
 
-##### fetch_metadata(opts={}, cb)
+##### read_bookreader(opts={}, cb)
+
+Read bookreader data from file and place in bookreader field on item.
+
+File has: `{ data, brOptions, lendingInfo, possibly metadata }`
+
+Item has `bookreader: { data, brOptions, lendingInfo }`
+
+API returns `{ data: { data, brOptions, lendingInfo, possibly metadata } }`
+
+`cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}}` (the bookreader API format)
+
+
+##### fetch_bookreader = function(opts={}, cb) {
+Fetch the bookreader data for this item if it hasn't already been. 
+A more flexible version than dweb-archive.ArchiveItem.
+Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
+
+```
+Alternatives:
+    skipCache:          load from net
+    cached:             return from cache
+    !cached:            Load from net, save to cache
+    
+    cb(err, this) or if undefined, returns a promise resolving to 'this'
+    Errors              TransportError (404)
+```
+Result is `ai.bookreader` set to `{ brOptions, data, lendingInfo}`
+
+
+#### fetch_page ({wantStream, reqUrl, zip, file, scale rotate, page}, cb)
+
+Fetch a page from the item, caching it
+```
+reqUrl  Can override automatically generated URL, this is typically for cover pages etc
+OR
+page    (int) page number within file
+
+zip     path to file from which to extract page, as returned by bookreader API - 4th segment is the filename
+file    The name of the file within the zip
+scale   float sppecifying scale wanted  (high numbers are smaller) 
+rotate  rotation wanted (int)
+cb(err, data || stream) returns either data, or if wantStream then a stream
+```
+
+For file location is see `MirrorFS.checkWhereValidFileRotatedScaled`
+
+##### fetch_metadata({skipCache, skipNet ....}, cb)
 
 Fetch the metadata for this item if it hasn't already been.
 
 A more flexible version than dweb-archive.ArchiveItem.fetch_metadata,
 which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
-
 ```
 Alternatives:
-!skipCache:    load from net
-cached:             return from cache
-!cached:            Load from net, save to cache
+    skipCache:          dont load from cache (only net)
+    skipNet             dont load from net (only cache)
+    if cached:          return from cache
+    if !cached:         Load from net, save to cache
 
+Other opts are passed to dweb-archivecontroller.ArchiveItem.fetch_metadata
 cb(err, this)       (optional - returns promise if undefined)
 Errors              TransportError (404)
 ```
 
-##### fetch_query(opts={}, cb)
+###### fetch_query (opts={}, cb)
 
 Fetch the next page of the query for this item.
 
@@ -147,13 +206,34 @@ Save a thumbnail to the cache,
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
-##### relatedItems({wantStream=false wantMembers=false} = {}, cb)
+##### fetch_playlist({wantStream}, cb) 
+
+Save the related items to the cache
+cb(err, stream || [{...}*])
+
+##### relatedItems({wantStream, wantMembers}, cb)
 Extend ArchiveItem.relatedItems, saves related items to the cache and returns either members or a stream
 ```
 cb(err, obj)  Callback on completion with related items object or stream
 ```
 
+##### addCrawlInfo({config}, cb)
+
+Extract crawl information from config, and apply to item.
+
+```
+config  MirrorConfig object
+
+Result: item.crawl is set to result of MirrorConfig.crawlInfo
+```
+
+##### isDownloaded({level}, cb)
+
+Result is true if the Item is downloaded to the level specified, 
+for now only level=detail is supported.
+
 ## ArchiveMember
+
 
 ##### static read({identifier = undefined}, cb)
 Read member info for an item
@@ -166,8 +246,30 @@ Read member info for an item from the cache.
 ```
 cb(err, data structure from file)
 ```
+
+
+##### addCrawlInfo({config}, cb)
+```
+config  MirrorConfig object
+this.crawl = result of config.crawlInfo
+```
+
+##### static addCrawlInfo([ArchiveMember*], {config}, cb) 
+
+Apply addCrawlInfo to each member
+
+##### static addCrawlInfoRelated([rels], {config}, cb) 
+
+Set .crawl field of each object in array returned by RelatedInfo API
+
+```
+rels    { hits: { hits: [ _source: { same fields as ArchiveMember } ] } }
+cb(err)
+```
+
 ##### save(opts = {}, cb)
-Save the results of a search as a `<IDENTIFIER>_member.json` file
+
+Save a member (fields from the `savedkeys` list) as a `<IDENTIFIER>_member.json` file
 ```
 cb(err, this)
 ```
@@ -227,20 +329,56 @@ return stream     So that further .on can be added
 ##### keys(table, cb)
 Returns an array of keys via promise or cb(err, [key*])
 
-##### new MirrorConfig(...config) 
+## classes MirrorConfig and ConfigController
+
+A generic, reusable config controller, and one specific to dweb-mirror.
+
+##### properties
+```
+```
+
+##### parameters of all methods
+```
+```
+
+### Class ConfigController
+
+##### new ConfigController(...config)
 Create a new config structure from one or more config objects. 
 
 The fields in later arguments (at the root, or nested levels) over-write the previous ones.
 
 See config file for structure of config
 
-##### new(filenames, cb) 
+##### static initializeUserConfigFile(userConfigFile, defaultUserConfig, cb)
+
+```
+userConfigFile  Path (can be relative) to user config file, that may not exist
+defaultUserConfig   Initial configuration to set the file to if it does not exist
+cb(err, { config } )
+```
+
+##### new(filenames, cb)
+
 ```
 filenames   optional ordered array of paths to possible config files (they may be missing), ~/ ./ * etc are expanded (I'm not sure about ../)
-    If missing then it looks in dweb-mirror/configDefaults.yaml and ~/dweb-mirror.config.yaml 
 cb(err, config) Called with an instance of MirrorConfig
 ```
 Create a new config by reading YAML from filenames in order, (later overriding earlier) 
+
+Requires MirrorConfig to implement initializeUserConfig the results of which override that in the filenames
+
+##### resolve(filename) 
+
+Return a resolved filename, expanding ./ ~/ and possibly ../
+
+##### resolves([filename])
+
+Return an array of resolved filenames, this can also expand `*` etc
+
+##### firstExisting([filename])
+
+Returns the first resolved filename from the array that exists (used to search for valid directories)
 
 ##### setopts(...config)
 Set some fields of configuration from passed object,
@@ -258,6 +396,63 @@ Throws errors on failure to read, or failure to parse.
 
 Read YAML from filename and return via cb(err, res), 
 or return error if unable to read or parse.
+
+##### userConfig() 
+Return the last configuration file
+
+##### writeUserFile(filename, cb)
+
+Write user configuration to filename
+
+##### setAndWriteUserFile(filename, obj, cb)
+
+Set local configuration in ConfigManager and write to user file
+
+##### writeYaml(filename, obj, cb)
+
+Write yaml version of an object to a file
+
+### Class MirrorConfig 
+
+Subclass of ConfigController that knows about dweb-mirror
+
+##### defaultUserConfig
+
+Default configuration for user file
+
+##### initializeUserConfig(cb)
+
+Return user configuration, initializing if required.
+
+##### new(filenames, cb) 
+
+```
+filenames   Optional list of filenames for configation otherwies uses defaultConfigFiles
+```
+
+##### setAndWriteUser(obj, cb)
+ 
+Set the configuration in the ConfigManager, and write to user file
+
+##### writeUser(cb)
+
+Write user configuration to file
+
+##### deleteUserTask(identifier, level, cb)
+Remove task for identifier (handles multi-identifier tasks correctly)
+
+##### writeUserTaskLevel(identifier, level, cb)
+
+Update, or create a new task for an identifier (handles multi-identifier tasks correctly)
+
+##### findTask(identifier)
+
+Find and return task form config
+
+##### crawlInfo(identifier, mediatype=undefined);
+ 
+Check if member being crawled and return info suitable for adding into ArchiveMember and usable by the UI
+
 
 ## CrawlManager, CrawlFile
 
@@ -293,28 +488,28 @@ Currently (may change) one instance only - that has parameterisation for crawls.
 ```
 CrawkManager.cm                         Points to single instance created (this may change) that has following attributes:
 
-_levels     ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
-_uniqItems  { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops (identifier also has pseudo-identifiers like _SEARCH_123abc
-_uniqItems  { identifier: [ task* ] } Dictionary of tasks carried out per file, used for checking uniqueness and avoiding loops
-errors      [{task, error}]             Array of errors encountered to report on at the end.
-completed   int                         Count of tasks completed (for reporting)
-pushedCount int                         Count of tasks pushed onto the queue, usd for checking against limitTotalTasks
-_taskQ      async queue                 Queue of tasks to run (from async package)
-defaults {
-    details_search                      Default search to perform as part of "details" or "full" (usually sufficient to paint tiles)
-    details_related                     Default crawl on related items when doing "details" or "full" (usually sufficient to paint tiles)
-    }
-skipCache   bool||false                 If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
-skipFetchFile bool||false               If true will just comment on file, not actually fetch it (including thumbnails)
-maxFileSize int||undefined              If set, constrains maximum size of any one file
-concurrency int||1                      Sets the number of tasks that can be processed at a time
-limitTotalTasks:int||undefined          If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
+_levels         ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
+_uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops (identifier also has pseudo-identifiers like _SEARCH_123abc
+_uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per file, used for checking uniqueness and avoiding loops
+errors          [{task, error}] Array of errors encountered to report on at the end.
+completed       Count of tasks completed (for reporting)
+pushedCount     Count of tasks pushed onto the queue, usd for checking against limitTotalTasks
+_taskQ          (async queue) of tasks to run (from async package)
+defaultDetailsSearch    Default search to perform as part of "details" or "full" (usually sufficient to paint tiles)
+defaultDetailsRelated   Default crawl on related items when doing "details" or "full" (usually sufficient to paint tiles)
+copyDirectory   If set, the crawl will make a full copy here, for example on a USB drive
+debugidentifier Will be set to a global variable to help conditional debugging
+skipCache       If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
+skipFetchFile   If true will just comment on file, not actually fetch it (including thumbnails)
+maxFileSize     (int) If set, constrains maximum size of any one file
+concurrency     (int) Sets the number of tasks that can be processed at a time
+limitTotalTasks (int) If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
 ```
-#### new CrawlManager({skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks}={}) TODO-API needs update
+#### new CrawlManager({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency=1, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated} = {})
 
 See attributes for meaning of arguments.
 
-Create and initialize a CrawlManager instance (only call once currently).
+Create and initialize a CrawlManager instance (only called once currently).
 
 #### push(task)
 
@@ -394,18 +589,53 @@ All the methods of MirrorFS are static, and it exists to encapsulate knowledge a
 algorithm:  Hash algorithm to be used, defaults to 'sha1' and only tested on that
 cacheDirectory: Same as directory
 debugname:  Name to use in debug statements to help see which file/item it refers to.
+digest      Digest (hash) of file to find 
 directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
+directories: Array of directories to check for caches
+expectsize: If defined, the result must match this size or will be rejected (it comes from metadata)
+file:       Name of file
 filepath:   Absolute path to file, normally must be in "directory"
-format:     Format of result, defaults to 'hex', alternative is 'multihash58'
+format:     Format of result or submitted digest, defaults to 'hex', alternative is 'multihash58'
+httpServer: Server to use for http (for seeding)
+preferredStreamTransports:  Array of transport names to use in order of preference for streaming
+relFileDir  Path to directory, typically IDENTIFIER
+relFilePath A path relative to any of the directories, typically IDENTIFIER/FILENAME
+scale       Factor to scale down an image
+sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
+rotate      Factor to rotate an image
+skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
+skipCache:  if set then do not check cache for results
+skipNet:    if set then do not try and fetch from the net
+url:        Single url (or in most cases array of urls) to retrieve
+wantBuff:   True if want a buffer of data (not stream)
+wantStream  The caller wants a stream as the result (the alternative is an object with the results)
+start       The first byte or result to return (default to start of file/result)
+end         The last byte or result to return (default to end of file/result)
 ```
+
 Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz where referred to below
 
-#### static quickhash(str, options={})
-Synchronous calculation of hash
+##### static init(directories, httpServer, preferredStreamTransports)
+
+Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find things
+and how to get things.
+
+##### setCopyDirectory(dir)
+
+Override copy directory for MirrorFS.
+Once set, operations will cause a copy from cache or net to this directory.
+
+##### _mkdir(path, cb) 
+
+Recursively create a directory, it is not an error if it exists already.
 ```
-str     string to get the hash of
-options { algorithm, format }
+path    File path to directory
+cb(err) Callback with error if applicable. 
 ```
+##### rmdir(path, cb)
+
+Recursively remove a directory (using `rm -r` at the OS level)
+
 #### static writeFile(relFilePath, data, cb)
 Like fs.writeFile but will mkdir the directory in copyDirectory or first configured before writing the file
 ```
@@ -413,14 +643,29 @@ data    Anything that fs.writeFile accepts
 cb(err)
 ```
 
+#### static quickhash(str, options={})
+Synchronous calculation of hash
+```
+str     string to get the hash of
+options { algorithm, format }
+```
+
+##### static readFile(relFilePath, cb) 
+
+Look for a path in one of the directories, and return (via fs.readFile)
+
+##### writeFile(relFilePath, data, cb)
+
+Look for a path in one of the directories, create parent directory if required, 
+and write it (via fs.writeFile)
+
+##### checkWhereValidFileRotatedScaled({relFileDir, file, scale, rotate}, cb)
+
+Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return its path if found.
+
 #### static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb)
 Checks if file or digest exists in one of the cache Directories.
 ```
-digest      Digest of file to find 
-format      hex or multihash - how hash formated
-algorithm   e.g. 'sha1'
-relFilePath <Identifier>/<Filename>
-
 Note - either relFilePath or digest/format/algorithm can be omitted, 
 If relFilePath && !digest it just checks the cache directories
 If digest && !relFilePath it will try and locate file in hashstores
@@ -429,19 +674,10 @@ if relPath && digest the hash will be recalculated and checked.
 cb(err, filepath)
 ```
     
-#### static cacheAndOrStream({filepath=undefined, debugname="UNDEFINED", urls=undefined, expectsize=undefined, sha1=undefined, skipFetchFile=false, wantStream=false, wantBuff=false, start=0, end=undefined} = {}, cb) {
+##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, start, end}, cb)
+
 Complicated function to encapsulate in one place the logic around the cache.
 ```
-Returns a stream from the cache, or the net if start/end unset cache it
-relFilePath:    Path to file relative to cache i.e. <IDENTIFIER>/<FILENAME>
-urls:           Single url or array to retrieve
-debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
-expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
-sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
-skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
-wantStream:     True if want an open stream to the contents, (set to false, when crawling)
-wantBuff:       True if want a buffer of data (not stream)
-start,end       First and last bytes wanted
 cb(err, s|undefined) if wantStream will call with a stream (see below)
 ```
 TypicalUsages:
@@ -454,11 +690,21 @@ cb behavior needs explanation !
 * In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
 
 
-#### static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = true}, cb)
+##### static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = true}, cb)
 Perform maintenance on the system. 
 Clear out old hashes and load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'.
 Make sure all applicable files are in IPFS. 
 Delete any .part files (typically these come from a server crash while something is partially streamed in)
+
+##### seed({directory, relFilePath, ipfs}, cb)
+
+Passes args to `DwebTransports.seed` which - depending on transports, 
+* WEBTORRENT: seed an entire directory to WebTorrent, 
+* IPFS seed just the file, check the ipfs hash if supplied.
+
+#### isSpecialFile(relFilePath) 
+
+True if its one of the files used by ArchiveItem, ArchiveFile, ArchiveMember that shouldnt be seeded. 
 
 # Applications
 
@@ -536,3 +782,5 @@ The following files are present in `dweb-mirror` but are still a work in progres
 * [RELEASENOTES.md] - history of releases
 * test.js - used to run test code against specific problems, not specified.
 * [URL_MAPPING.md] - how universal urls flow through the different mappings in mirrorHttp and elsewhere.
+
+

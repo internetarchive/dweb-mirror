@@ -3,7 +3,7 @@ const ConfigController = require('./ConfigController');
 const CrawlManager = require('./CrawlManager');
 const {Object_deeperAssign} = require('@internetarchive/dweb-archivecontroller/Util');
 
-class MirrorConfig extends ConfigController { //TODO-API split from ConfigController
+class MirrorConfig extends ConfigController {
     /*
     Subclass of ConfigController specific to mirroring
      */
@@ -39,7 +39,7 @@ class MirrorConfig extends ConfigController { //TODO-API split from ConfigContro
     }
 
     deleteUserTask(identifier) {
-        let task = this.findTask(identifier);  // TODO-UXLOCAL this is not quite correct, it should find hte task, and if necessary split before writing
+        let task = this.findTask(identifier);
         if (task) {
             if (Array.isArray(task.identifier) && (task.identifier.length > 1)) {
                 task.identifier.splice(task.identifier.indexOf(identifier), 1); // Old task - remove identifier
@@ -52,7 +52,7 @@ class MirrorConfig extends ConfigController { //TODO-API split from ConfigContro
         if (level === "none") {
             this.deleteUserTask(identifier);
         } else {
-            let task = this.findTask(identifier);  // TODO-UXLOCAL this is not quite correct, it should find hte task, and if necessary split before writing
+            let task = this.findTask(identifier);
             if (!task) {
                 Object_deeperAssign(this, {apps: {crawl: {}}});
                 if (!this.apps.crawl.tasks) {
@@ -74,7 +74,7 @@ class MirrorConfig extends ConfigController { //TODO-API split from ConfigContro
         return this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
     }
     // TODO-UXLOCAL merge with similar code in dweb-archive/ConfigDetailsComponent/stateFromInfo
-    crawlInfo(identifier, mediatype=undefined) { //TODO-API
+    crawlInfo(identifier, mediatype=undefined) {
         /*
            Check if member being crawled and return info suitable for adding into ArchiveMember and usable by the UI
          */

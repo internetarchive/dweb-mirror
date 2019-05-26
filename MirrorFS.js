@@ -25,7 +25,7 @@ const HashStore = require('./HashStore');
 function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
 
 
-class MirrorFS { //TODO-API needs updating
+class MirrorFS {
     /*
     Utility subclass that knows about the file system.
 
@@ -33,6 +33,18 @@ class MirrorFS { //TODO-API needs updating
       copyDirectory:  place to put a copy
       hashstores: { directory: hashstore }  esp sha1.filestore
 
+    Common parameters to functions
+        algorithm:  Hash algorithm to be used, defaults to 'sha1' and only tested on that
+        cacheDirectory: Same as directory
+        debugname:  Name to use in debug statements to help see which file/item it refers to.
+        directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
+        filepath:   Absolute path to file, normally must be in "directory"
+        format:     Format of result, defaults to 'hex', alternative is 'multihash58'
+        skipCache:  if set then do not check cache for results
+        skipNet:    if set then do not try and fetch from the net
+        wantStream  The caller wants a stream as the result (the alternative is an object with the results)
+        start       The first byte or result to return (default to start of file/result)
+        end         The last byte or result to return (default to end of file/result)
      */
 
     static init({directories, httpServer, preferredStreamTransports=[] }) { // Not a constructor, all methods are static

@@ -15,11 +15,6 @@ const {gateway, Object_filter} = require('@internetarchive/dweb-archivecontrolle
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 
-// noinspection JSUnresolvedVariable
-ArchiveMember.prototype.save = function({} = {}, cb) {
-    cb(new Error("Shouldnt be trying to save ArchiveMember, only ArchiveMember"));
-};
-
 ArchiveMember.read = function({identifier = undefined}, cb) {
     /*
         Read member info for an item

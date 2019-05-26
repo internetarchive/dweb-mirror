@@ -45,7 +45,7 @@ class ConfigController {
     static initializeUserConfig(cb) {
         cb(new Error("ConfigManager must be subclassed to provider initializeUserConfig"));
     }
-    static new(filenames, cb) { //TODO-API
+    static new(filenames, cb) {
         /* build a new ConfigController from a set of options loaded from YAML files,
             filename: filename of file, may use ., .., ~ etc, parameters in later override those in earlier.
         */

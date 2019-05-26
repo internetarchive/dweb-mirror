@@ -1,4 +1,4 @@
---- # User configuration for dweb mirror
+--- # Example User configuration for dweb mirror
 # Note in YAML, indentation is significant, and you can't have multiple spaces after the ":"
 apps:
     crawl:
