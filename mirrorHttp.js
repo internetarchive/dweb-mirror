@@ -398,8 +398,9 @@ function mirrorHttp(config, cb) {
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/metadata/:itemid', function (req, res, next) {
+        const noCache = req.headers["cache-control"] && ["no-cache", "max-age=0"].includes(req.headers["cache-control"]);
         new ArchiveItem({itemid: req.params.itemid})
-            .fetch_metadata((err, ai) => {
+            .fetch_metadata({noCache}, (err, ai) => {
                 if (err) {
                     res.status(404).send(err.message); // Its neither local, nor from server
                 } else {

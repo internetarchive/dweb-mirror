@@ -164,7 +164,7 @@ cb(err, data || stream) returns either data, or if wantStream then a stream
 
 For file location is see `MirrorFS.checkWhereValidFileRotatedScaled`
 
-##### fetch_metadata({skipCache, skipNet ....}, cb)
+##### fetch_metadata({noCache, noStore, skipNet ....}, cb)
 
 Fetch the metadata for this item if it hasn't already been.
 
@@ -172,7 +172,9 @@ A more flexible version than dweb-archive.ArchiveItem.fetch_metadata,
 which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
 ```
 Alternatives:
-    skipCache:          dont load from cache (only net)
+    DEPRECATED skipCache:          dont load from cache (only net)
+    noCache:            skip cache on reading, but write to it
+    noStore:            skip cache on writing, but read from it
     skipNet             dont load from net (only cache)
     if cached:          return from cache
     if !cached:         Load from net, save to cache
@@ -486,7 +488,7 @@ Currently (may change) one instance only - that has parameterisation for crawls.
 
 ##### Attributes
 ```
-CrawkManager.cm                         Points to single instance created (this may change) that has following attributes:
+CrawlManager.cm                         Points to single instance created (this may change) that has following attributes:
 
 _levels         ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
 _uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops (identifier also has pseudo-identifiers like _SEARCH_123abc

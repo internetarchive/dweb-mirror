@@ -320,59 +320,86 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) {
+ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:cacheControl
     /*
     Fetch the metadata for this item if it hasn't already been.
     More flexible version than dweb-archive.ArchiveItem
     Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
     Alternatives:
-    skipCache:          dont load from cache (only net)
+    skipCache:          dont load from cache (only net)  DEPRECATED - use noCache and/or noStore
+    noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
+    noStore:            Like HTTP Cache-Control: no-store, don't store the result
     skipNet             dont load from net (only cache)
     cached:             return from cache
     !cached:            Load from net, save to cache
 
     cb(err, this) or if undefined, returns a promise resolving to 'this'
     Errors              TransportError (404)
+
+    TODO-CACHEAGING - check on age of cache
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     // noinspection JSUnresolvedVariable
     if (cb) { try { f.call(this, cb) } catch(err) {
         cb(err)}}
     else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
-    function errOrDark(err) {
-        return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
+    function tryRead(cb) { // Try and read from disk, obeying options
+        if (opts.noCache) {
+            cb(new Error("NoCache"));
+        } else {
+            this.read((err, metadata) => {
+                if (err) {
+                    cb(err);
+                } else {
+                    this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
+                    cb(null)
+                }
+            });
+        }
+    }
+    function tryNet(cb) {  // Try and read from net, obeying options
+        if (opts.skipNet) {
+            cb(new Error("skipNet set"));
+        } else {
+            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
+                cb(err); // Maybe or maybe not err
+            });
+        }
+    }
+    function tryReadOrNet(cb) { // Try and Read and if not, then get from net, obeying options cb(err, doSave)
+        if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
+            tryRead.call(this, (err) => {
+                if (err) { // noCache, or not cached
+                    tryNet.call(this, (err) => {
+                        cb(err, true); // If net succeeded then save
+                    });
+                } else { // cached
+                    cb(null, !!MirrorFS.copyDirectory); // cached but check for explicit requirement to copy
+                }
+            })
+        } else {
+            cb(null, false); // Didn't fetch so dont save, but not an error
+        }
+    }
+    function trySave(doSave, cb) { // If requested, try and save, obeying options
+        if (!doSave || opts.noStore) {
+            cb(null);
+        } else {
+            this.save(cb);
+        }
     }
     function f(cb) {
-        if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
-            if (!opts.skipCache) { // We have a cache directory to look in
-                //TODO-CACHE-AGING need timing of how long use old metadata
-                this.read((err, metadata) => {
-                    if (err) { // No cached version
-                        if (opts.skipNet) {
-                            cb(err);
-                        } else {
-                            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
-                                if (err) {
-                                    cb(err); // Failed to read & failed to fetch
-                                } else {
-                                    ai.save({}, (err, res) => cb(errOrDark(null), res));
-                                }  // Save data fetched (de-fjorded)
-                            });    // resolves to this
-                        }
-                    } else {    // Local read succeeded.
-                        this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-                        if (MirrorFS.copyDirectory) { // If copyDirectory explicitly specified then save to it.
-                            this.save({}, (err, res) => cb(errOrDark(null), res));
-                        } else {
-                            cb(errOrDark(null), this);
-                        }
-                    }
-                })
-            } else { // No cache Directory or skipCache telling us not to use it for read or save
-                this._fetch_metadata(opts, cb); // Process Fjords and load .metadata and .files etc - handles darkOk
-            }
+        if (this.itemid && !(this.metadata || this.is_dark)) { // If havent already fetched (is_dark means no .metadata field)
+            if (opts.skipCache) {
+                opts.noCache = true; opts.noStore = true; } // skipCache is deprecated
+            waterfall([
+                tryReadOrNet.bind(this), // passes doStore to cb
+                trySave.bind(this),
+            ], (err) => {
+                cb(err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+            });
         } else {
-            cb(errOrDark(null), this);
+            cb(null, this);
         }
     }
 };

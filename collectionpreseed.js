@@ -27,7 +27,7 @@ const MirrorConfig = require('./MirrorConfig');
 const MirrorFS = require('./MirrorFS');
 const CrawlManager = require('./CrawlManager');
 
-const crawlTasks = [ //skipFetchFile, skipcache, mediatype: collection
+const crawlTasks = [
     // Get the tiles for the top 60 items on the top 100 collections of each supported media type
     { identifier: ["image","movies","texts","audio"], level: "details",
         crawl: { rows: 100, level: "details", sort: "-downloads",

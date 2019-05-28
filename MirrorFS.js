@@ -40,7 +40,9 @@ class MirrorFS {
         directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
         filepath:   Absolute path to file, normally must be in "directory"
         format:     Format of result, defaults to 'hex', alternative is 'multihash58'
-        skipCache:  if set then do not check cache for results
+        skipCache:  if set then do not check cache for results (being replaced by noCache+noStore for finer grain control)
+        noCache:    skip cache on reading, but store results
+        noStore:    use cache on reading, but do not store results
         skipNet:    if set then do not try and fetch from the net
         wantStream  The caller wants a stream as the result (the alternative is an object with the results)
         start       The first byte or result to return (default to start of file/result)
