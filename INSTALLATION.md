@@ -18,7 +18,14 @@ and because we've modified the IIAB installer to include dweb-mirror.
 * ###### You'll need git, node, npm, yarn, which should be on most Linux machines.
 
 #### Mac OSX
-* TODO Mac specific instructions to add these (need a clean machine to test on)
+* git: type "git" in a Terminal window, if git is installed you'll get the help message,
+if not then it should prompt you to install Xtools command line tools, accept ...
+* node and npm: https://nodejs.org should know its a map and prompt you to install, select the "recommended" version
+* yarn: https://yarnpkg.com/en/docs/install should auto-detect and make suggestions. 
+The easiest is often, at a terminal window: 
+```
+      curl -o- -L https://yarnpkg.com/install.sh | bash
+```
 
 #### Rachel 3+ (32 bit intel box from World Possible)
 This is complex, the OS with the box is seriously out of date, see [./INSTALLATION-rachel.md]
@@ -28,9 +35,14 @@ This is complex, see [./INSTALLATION-raspberrypi.md] then come back here to fini
 
 #### Anything else
 * This is only tested on current versions, so I recommend updating before installing.
-  * Node: open `https://nodejs.org` in the browser.  It should auto-detect your machine, and get the "recommended" version.
-  * Npm: # sudo npm install npm@latest -g
-  * Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+* Node: open `https://nodejs.org` in the browser.  It should auto-detect your machine, and get the "recommended" version.
+* Npm: # sudo npm install npm@latest -g
+* Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+* yarn: https://yarnpkg.com/en/docs/install should auto-detect and make suggestions. 
+The easiest is often, at a terminal window: 
+```
+      curl -o- -L https://yarnpkg.com/install.sh | bash
+```
 
 ### 3. Install dweb-mirror
 
@@ -40,28 +52,39 @@ There are two alternatives, depending on whether running as an appliance (recomm
 
 We will install it as a standard node_module
 
-Create a top level cache directory,
+Create a top level cache directory.
+
+This has to be called `archiveorg` but can be in your home directory (if you plan
+on running the server there) or can be in `/.data`, `/library` or at the top
+level of any disk e.g.
 
 ```
 sudo mkdir -p "/.data/archiveorg" && sudo chown ${USER} /.data/archiveorg
 ```
-Its in configDefaults.yaml to check at this address. You can put this somewhere else, but if so you'll need to change it during the "Edit Configuration" step
+If its anywhere else, then edit `~/dweb-mirror.config.yaml` after you've finished installing to add the lines such as:
+```
+directories:
+  - /foo/bar/archiveorg # wherever you put 'archiveorg'
+  - /Volumes/*/archiveorg # Check any plugged in drives
+```
 
-Now create a package.json that points at dweb-mirror
+The following yarn install might or might not be needed but seems to speed 
+up compiles and updates.
+```
+sudo yarn add node-pre-gyp cmake
+```
+Now add the packages we need for dweb-mirror.
 ```
 cd /usr/local  # Various other places didn't work on Rachel, but in theory it should work anywhere.
 yarn add @internetarchive/dweb-mirror @internetarchive/dweb-archive
 ```
 
-The following yarn install might or might not have been needed TODO-RACHEL-CLEAN try without this on clean machine
-```
-sudo yarn add node-pre-gyp cmake
-```
-Now install dweb-mirror, otherwise:
+If it fails, then
 ```
 sudo yarn install
-# If it fails, then running it again is safe.
 ```
+which can be safely rerun. 
+
 The example above would install dweb-mirror as `/usr/local/node_modules/@internetarchive/dweb-mirror`
 which is referred to as `<wherever>/dweb-mirror` in the rest of this INSTALLATION
 
@@ -113,10 +136,12 @@ otherwise to those automatically brought in by `yarn install`
 
 ### 4. Edit configuration
 
+If you are doing anything non-standard, then you'll need to create and edit 
+a local configuration file.  Otherwise the application will create it the first time its needed.
 ```
 cd <wherever you installed dweb-mirror>/dweb-mirror
 # By default this is /usr/local/node_modules/@internetarchive/dweb-mirror or /usr/local/git/dweb-mirror
-# depending on whether you did 3a or 3b above.
+
 cp ./dweb-mirror.config.yaml ${HOME} # Copy sample to your home directory and edit, 
 ```
 and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for inline documentation.
