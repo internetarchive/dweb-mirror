@@ -36,6 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
+* 0.2.24: Correct default user config
 * 0.2.23: Update default UserConfig
 * 0.2.22: home page; not stopping server didnt start; better HashStore error handling; simplelist/collection/search_collection; start on /local
 * 0.2.21: USING.md and some bug fixes (with 0.2.20), dont enable IPFS by default

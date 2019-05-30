@@ -91,7 +91,7 @@ class MirrorConfig extends ConfigController {
 }
 MirrorConfig.userConfigFile =   "~/dweb-mirror.config.yaml"; // contents overwritten by writeUser or setAndWriteUser
 // Default to just top 30 tiles of home page
-MirrorConfig.defaultUserConfig = {apps: {crawl: { tasks: { identifier: [ "home"], level: "details", search:[{sort: "-downloads", rows: 30, level: "tile"}]}}}};
+MirrorConfig.defaultUserConfig = {apps: {crawl: { tasks: [ { identifier: [ "home"], level: "details", search:[{sort: "-downloads", rows: 30, level: "tile"}]} ]}}};
 // config files (later override earlier) note the userConfigFile is always appended
 // If this is ever more than one file in defaultConfigFiles then the code in dweb-archive that for statusFromConfig will need editing as assumes userConfigFile returned in position 1
 MirrorConfig.defaultConfigFiles = [ "./configDefaults.yaml"];
