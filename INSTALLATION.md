@@ -12,7 +12,12 @@ Please check for a platform specific INSTALLATION for some platforms. Specifical
  * [./INSTALLATION-raspberrypi.md] for RaspberryPi if you don't want Internet In A Box
  
 This is important, as these instructions dont work without some prelims for some of the smaller platforms
-and because we've modified the IIAB installer to include dweb-mirror.
+and because we've modified the IIAB installer to include dweb-mirror so the installation process is very different.
+
+Also, if you are working on another machine that uses Ansible, 
+then the [IIAB Ansible Role](https://github.com/iiab/iiab/tree/master/roles/internetarchive) is a good place to start.
+And also there are [yarn](https://github.com/iiab/iiab/tree/master/roles/yarn) 
+and [node](https://github.com/iiab/iiab/tree/master/roles/nodejs)internetarchive.service.j2 roles in the same repo. 
 
 ### 1. Prelim - getting your machine ready.
 * ###### You'll need git, node, npm, yarn, which should be on most Linux machines.
@@ -207,6 +212,15 @@ Allow ipfs to start, once it says Daemon is ready, Ctrl-C out of it
 cd <wherever>/dweb-mirror && ./install_ipfs.sh
 ```
 should update it.
+
+### 8. Autostarting
+Autostarting varies from platform to platform. 
+IIAB is configured automatically. 
+On many platforms you'll need to setup a service, 
+there is a template to work from at [./internetarchive.service]. 
+It needs the location of your installation.
+TODO check where this goes on Raspberry Pi/NOOBS and Rachel
+TODO alternative start process on Mac.
 
 ## Updating dweb-mirror 
 The update process depends on whether you took choice "a" (appliance) or "b" (developer) above.
