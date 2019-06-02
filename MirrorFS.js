@@ -234,25 +234,28 @@ class MirrorFS {
     }
     */
 
-    static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined}, cb) {
+    static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined, noCache=undefined}, cb) { //TODO-API noCache
         /*
             relFileDir: Item's dir
             file:       File within dir
             scale:      scale wanted at
             rotate:     rotation wanted
+            noCache:    Dont check cache for it
             cb(err, filepath) - Careful, its err,undefined if not found unlike checkWhereValidFile
          */
         const scales = [];
         for(let i=Math.floor(scale); i>0; i--) { scales.push(i); }  // A = e.g. [ 8...1 ]
         detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
-            (rel, cb2) => this.checkWhereValidFile(rel, {}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger or same size as
+            (rel, cb2) => this.checkWhereValidFile(rel, {noCache}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger or same size as
             cb
         )
     }
-    static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb) {
+    static checkWhereValidFile(relFilePath, {existingFilePath=undefined, noCache=false, digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API
         /*
         digest      Digest of file to find
         format      hex or multihash - how hash formatted
+        existingFilePath  Something else found the file already
+        noCache     Dont check the cache (note digest overrides noCache, as will confirm file's sha1)
         algorithm   e.g. 'sha1'
         relFilePath <Identifier>/<Filename>
 
@@ -263,7 +266,12 @@ class MirrorFS {
 
         cb(err, filepath)
          */
-        detect( this.directories, (cacheDirectory, cb2) => {
+        if (noCache && !digest) {
+          cb(new Error("no-cache")); // Dont use cached version
+        } else if (existingFilePath) {
+          cb(null, existingFilePath); // Got it
+        } else {
+          detect( this.directories, (cacheDirectory, cb2) => { // Looking for first success
             waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
@@ -286,13 +294,13 @@ class MirrorFS {
                         const filepath = path.join(cacheDirectory, relFilePath);
                         this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
                             if (err) debug("Error from streamhash for %s: %s", filepath, err.message); // log as error lost in waterfall
-                            if (actual !== digest) { debug("multihash %s %s %s doesnt match %s %s", format, algorithm, digest, filepath, digest); err=true} // Just test boolean anyway
+                            if (actual !== digest) { debug("multihash %s %s %s doesnt match file %s which is %s", format, algorithm, digest, filepath, actual); err=true} // Just test boolean anyway
                             cb5(err);
                         });
                     }
                 }
             ], (err, unused) => cb2(null, !err)) // Did the detect find one
-        }, (err, res) => {
+          }, (err, res) => {
             // Three possibilities - err (something failed) res (found) !err && !res (not found)
             if (err)
                 cb(err);
@@ -300,13 +308,15 @@ class MirrorFS {
                 cb (new Error(`${relFilePath} not found in caches`));
             else
                 cb(null, path.join(res, relFilePath)); // relFilePath should have been set by time get here
-        });
+          });
+        }
     }
 
-    static cacheAndOrStream({relFilePath=undefined,
+    static cacheAndOrStream({relFilePath=undefined, //TODO-API noCache
                                 existingFilePath=undefined,
                                   debugname="UNDEFINED", urls=undefined,
-                                  expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false, wantStream=false, wantBuff=false,
+                                  expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false,
+                                  wantStream=false, wantBuff=false, noCache=false,
                                   start=0, end=undefined} = {}, cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
@@ -322,6 +332,7 @@ class MirrorFS {
         ipfs:           IPFS hash if known
         wantStream:     True if want an open stream to the contents, (set to false, when crawling)
         wantBuff:       True if want a buffer of data (not stream)
+        noCache:        Dont read local cache, but will still store and maybe use cache if cant get from net (overridden by sha1)
         start,end       First and last bytes wanted
         cb(err, s|undefined) if wantStream will call with a stream (see below)
 
@@ -334,21 +345,18 @@ class MirrorFS {
             If !wantStream, then cb will only call back (with undefined) when the file has been written to disk and the file renamed.
             In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
-        if (existingFilePath) {
-            haveExistingFile(existingFilePath, sha1);
-        } else {
-            this.checkWhereValidFile(relFilePath, {digest: sha1, format: 'hex', algorithm: 'sha1'}, (err, existingFilePath) => {
-                if (err) {  //Doesn't match
-                    if (!urls || (Array.isArray(urls) && !urls.length)) {
-                        cb(err); // Dont have it (which is reasonable, as caller such as AF.cacheOrStream might then find URLS and try again)
-                    } else { // Have urls, retrieve and cache
-                        _notcached.call(this);
-                    }
-                } else { // sha1 matched, skip fetching, just stream from saved
-                    haveExistingFile.call(this, existingFilePath, sha1)
+        this.checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1'},
+          (err, existingFilePath) => {
+            if (err) {  //Doesn't match
+                if (!urls || (Array.isArray(urls) && !urls.length)) {
+                    cb(err); // Dont have it (which is reasonable, as caller such as AF.cacheOrStream might then find URLS and try again)
+                } else { // Have urls, retrieve and cache
+                    _notcached.call(this);
                 }
-            });
-        }
+            } else { // sha1 matched, skip fetching, just stream from saved
+                haveExistingFile.call(this, existingFilePath, sha1)
+            }
+        });
         function haveExistingFile(existingFilePath, sha1) {
             if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
                 const copyFilePath = path.join(this.copyDirectory, relFilePath);

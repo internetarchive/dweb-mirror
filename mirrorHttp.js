@@ -61,11 +61,14 @@ function mirrorHttp(config, cb) {
         // Pre Munging - applies to all queries
         debug("STARTING: %s", req.url);
         /* Turn the range headers on a req into an options parameter can use in streams */
+        req.opts = {};
         const range = req.range(Infinity);
         if (range && range[0] && range.type === "bytes") {
-            req.streamOpts = {start: range[0].start, end: range[0].end};
+            Object.assign(req.opts, {start: range[0].start, end: range[0].end});
             debug("Range request = %O", range);
         }
+        // Detect if want server to skip cache
+        req.opts.noCache = req.headers["cache-control"] && ["no-cache", "max-age=0"].includes(req.headers["cache-control"]);
         next();
     });
 
@@ -100,10 +103,11 @@ function mirrorHttp(config, cb) {
     }
 
     function sendPlaylist(req, res, next) {
+        // req.opts = { noCache}
         const ai = new ArchiveItem({itemid: req.params[0]});
         waterfall([
-                (cb) => ai.fetch_metadata(cb),
-                (ai, cb) => ai.fetch_playlist({wantStream: true}, cb)
+                (cb) => ai.fetch_metadata(req.opts, cb),
+                (ai, cb) => ai.fetch_playlist({wantStream: true, noCache: req.opts.noCache}, cb)
             ], (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"})
         );
     }
@@ -111,13 +115,15 @@ function mirrorHttp(config, cb) {
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
     function proxyUpstream(req, res, next, headers = {}) {
         // Note req.url will start with "/"
+        // req.opts = { start, end, noCache}
         // noinspection JSUnresolvedVariable
         proxyUrl(req, res, next, [config.upstream, req.url].join(''), headers);
     }
 
     function proxyUrl(req, res, next, url, headers = {}) {
         // Proxy a request to somewhere under urlbase, which should NOT end with /
-        DwebTransports.createReadStream(url, Object.assign({}, req.streamOpts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
+        // req.opts = { start, end, noCache}
+        DwebTransports.createReadStream(url, Object.assign({}, req.opts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
             _proxy(req, res, next, err, s, headers);
         })
     }
@@ -140,12 +146,13 @@ function mirrorHttp(config, cb) {
     }
 
     function streamArchiveFile(req, res, next) {
-        // Note before this is called req.streamOpts = {start, end}
+        // Note before this is called req.opts = {start, end}
         //TODO-CACHE-AGING Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile (maxAge, immutable)
+        // req.opts { start, end, noCache }
         try {
             const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
             const itemid = req.params['itemid'];
-            const opts = Object.assign({}, req.streamOpts, {wantStream: true});
+            const opts = Object.assign({}, req.opts, {wantStream: true});
             let af; // Passed out from waterfall to end
             debug('Sending ArchiveFile %s/%s', itemid, filename);
             const ai = new ArchiveItem({itemid});
@@ -155,19 +162,19 @@ function mirrorHttp(config, cb) {
                     // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
                     (archivefile, cb) => {
                         af = archivefile;
-                        archivefile.cacheAndOrStream(opts, cb)
+                        archivefile.cacheAndOrStream(opts, cb);
                     },
                 ],
-                (err, s) => {
+                (err, s) => { // Have stream of file or error
                     if (err) {
                         // Failed - report
                         debug("streamArchiveFile failed for %s/%s: %s", itemid, filename, err.message);
                         res.status(404).send(err.message);
                     } else {
                         // Succeeded - pipe back to user with headers
-                        res.status(req.streamOpts ? 206 : 200);
+                        res.status(req.opts.end ? 206 : 200); // True if there was a range request
                         res.set('Accept-ranges', 'bytes');
-                        if (req.streamOpts) res.set("Content-Range", `bytes ${req.streamOpts.start}-${Math.min(req.streamOpts.end, af.metadata.size) - 1}/${af.metadata.size}`);
+                        if (req.opts.end) res.set("Content-Range", `bytes ${req.opts.start}-${Math.min(req.opts.end, af.metadata.size) - 1}/${af.metadata.size}`);
                         // noinspection JSUnresolvedVariable
                         res.set("Content-Type", af.mimetype());   // Not sure what happens if doesn't find it.
                         // Uncomment first .pipe to log bytes on way out.
@@ -184,6 +191,7 @@ function mirrorHttp(config, cb) {
     }
 
     function streamQuery(req, res, next) {
+        // req.opts = { noCache}
         let o;
         // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
         if (req.query.q && req.query.q.startsWith("collection:") && req.query.q.includes('simplelists__items:')) { // Only interested in standardised q=collection:ITEMID..
@@ -207,12 +215,12 @@ function mirrorHttp(config, cb) {
         o.rows = parseInt(req.query.rows, 10);
         o.page = parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
         o.and = req.query.and; // I dont believe this is used anywhere
-        o.fetch_metadata((err, unused) => {
+        o.fetch_metadata(req.opts, (err, unused) => {
             if (err) {
                 debug('streamQuery could not fetch metadata for %s', o.itemid);
                 next(err);
             } else {
-                o.fetch_query({wantFullResp: true}, (err, resp) => { // [ArchiveMember*]
+                o.fetch_query({wantFullResp: true, noCache: req.opts.noCache}, (err, resp) => { // [ArchiveMember*]
                     if (err) {
                         debug('streamQuery for q="%s" failed with %s', o.query, err.message);
                         res.status(404).send(err.message);
@@ -234,6 +242,9 @@ function mirrorHttp(config, cb) {
         Stream back the icon,
         In many cases we will have the icon, but nothing else for the item (eg its a tile on a collection), in that case just send the icon
         Otherwise fetch metadata, find it in several possible places.
+
+        req.opts = {noCache}
+
          */
         function sendJpegStream(s) {
             // Stream back with appropriate status and Content-type
@@ -244,21 +255,22 @@ function mirrorHttp(config, cb) {
 
         const itemid = req.params['itemid'];
         debug('Sending Thumbnail for %s', itemid);
+        const noCache = req.opts.noCache;
 
         if (itemid === "home") {
             res.redirect(url.format({
                 pathname: "/archive/images/archivelogo246x246.jpg",
             }))
         } else {
-            MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {}, (err, existingFilePath) => {
+            MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {noCache}, (err, existingFilePath) => {
                 if (!err) {
                     sendJpegStream(fs.createReadStream(existingFilePath));
                 } else {
                     // We dont already have the file
                     const ai = new ArchiveItem({itemid});
                     waterfall([
-                            (cb) => ai.fetch_metadata(cb),
-                            (archiveitem, cb2) => archiveitem.saveThumbnail({wantStream: true}, cb2)
+                            (cb) => ai.fetch_metadata({noCache}, cb),
+                            (archiveitem, cb2) => archiveitem.saveThumbnail({noCache, wantStream: true, }, cb2)
                         ],
                         (err, s) => {
                             if (err) {
@@ -284,8 +296,8 @@ function mirrorHttp(config, cb) {
     function sendBookReaderJSIA(req, res, next) {
         waterfall([
             (cb) => new ArchiveItem({itemid: req.query.id})
-                .fetch_metadata(cb),
-            (ai, cb) => ai.fetch_bookreader(cb)
+                .fetch_metadata(req.opts, cb),
+            (ai, cb) => ai.fetch_bookreader(req.opts, cb)
         ], (err, ai) => {
             if (err) {
                 res.status(404).send(err.message); // Its neither local, nor from server
@@ -304,6 +316,7 @@ function mirrorHttp(config, cb) {
         //debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
         // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
         // or http://localhost:4244/download/IDENTIFIER/page/cover_t.jpg
+        // req.opts = { noCache}
         const itemid = req.params['itemid'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
         new ArchiveItem({itemid})
             .fetch_page({
@@ -313,7 +326,8 @@ function mirrorHttp(config, cb) {
                     page: req.params['page'],
                     file: req.query.file,
                     scale: req.query.scale,
-                    rotate: req.query.rotate
+                    rotate: req.query.rotate,
+                    noCache: req.opts.cache
                 },
                 (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"})
             )
@@ -398,9 +412,8 @@ function mirrorHttp(config, cb) {
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/metadata/:itemid', function (req, res, next) {
-        const noCache = req.headers["cache-control"] && ["no-cache", "max-age=0"].includes(req.headers["cache-control"]);
         new ArchiveItem({itemid: req.params.itemid})
-            .fetch_metadata({noCache}, (err, ai) => {
+            .fetch_metadata(req.opts, (err, ai) => {
                 if (err) {
                     res.status(404).send(err.message); // Its neither local, nor from server
                 } else {

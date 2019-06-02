@@ -599,6 +599,7 @@ file:       Name of file
 filepath:   Absolute path to file, normally must be in "directory"
 format:     Format of result or submitted digest, defaults to 'hex', alternative is 'multihash58'
 httpServer: Server to use for http (for seeding)
+noCache:    If true will skip reading cache, but will write back to it and not trash it if unable to read file
 preferredStreamTransports:  Array of transport names to use in order of preference for streaming
 relFileDir  Path to directory, typically IDENTIFIER
 relFilePath A path relative to any of the directories, typically IDENTIFIER/FILENAME
@@ -676,7 +677,7 @@ if relPath && digest the hash will be recalculated and checked.
 cb(err, filepath)
 ```
     
-##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, start, end}, cb)
+##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, noCache, start, end}, cb)
 
 Complicated function to encapsulate in one place the logic around the cache.
 ```

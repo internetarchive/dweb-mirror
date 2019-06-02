@@ -231,64 +231,73 @@ ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
     });
 };
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) {
-    /*
-    Fetch the bookreader data for this item if it hasn't already been.
-    More flexible version than dweb-archive.ArchiveItem
-    Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
-    Alternatives:
-    skipCache:          load from net
-    cached:             return from cache
-    !cached:            Load from net, save to cache
+ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
+  /*
+  Fetch the bookreader data for this item if it hasn't already been.
+  More flexible version than dweb-archive.ArchiveItem
+  Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
+  opts = {
+    noCache             Dont check cache, refetch from server, and store locally
+    noStore             Dont store result
+  }
+  Alternatives:
+  cached:             return from cache
+  !cached:            Load from net, save to cache
 
-    cb(err, this) or if undefined, returns a promise resolving to 'this'
-    Errors              TransportError (404)
+  cb(err, this) or if undefined, returns a promise resolving to 'this'
+  Errors              TransportError (404)
 
-    Result is ai.bookreader = { brOptions, data, lendingInfo}
-     */
-    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-    const skipCache = opts.skipCache;           // If set will not try and read cache
-    // noinspection JSUnresolvedVariable
-    if (cb) { try { f.call(this, cb) } catch(err) {
-        cb(err)}}
-    else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
-    function errOrDark(err) {
-        return err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null;
+  Result is ai.bookreader = { brOptions, data, lendingInfo}
+   */
+  if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+  const {noCache, noStore} = opts;
+  // noinspection JSUnresolvedVariable
+  if (cb) { try { f.call(this, cb) } catch(err) {
+      cb(err)}}
+  else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+  function tryRead(cb) { // Read if allowed
+    //TODO-CACHE-AGING need timing of how long use old metadata
+    if (noCache) {
+      cb(new Error("no-cache"));
+    } else {
+      this.read_bookreader(cb); // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
     }
-    function f(cb) {
-        if (this.itemid && !(this.bookreader || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
-            if (!skipCache) { // We have a cache directory to look in
-                //TODO-CACHE-AGING need timing of how long use old metadata
-                this.read_bookreader((err, bookapi) => { // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
-                    if (err) { // No cached version
-                        this._fetch_bookreader(opts, (err, ai) => {
-                            if (err) {
-                                cb(err); // Failed to read during fetch_metadata & failed to fetch here
-                            } else {
-                                ai.saveBookReader({}, (err, res) => cb(errOrDark.call(this, null), res)); // resave as have new data
-                            }  // Save data fetched (de-fjorded)
-                        });    // resolves to this
-                    } else {    // Local read succeeded.
-                        this.loadFromBookreaderAPI(bookapi); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-                        //TODO-BOOK ensure copying bookreader during a crawl to an explicit copyDirectory
-                        if (MirrorFS.copyDirectory) { // If copyDirectory explicitly specified then save to it.
-                            this.saveBookReader({}, (err, res) => cb(errOrDark.call(this, null), res));
-                        } else {
-                            cb(errOrDark.call(this, null), this);
-                        }
-                    }
-                })
-            } else { // No cache Directory or skipCache telling us not to use it for read or save
-                this._fetch_bookreader(opts, cb); // Process Fjords and load .metadata and .files etc - handles darkOk
-            }
-        } else {
-            cb(errOrDark.call(this, null), this);
-        }
+  }
+  function tryReadOrNet(cb) { // Try both files and net, cb(err, doSave)
+    tryRead.call(this, (err, bookapi) => {
+      if (err) {
+        this._fetch_bookreader(opts, (err, unusedRes)=>cb(err, true)); // Will process and add to this.bookreader, but want to save as came from net
+      } else {
+        this.loadFromBookreaderAPI(bookapi);  // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
+        cb(null, !!MirrorFS.copyDirectory);   // If copyDirectory explicitly specified then save to it, otherwise its from file so no need to save.
+      }
+    });
+  }
+  function trySave(doSave, cb) {
+    if (!noStore && doSave) {
+      this.saveBookReader({}, cb)
+    } else {
+      cb(null);
     }
+  }
+  function f(cb) {
+    if (this.is_dark && !opts.darkOk) {
+      cb(new Error(`item ${this.itemid} is dark`));
+    } else {
+      if (this.itemid && !this.bookreader) { // Check haven't already loaded or fetched metadata
+        waterfall([
+          tryReadOrNet.bind(this),
+          trySave.bind(this)
+        ], cb);
+      } else {
+        cb(null, this);
+      }
+    }
+  }
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined, zip=undefined, file=undefined, scale=undefined, rotate=undefined, page=undefined}={}, cb) {
+ArchiveItem.prototype.fetch_page = function({wantStream=false, noCache=false, reqUrl=undefined, zip=undefined, file=undefined, scale=undefined, rotate=undefined, page=undefined}={}, cb) { //TODO-API noCache
     /* Fetch a page from the item, caching it
         cb(err, data || stream) returns either data, or if wantStream then a stream
      */
@@ -304,14 +313,14 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, reqUrl=undefined,
             const debugname = `${this.itemid}_${file}`;
             const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
             if (page) { // This is the cover , its not scaled or rotated
-                MirrorFS.cacheAndOrStream({ urls, wantStream, debugname, relFilePath}, cbw)
+                MirrorFS.cacheAndOrStream({ urls, wantStream, debugname, noCache, relFilePath}, cbw);
             } else { // Looking for page by number with scale and rotation
-                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, // Find which valid scale/rotate we have,
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
                     (err, relFilePath2) => { // undefined if not found
                         // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
                         //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
-                        MirrorFS.cacheAndOrStream({urls, wantStream, debugname, relFilePath: relFilePath2 || relFilePath }, cbw)
+                        MirrorFS.cacheAndOrStream({urls, wantStream, debugname, noCache, relFilePath: relFilePath2 || relFilePath }, cbw);
                     }
                 )
             } }
@@ -325,6 +334,8 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     Fetch the metadata for this item if it hasn't already been.
     More flexible version than dweb-archive.ArchiveItem
     Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
+    Note that it adds information about the crawl and downloaded status
+
     Alternatives:
     skipCache:          dont load from cache (only net)  DEPRECATED - use noCache and/or noStore
     noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
@@ -361,7 +372,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         if (opts.skipNet) {
             cb(new Error("skipNet set"));
         } else {
-            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, ai) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
+            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, unusedAI) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
                 cb(err); // Maybe or maybe not err
             });
         }
@@ -389,7 +400,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         }
     }
     function f(cb) {
-        if (this.itemid && !(this.metadata || this.is_dark)) { // If havent already fetched (is_dark means no .metadata field)
+        if (this.itemid && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
             if (opts.skipCache) {
                 opts.noCache = true; opts.noStore = true; } // skipCache is deprecated
             waterfall([
@@ -405,103 +416,105 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
-    /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
-        cb(err, [ArchiveMember])
+ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCache & noStore
+  /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
+      cb(err, [ArchiveMember])
 
-        Strategy is:
-        * Read <IDENTIFIER>_members_cached.json if it exists into .members
-        * Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
-        * Run _fetch_query which will also handled fav-*'s `members.json` files, and `query` metadata field.
-        * Write the result back to `<IDENTIFIER>_members_cached.json`
-        * Write each member to its own `<IDENTIFIER>_member.json`
-     */
-    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-    const skipCache = opts.skipCache; // Set if should ignore cache
-    if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
+      Strategy is:
+      * Read <IDENTIFIER>_members_cached.json if it exists into .members
+      * Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
+      * Run _fetch_query which will also handled fav-*'s `members.json` files, and `query` metadata field.
+      * Write the result back to `<IDENTIFIER>_members_cached.json`
+      * Write each member to its own `<IDENTIFIER>_member.json`
+   */
+  if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+  const {noCache, noStore} = opts;
+  if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
 
-    function f(cb) {
-        //TODO-CACHE-AGING
-        // noinspection JSUnresolvedVariable
-        const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
-        if (!skipCache) {
-            const relFilePath = namepart && path.join(namepart, namepart + "_members_cached.json");
-            waterfall([
-                (cb) => { // Read from members_cached.json files from cache if available
-                    if (!relFilePath) {
-                        cb();
-                    } else {
-                        MirrorFS.readFile(relFilePath, (err, jsonstring) => {
-                            if (!err) {
-                                try {
-                                    const data = canonicaljson.parse(jsonstring);
-                                    this.members = data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
-                                } catch(err) {
-                                    debug("Cant parse json in %s: %s", relFilePath, err.message);
-                                    this.members = []
-                                }
-                            }
-                            cb();
-                        });
-                    } },
-                (cb) => { // Expand the members if necessary and possible locally, errors are ignored
-                    // unexpanded members typically come from either:
-                    // a direct req from client to server for identifier:...
-                    // or for identifier=fav-* when members loaded with unexpanded
-                    if (this.members) {
-                        map(this.members,
-                            (ams,cb2) => {
-                                if (ams instanceof ArchiveMember && ams.isExpanded()) { // Expanded or unexpanded
-                                    cb2(null, ams)
-                                } else { ams.read({},(err, o) =>
-                                    cb2(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
-                            (err, arr) => {
-                            this.members=arr; cb() }); // Expand where possible
-                    } else {
-                        cb();
-                    }
-                },
-                // _fetch_query will optimize, it tries to expand any unexpanded members, and only does the query if needed (because too few pages retrieved)
-                // unexpanded members are a valid response - client should do what it can to display them.
-                (cb) => {
-                    this._fetch_query(opts, cb) }, // arr of search result or slice of existing members
-                (arr, cb) => {
-                    // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
-                    // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
-                    if (this.members && relFilePath) {
-                        MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.members), (err) => cb(err, arr))
-                    } else {
-                        cb(null, arr);
-                    }
-                },
-                (arr, cb) => { // Save members
-                    if (this.members) {
-                        // noinspection JSUnusedLocalSymbols
-                        this.members.filter(ams => ams.isExpanded()).forEach(ams=>ams.save((unusederr)=>{})); } // Note this returns before they are saved
-                    cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
-                                   // Not that arr may or may not be wrapped in response by _fetch_query depending on opts
-                }
-            ], cb );
+  function f(cb) {
+    //TODO-CACHE-AGING
+    // noinspection JSUnresolvedVariable
+    const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
+    const relFilePath = namepart && path.join(namepart, namepart + "_members_cached.json");
+    waterfall([
+      (cb) => { // Read from members_cached.json files from cache if available
+        if (!relFilePath) {
+            cb();
         } else {
-            this._fetch_query(opts, cb);    // Uncached version (like ArchiveItem.fetch_query did before patching)
+          if (!noCache) { // Dont read old members if not caching
+            MirrorFS.readFile(relFilePath, (err, jsonstring) => {
+              if (!err) {
+                try {
+                  const data = canonicaljson.parse(jsonstring);
+                  this.members = data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
+                } catch (err) {
+                  debug("Cant parse json in %s: %s", relFilePath, err.message);
+                  this.members = []
+                }
+              }
+              cb();
+            });
+          } else {
+            cb();
+          }
+        } },
+      (cb) => { // Expand the members if necessary and possible locally, errors are ignored
+        // unexpanded members typically come from either:
+        // a direct req from client to server for identifier:...
+        // or for identifier=fav-* when members loaded with unexpanded
+        if (this.members) {
+          map(this.members,
+            (ams,cb2) => {
+              if (ams instanceof ArchiveMember && ams.isExpanded() || noCache) { // Expanded or unexpanded or not using cache
+                cb2(null, ams)
+              } else { ams.read({},(err, o) =>
+                cb2(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
+            (err, arr) => {
+              this.members=arr; cb() }); // Expand where possible
+        } else {
+          cb();
         }
-    }
+      },
+      // _fetch_query will optimize, it tries to expand any unexpanded members, and only does the query if needed (because too few pages retrieved)
+      // unexpanded members are a valid response - client should do what it can to display them.
+      (cb) => {
+        this._fetch_query(opts, cb) }, // arr of search result or slice of existing members
+      (arr, cb) => {
+        // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
+        // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
+        if (this.members && relFilePath && !noStore) {
+          MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.members), (err) => cb(err, arr))
+        } else {
+          cb(null, arr);
+        }
+      },
+      (arr, cb) => { // Save members
+        if (this.members && !noStore) {
+        // noinspection JSUnusedLocalSymbols
+          this.members.filter(ams => ams.isExpanded()).forEach(ams=>ams.save((unusederr)=>{}));
+        } // Note this returns before they are saved
+        cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
+                       // Note that arr may or may not be wrapped in response by _fetch_query depending on opts
+      }
+    ], cb );
+  }
 };
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=false} = {}, cb) {
+ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=false, wantStream=false} = {}, cb) {  //TODO-API
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
     skipFetchFile   true if should skip net retrieval - used for debugging
+    noCache         true to skip reading cache
     cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
     */
 
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
 
     if (!namepart) {
-        cb(null,wantStream ? undefined : this);
+        cb(null, wantStream ? undefined : this);
     } else {
         //MirrorFS._mkdir(dirpath, (err) => { // No longer making since a) comes after .save and b) mirrorFS.cacheAndOrStream does so
         //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
@@ -528,7 +541,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
                 } // Clear cb so not called when complete
                 let af;
                 if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
-                    af.cacheAndOrStream({skipFetchFile, wantStream}, recursable); // Recurse
+                    af.cacheAndOrStream({skipFetchFile, noCache, wantStream}, recursable); // Recurse
                     // Exits, allowing recursable to recurse with next iteration
                 } else { // Completed loop
                     // cb will be set except in the case of wantStream in which case will have been called with first stream
@@ -543,7 +556,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = relFilePath;
-            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, debugname,
+            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname,
                 urls: this.metadata.thumbnaillinks,
             }, (err, streamOrUndefined) => {
                 if (err) {
@@ -559,10 +572,11 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, wantStream=
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
+ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false} = {}, cb) { //TODO-API noCache
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true if want stream) alternative is obj. obj will be processed, stream will always be raw (assuming client processes it)
+    noCache         true if want to ignore local cache, noStore not to save result (not currently used)
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
     const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
@@ -570,7 +584,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_playlist.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({wantStream, relFilePath,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: `https://archive.org/embed/${identifier}?output=json`, // Hard coded, would rather have in Util.gateway.url_playlist but complex
             debugname: identifier + "/" + identifier + "_playlist.json"
@@ -590,7 +604,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false} = {}, cb) {
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=false} = {}, cb) {
+ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=false, noCache=false} = {}, cb) { //TODO-API noCache
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true => cb(err, stream)
@@ -603,7 +617,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({wantStream, relFilePath,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: gateway.url_related + identifier, //url_related currently ends in /
             debugname: identifier + "/" + identifier + "_related.json"
