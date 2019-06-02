@@ -634,13 +634,32 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
                     }
                 } catch (err) { cb(err); } // Catch bad JSON
             } else {
-                cb(err, res)
+                cb(err, res); // Could be err or stream
             }
         });
     } else {
         cb(null, wantMembers ? [] : undefined);
     }
 };
+ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
+  const hits = rels.hits.hits;
+  parallel([
+    cb2 => each(hits,
+      (hit, cb3) => {
+        Object.assign(hit._source, {crawl: config.crawlInfo(hit._id)});
+        cb3(null)
+      },
+      cb2),
+    cb2 => each(hits,
+      // relatively expensive reads metadata files for each member,
+      (hit, cb3) => ArchiveItem.isDownloaded(hit._id, {level: "details"}, (err, res) => {
+        hit._source.downloaded = res;
+        cb3(err);
+      }),
+      cb2)
+  ], cb);
+};
+
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {

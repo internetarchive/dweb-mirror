@@ -44,15 +44,8 @@ ArchiveMember.prototype.addCrawlInfo = function({config}, cb) {
     Object.assign(this, {crawl: config.crawlInfo(this.identifier)});
     cb(null);
 };
-ArchiveMember.addCrawlInfo = function(arr, {config=undefined}={}, cb) { // Should work on an [ArchiveMember*] or [{}*] as same structure
+ArchiveMember.addCrawlInfo = function(arr, {config=undefined}={}, cb) { // Should work on an [ArchiveMember*]
     each(arr, (memb, cb2)  => memb.addCrawlInfo({config}, cb2), cb);
-};
-ArchiveMember.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) { // Should work on an [ArchiveMember*] or [{}*] as same structure
-    const arr = rels.hits.hits;
-    each(arr, (rel, cb2)  => {
-        Object.assign(rel._source, {crawl: config.crawlInfo(rel._id)});
-        cb2(null);
-    }, cb);
 };
 ArchiveMember.prototype.read = function(unusedopts = {}, cb) {
     if (typeof unusedopts === "function") { cb = unusedopts; unusedopts={}; }

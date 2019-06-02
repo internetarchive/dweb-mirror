@@ -92,12 +92,12 @@ function mirrorHttp(config, cb) {
 
 
     function sendRelated(req, res, next) {
+        // req.opts = { noCache}
         const ai = new ArchiveItem({itemid: req.params[0]});
         waterfall([
-                (cb) => ai.fetch_metadata(cb),
-                (ai, cb) => ai.relatedItems({wantMembers: false}, cb),
-                (res, cb) =>
-                        ArchiveMember.addCrawlInfoRelated(res, {config}, (err) => cb(err, res)),
+                (cb) => ai.fetch_metadata(req.opts, cb),
+                (ai, cb) => ai.relatedItems({wantMembers: false, noCache: req.opts.noCache}, cb),
+                (res, cb) => ArchiveItem.addCrawlInfoRelated(res, {config}, (err) => cb(err, res)),
             ], (err, obj) => res.json(obj)
         );
     }
