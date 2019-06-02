@@ -184,7 +184,7 @@ function _tasks() {
     // or a -depth parameter
     // or an array of -rows
     let tasks;
-    if (!opts._.length) {
+    if (!(opts._.length || (typeof opts.crawl === "string"))) {
         // We have no positional arguments
         // If no positional args specified, then use from config.apps.crawl.tasks
         if (opts.depth || opts.search || opts.related ) {
@@ -193,6 +193,8 @@ function _tasks() {
         // noinspection JSUnresolvedVariable
         tasks = config.apps.crawl.tasks; // Default or configured tasks
     } else {
+        if (typeof opts.crawl === "string") { // e.g. "./internetarchive --crawl foo" which is technically wrong, but understandable.
+            opts._.push(opts.crawl) }
         opts.crawl = true;  // Specifying identifiers implies --crawl
         // We have positional arguments, use default details search
         function f(depthnow, depth) { // Recurses
