@@ -3,9 +3,6 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 //process.env.DEBUG=process.env.DEBUG + " bittorrent-tracker:*";  // Add Webtorrent debugging
 
 // TODO-MIRROR check using GUN for metadata
-/* TODO-UXLOCAL https://github.com/internetarchive/dweb-mirror/issues/105
-TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
-*/
 
 const debug = require('debug')("dweb-mirror:internetarchive");
 const getopts = require('getopts');

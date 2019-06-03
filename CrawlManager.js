@@ -36,20 +36,25 @@ const MirrorFS = require('./MirrorFS');
 //TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
 //See collectionpreseed.js for example using this to do a nested crawl to force server to preseed.
 
+//TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
+
 class CrawlManager {
 
-    constructor({copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
+    constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
                     maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={}) {
         this.clearState();
-        this.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated});
+        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated});
+        const self = this;
         this._taskQ = queue((task, cb) => {
-            task.process((err)=> {
+            task.process(this, (err)=> {
                 this.completed++;
                 if (err) this.errors.push({task: task, error: err});
                 cb(err);
             }); //Task should be an instance of a class with a process method
         }, this.concurrency);
         this._taskQ.drain = () => this.drained.call(this);
+        if (typeof CrawlManager.crawls === "undefined") CrawlManager.crawls = [];
+        CrawlManager.crawls.push(this); // Make crawl findable
     }
     clearState() {
         // Clear out any state before running/re-running.
@@ -80,9 +85,9 @@ class CrawlManager {
         if (Array.isArray(task)) {
             task.forEach(t => this.pushTask(t));
         } else if (Array.isArray(task.identifier)) {
-            this._push(task.identifier.map(identifier => new CrawlItem(Object.assign({}, task, {identifier}), [])));
+            this._push(task.identifier.map(identifier => new CrawlItem(Object.assign({}, task, {identifier, crawlmanager: this}), [])));
         } else {
-            this._push(new CrawlItem(task, []));
+            this._push(new CrawlItem(Object.assign({}, task, {crawlmanager: this}), []));
         }
     }
     setopts(opts={}) {
@@ -93,8 +98,7 @@ class CrawlManager {
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={},  cb) {
         const parent = [];
-        const CM = CrawlManager.cm; //Note, for now just one instance - if want multiple simultaneous crawls will need to pass as parameter to tasks.
-        CM.setopts({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch});
+        const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object_filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (MirrorFS.copyDirectory) {
@@ -102,7 +106,7 @@ class CrawlManager {
         } else {
             debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", MirrorFS.directories);
         }
-        CM.pushTask(initialItemTaskList);
+        CM.restart();
         CM.drainedCb = cb;
     }
     drained() {
@@ -111,39 +115,46 @@ class CrawlManager {
             e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || "", e.task.related || "", e.error.message));
         if (this.drainedCb) this.drainedCb()
     }
-    static restart(tasks) {
+
+    // CONTROL FUNCTIONS UNDER DEV
+    restart() {
         this.empty();   // Note there may be some un-stoppable file retrievals happening
-        this.cm.clearState();
-        this.cm.pushTask(tasks);
+        this.clearState();
+        this.pushTask(this.initialItemTaskList); // Push original tasks onto list
     }
-    static pause() {
-        this.cm._taskQ.pause();
+    pause() {
+        this._taskQ.pause();
     }
-    static resume() {
-        this.cm._taskQ.resume();
+    resume() {
+        this._taskQ.resume();
     }
-    static empty() {
-        this.cm._taskQ.remove(task=>true); // Passed {data, priority} but removing all anyway
+    empty() {
+        this._taskQ.remove(task=>true); // Passed {data, priority} but removing all anyway
     }
-    static status() {
+
+    status() {
         return {
             queue: {
-                length: this.cm._taskQ.length(),    // How many waiting to run
-                running: this.cm._taskQ.running(),  // How many being run by tasks
-                workersList: this.cm._taskQ.workersList(), //TODO-UXLOCAL figure out what get here and document
-                concurrency: this.cm._taskQ.concurrency,
-                completed:  this.cm.completed,      // May want to split into files and items
-                pushed: this.cm.pushed, // Should be length + running + completed
+                length: this._taskQ.length(),    // How many waiting to run
+                running: this._taskQ.running(),  // How many being run by tasks
+                workersList: this._taskQ.workersList().map(worker => worker.data), // Its a task e.g. CrawlItem or CrawlFile
+                concurrency: this._taskQ.concurrency,
+                completed:  this.completed,      // May want to split into files and items
+                pushed: this.pushed, // Should be length + running + completed
             },
-            opts: Object_fromEntries(this.optsallowed.map(k => [k, this.cm[k]])),
-            config: config.apps.crawl, //TODO this wont work - config is not global
+            opts: Object_fromEntries(CrawlManager.optsallowed.map(k => [k, this[k]])),
+            initialItemTaskList: this.initialItemTaskList,
+            //config: config.apps.crawl, //TODO this wont work - config is not global
             errors: this.errors, // [ { task, error } ]
         }
+    }
+    static status() {
+        return this.crawls.map(crawl => crawl.status());
     }
 }
 //  *** NOTE THIS _levels LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js && assumptions about it in dweb-archive/dweb-archive-styles.css
 CrawlManager._levels = ["tile", "metadata", "details", "all"];
-CrawlManager.cm = new CrawlManager();   // For now there is only one CrawlManager, at some point might start passing as a parameter to tasks.
+CrawlManager.crawls = [];
 CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory", "defaultDetailsSearch", "defaultDetailsRelated"];
 // q.drain = function() { console.log('all items have been processed'); }; // assign a callback *
 // q.push({name: 'foo'}, function(err) { console.log('finished processing foo'); }); // add some items to the queue
@@ -174,11 +185,11 @@ class CrawlFile extends Crawlable {
         super(file.metadata.name, parent);
         this.file = file;
     }
-    process(cb) {
-        if (this.isUniq()) {
-            if (!(CrawlManager.cm.maxFileSize && (parseInt(this.file.metadata.size) > CrawlManager.cm.maxFileSize))) {
+    process(crawlmanager, cb) { //TODO-API
+        if (this.isUniq(crawlmanager)) {
+            if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
                 debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
-                const skipFetchFile = CrawlManager.cm.skipFetchFile;
+                const skipFetchFile = crawlmanager.skipFetchFile;
                 this.file.cacheAndOrStream({
                     skipFetchFile,
                     wantStream: false,
@@ -186,26 +197,26 @@ class CrawlFile extends Crawlable {
                     end: undefined,
                 }, cb);
             } else {
-                debug('Skipping "%s" File via %o, size %d > %d', this.file.metadata.name, this.parent, this.file.metadata.size, CrawlManager.cm.maxFileSize );
+                debug('Skipping "%s" File via %o, size %d > %d', this.file.metadata.name, this.parent, this.file.metadata.size, crawlmanager.maxFileSize );
                 cb();
             }
         } else {
             cb();
         }
     }
-    isUniq() {
+    isUniq(crawlmanager) {
         const key = [this.file.itemid,this.file.metadata.name].join('/');
-        const prevTasks = CrawlManager.cm._uniqFiles[key];
+        const prevTasks = crawlmanager._uniqFiles[key];
         if (prevTasks) { return false; }
         else {
-            CrawlManager.cm._uniqFiles[key] = this;
+            crawlmanager._uniqFiles[key] = this;
             return true;
         }
     }
 }
 
 class CrawlItem extends Crawlable {
-    constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined}={}, parent) {
+    constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined, crawlmanager}={}, parent) { //TODO-API crawlmanager
         super(identifier || query, parent);
         this.identifier = identifier;
         this.level = level;
@@ -217,17 +228,17 @@ class CrawlItem extends Crawlable {
             this.identifier = "home"; this.debugname = "home"; this.query = homeQuery;
         }
         if ( ["details","full"].includes(this.level)) {
-            if (!this.search)    this.search = CrawlManager.cm.defaultDetailsSearch;
-            if (!this.related)  this.related = CrawlManager.cm.defaultDetailsRelated;
+            if (!this.search)    this.search = crawlmanager.defaultDetailsSearch;
+            if (!this.related)  this.related = crawlmanager.defaultDetailsRelated;
         }
     }
 
-    static fromSearchMember(member, taskparms, parent) {
+    static fromSearchMember(member, taskparms, parent, crawlmanager) {
         // create a new CrawlItem and add to taskQ
         // Handles weird saved-searches in fav-xxx
         return new CrawlItem({
+            member, crawlmanager,
             identifier: member.mediatype === "search" ? undefined : member.identifier,
-            member: member,
             level: taskparms.level,
             search: taskparms.search,
             related: taskparms.related,
@@ -265,28 +276,28 @@ class CrawlItem extends Crawlable {
         && this._searchLessThanOrEqual(this.search, task.search)
         && this._relatedLessThanOrEqual(this.related, task.related)
     }
-    isUniq() {
+    isUniq(crawlmanager) {
         const key = this.item._namepart();
-        const prevTasks = CrawlManager.cm._uniqItems[key];
+        const prevTasks = crawlmanager._uniqItems[key];
         if (prevTasks) {
             if (prevTasks.some(task => this._lessThanOrEqual(task))) { // At least one task covered all material in this task
                 return false;
             } else {
-                CrawlManager.cm._uniqItems[key].push({level: this.level, search: this.search});
+                crawlmanager._uniqItems[key].push({level: this.level, search: this.search});
                 return true;
             }
         } else {
-            CrawlManager.cm._uniqItems[key] = [{level: this.level, search: this.search}]; // Explicitly not caching ArchiveItem as could get large in memory
+            crawlmanager._uniqItems[key] = [{level: this.level, search: this.search}]; // Explicitly not caching ArchiveItem as could get large in memory
             return true;
         }
     }
 
-    process(cb) {
+    process(crawlmanager, cb) {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({itemid: this.identifier, query: this.query});
-        if (this.isUniq()) {
-            const skipFetchFile = CrawlManager.cm.skipFetchFile;
-            const skipCache = CrawlManager.cm.skipCache;
+        if (this.isUniq(crawlmanager)) { //TODO-API
+            const skipFetchFile = crawlmanager.skipFetchFile;
+            const skipCache = crawlmanager.skipCache;
             waterfall([
                 (cb2) => {
                     if (["metadata", "details", "all"].includes(this.level) || (this.level === "tile" && !(this.member && this.member.thumbnaillinks) )) {
@@ -309,16 +320,16 @@ class CrawlItem extends Crawlable {
                 (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     const asParent = this.asParent();
                     if (this.level === "details") { // Details
-                        this.item.minimumForUI().forEach(af => CrawlManager.cm._push(new CrawlFile({file: af}, asParent)));
+                        this.item.minimumForUI().forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
                     } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
-                        if (this.item.files) this.item.files.forEach(af => CrawlManager.cm._push(new CrawlFile({file: af}, asParent)));
+                        if (this.item.files) this.item.files.forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
                     }
                     cb4(null);
                 },
                 //(cb) => { debug("XXX Finished fetching files for item %s", this.identifier); cb(); },
                 (cb5) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     if (["details", "all"].includes(this.level) || this.related) {
-                        const taskparms = this.related || CrawlManager.cm.defaultDetailsRelated;
+                        const taskparms = this.related || crawlmanager.defaultDetailsRelated;
                         this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => {
                             if (err) {
                                 cb5(err);
@@ -326,7 +337,7 @@ class CrawlItem extends Crawlable {
                                 each(searchmembers, (sm, cb1) => sm.save(cb1), (unusederr) => { // Errors reported in save
                                     searchmembers.slice(0, taskparms.rows)
                                         .forEach(sm =>
-                                            CrawlManager.cm._push(CrawlItem.fromSearchMember(sm, taskparms, this.asParent())));
+                                          crawlmanager._push(CrawlItem.fromSearchMember(sm, taskparms, this.asParent(), crawlmanager)));
                                     cb5(null);
                                 });
                             }
@@ -350,8 +361,8 @@ class CrawlItem extends Crawlable {
                                     debug("ERROR in configuration - Sorry, can't (yet) mix sort types in %s ignoring %s", this.debugname, queryPage.sort)
                                 }
                                 searchMembers.slice(start, start + queryPage.rows).forEach(sm =>
-                                    CrawlManager.cm._push(
-                                        CrawlItem.fromSearchMember(sm, queryPage, this.asParent()) ));
+                                  crawlmanager._push(
+                                        CrawlItem.fromSearchMember(sm, queryPage, this.asParent(), crawlmanager) ));
                                 start = start + queryPage.rows;
                             });
                             cb6();

@@ -20,6 +20,7 @@ TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if 
 // External packages
 //Not debugging: express:*
 // noinspection JSUnresolvedVariable
+
 process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:* dweb-archivecontroller:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
@@ -341,6 +342,7 @@ function mirrorHttp(config, cb) {
             query: {transport: "HTTP", mirror: req.headers.host, item: "local"}
         }))
     });
+
     // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
     app.post('/admin/setconfig', function (req, res, next) {
         debug("Testing setconfig %O", req.body);
@@ -362,19 +364,25 @@ function mirrorHttp(config, cb) {
             }
         });
     });
-    app.get('/admin/crawl/start', (req, res) => {
-       CrawlManager.restart(config.apps.crawl.tasks);
+    //TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
+    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+    app.get('/admin/crawl/restart', (req, res) => {
+       CrawlManager.x.restart(config.apps.crawl.tasks);
     });
-    app.get('/admin/crawl/pause', (req, res) => {
-        CrawlManager.pause();
+    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+    app.get('/admin/crawl/pause', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+        CrawlManager.x.pause();
     });
-    app.get('/admin/crawl/resume', (req, res) => {
-        CrawlManager.resume();
+    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+    app.get('/admin/crawl/resume', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+        CrawlManager.x.resume();
     });
-    app.get('/admin/crawl/empty', (req, res) => {
-        CrawlManager.empty();
+    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+    app.get('/admin/crawl/empty', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+        CrawlManager.x.empty();
     });
-    app.get('/admin/crawl/status', (req, res) => {
+    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
+    app.get('/admin/crawl/status', (req, res) => { //TODO-CRAWLCTL needs to be non-static
         res.json(CrawlManager.status());
     });
     app.get('/arc/archive.org', (req, res) => {

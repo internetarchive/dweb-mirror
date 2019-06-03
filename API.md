@@ -488,7 +488,7 @@ Currently (may change) one instance only - that has parameterisation for crawls.
 
 ##### Attributes
 ```
-CrawlManager.cm                         Points to single instance created (this may change) that has following attributes:
+CrawlManager.crawls Array of CrawlManagers for each crawl run so far since startup (TODO will start culling), each of which has following attributes:
 
 _levels         ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
 _uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops (identifier also has pseudo-identifiers like _SEARCH_123abc
@@ -511,7 +511,7 @@ limitTotalTasks (int) If set, limits the total number of tasks that can be handl
 
 See attributes for meaning of arguments.
 
-Create and initialize a CrawlManager instance (only called once currently).
+Create and initialize a CrawlManager instance.
 
 #### push(task)
 
@@ -569,7 +569,7 @@ identifier  Archive Identifier
 identifier, level, query, search, related:  see config
 member      Pointer to ArchiveMember if known
 ```
-#### static fromSearchMember(member, taskparms, parent)
+#### static fromSearchMember(member, taskparms, parent, crawlmanager)
 
 Create a new CrawlItem and queue it, handles different kinds of members, including saved searches
 
