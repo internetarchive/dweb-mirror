@@ -68,4 +68,4 @@ sudo apt-get update && sudo apt-get install yarn
 
 ## Install dweb-mirror
 
-Now follow the instructions in [INSTALLATION.md]
+Now follow the instructions in [INSTALLATION.md] starting at step 2.

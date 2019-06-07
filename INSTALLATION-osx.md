@@ -1,4 +1,4 @@
-# Internet Archive - Universal Library project - Installation
+# Installation instructions for dweb-mirror on IIAB on Raspberry Pi 3
 
 See [README.md] for more info
 
@@ -6,27 +6,13 @@ See [README.md] for more info
  
 At the moment this is one set for developing, or use, later I'll split it when its more stable.
 
-Please check for a platform specific INSTALLATION for some platforms. Specifically:
- * [./INSTALLATION-osx.md](./INSTALLATION-osx.md) for Mac OSX
- * [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md) for Rachel 
- * [./INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md) for Internet In A Box (IIAB) on a RaspberryPi
- * [./INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md) for RaspberryPi if you don't want Internet In A Box
- 
-This is important, as these instructions dont work without some prelims for some of the smaller platforms
-and because we've modified the IIAB installer to include dweb-mirror so the installation process is very different.
-
-Also, if you are working on another machine that uses Ansible, 
-then the [IIAB Ansible Role](https://github.com/iiab/iiab/tree/master/roles/internetarchive) is a good place to start.
-And also there are [yarn](https://github.com/iiab/iiab/tree/master/roles/yarn) 
-and [node](https://github.com/iiab/iiab/tree/master/roles/nodejs)internetarchive.service.j2 roles in the same repo. 
-
 ### 1. Prelim - getting your machine ready.
-* ###### You'll need git, node, npm, yarn, which should be on most Linux machines.
 
-* This is only tested on current versions, so I recommend updating before installing.
-* Node: open `https://nodejs.org` in the browser.  It should auto-detect your machine, and get the "recommended" version.
-* Npm: # sudo npm install npm@latest -g
-* Git: Try `git --version` and if its not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+You will need git, node, npm, yarn, which may or may not be already installed.
+
+* git: type "git" in a Terminal window, if git is installed you'll get the help message,
+if not then it should prompt you to install Xtools command line tools, accept ...
+* node and npm: https://nodejs.org should know its a map and prompt you to install, select the "recommended" version
 * yarn: https://yarnpkg.com/en/docs/install should auto-detect and make suggestions. 
 The easiest is often, at a terminal window: 
 ```
@@ -174,7 +160,7 @@ Look in that directory, and there should be sub-directories appearing for each i
 You can safely delete any of the crawled material and it will be re-fetched if needed.
 
 ### 6. IPFS (optional)
-Install IPFS, there are several strategies in install_ipfs.sh that cover machines tested already.
+Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
 but it might need editing if you have an odd combinations.
 ```
 cd <wherever>/dweb-mirror
@@ -199,16 +185,39 @@ cd <wherever>/dweb-mirror && ./install_ipfs.sh
 should update it.
 
 ### 7. Auto-starting
-Autostarting varies from platform to platform. 
-See the note in [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md) for Rachel specific notes.
 
-On many platforms you'll need to setup a service, 
-there is a template to work from at [./internetarchive.service]. 
-It needs the location of your installation.
-TODO check where this goes on Raspberry Pi/NOOBS
-TODO alternative start process on Mac.
+If you want the server to start automatically when the mac boots. 
+Run the following commands in a terminal window
 
+If you put the installation somewhere else, you'll need to edit `${HOME}/git/dweb-mirror/internetarchive` 
+to be the path to "internetarchive"
+```
+cat <<EOT >/tmp//org.archive.mirror.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.archive.mirror</string>
+    <key>OnDemand</key>
+    <false/>
+    <key>UserName</key>
+    <string>${USER}</string>
+    <key>GroupName</key>
+    <string>staff</string>
 
+    <key>ProgramArguments</key>
+    <array>
+            <string>${HOME}/git/dweb-mirror/internetarchive</string>
+            <string>--server</string>
+            <string>--crawl</string>
+    </array>
+</dict>
+</plist>
+EOT
+sudo cp /tmp//org.archive.mirror.plist /Library/LaunchAgents/org.archive.mirror.plist
+sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
+```
 
 ## FUTURE: Updating dweb-mirror 
 The update process depends on whether you took choice "2A" (appliance) or "2B" (developer) above.

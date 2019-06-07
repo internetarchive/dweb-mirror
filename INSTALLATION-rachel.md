@@ -93,18 +93,9 @@ node -v # Check its 10.x
 ```
 TODO-RACHEL figure out the issues around `path` etc for services accessing node and use whatever Rafael produces.
 
-## YQ
-I'm playing with yq for reading yaml, but not using it yet so probably dont install this yet
-```
-sudo add-apt-repository ppa:rmescandon/yq
-sudo apt update
-sudo apt install yq -y
-# or go get gopkg.in/mikefarah/yq.v2
-```
+## Now continue from the general INSTALLATION.md starting at step 2.
 
-## Now continue from the general INSTALLATION.md
-
-## Auto running
+## Step 7 - Auto running
 * TODO-RACHEL - hook into supervisorctl etc [http://community.rachelfriends.org/t/starting-at-boot-supervisorctl/1202]
   * THEN TODO-RACHEL - auto start mirrorHttp
 * TODO-RACHEL - run crawl under cron
