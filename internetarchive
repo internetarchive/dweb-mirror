@@ -169,7 +169,7 @@ function optsToConfig() {
     }
     if (opts.debugidentifier.length) {
         // noinspection ES6ConvertVarToLetConst
-        var debugidentifier = opts.debugidentifier }
+        global.debugidentifier = opts.debugidentifier }
     if (opts.verbose || opts.dummy) {
         debug( "Config:"); debug(yaml.safeDump(Object_filter(config, (key, unusedValue) => key !== "configOpts")));
     }
@@ -240,7 +240,9 @@ function crawl(cb) {
     // Group explicit crawl opts from config, and any other opts that CrawlManager accepts, overriding existing defaults
     const crawlopts = Object.assign({},
         config.apps.crawl.opts,
-        Object_filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")));
+        Object_filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")),
+        {callbackDrainOnce: true, name: "main"}
+    );
     const tasks = _tasks(); // draws from opts and config.apps.crawl.tasks
     if (opts.verbose || opts.dummy) {
         debug( "Crawl configuration: crawlopts=%o tasks=%O", crawlopts, tasks);
@@ -264,15 +266,17 @@ waterfall([
     cb => { if (opts.server || opts.maintenance || opts.crawl) { mirrorHttp(config, (err, serv) => {server = serv; cb(err); }) } else { cb(null); }},
     cb => { if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}}, // Must be after server start since needs for IPFS, should be before crawl
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
-    //TODO need way to stop mirrorHttp so crawl and maintenance exit
     cb => {
-    if (!opts.server && server) {server.close(cb)} else { cb(null); } }, // Stop express server unless explicit -s option
+    if (!opts.server && server) {
+        debug("Closing server");
+        server.close(cb)} else {
+        cb(null); } }, // Stop express server unless explicit -s option
     cb => {
     if (!opts.server && (opts.maintenance || opts.crawl)) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {
     if (err) {
         debug("Failed: %s", err.message)
     } else {
-        debug('Completed')
+        debug('Completed' + ((!!server) ? " but server still running" : ""));
     }
 });

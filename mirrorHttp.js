@@ -21,6 +21,11 @@ TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if 
 //Not debugging: express:*
 // noinspection JSUnresolvedVariable
 
+/* To add a new special page
+    Search on SEE-OTHER-ADD-SPECIAL-PAGE
+    Document in README.md and USING.md
+ */
+
 process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:* dweb-archivecontroller:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
@@ -366,20 +371,24 @@ function mirrorHttp(config, cb) {
     });
     //TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
     // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
-    app.get('/admin/crawl/restart', (req, res) => {
-       CrawlManager.x.restart(config.apps.crawl.tasks);
+    app.get('/admin/crawl/restart/:crawlid', (req, res) => {crawlid =
+      CrawlManager.crawls[req.params["crawlid"]].restart();
+      res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
     // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
-    app.get('/admin/crawl/pause', (req, res) => { //TODO-CRAWLCTL needs to be non-static
-        CrawlManager.x.pause();
+    app.get('/admin/crawl/pause/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+      CrawlManager.crawls[req.params["crawlid"]].pause();
+        res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
     // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
-    app.get('/admin/crawl/resume', (req, res) => { //TODO-CRAWLCTL needs to be non-static
-        CrawlManager.x.resume();
+    app.get('/admin/crawl/resume/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+      CrawlManager.crawls[req.params["crawlid"]].resume();
+        res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
     // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
-    app.get('/admin/crawl/empty', (req, res) => { //TODO-CRAWLCTL needs to be non-static
-        CrawlManager.x.empty();
+    app.get('/admin/crawl/empty/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+      CrawlManager.crawls[req.params["crawlid"]].empty();
+        res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
     // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
     app.get('/admin/crawl/status', (req, res) => { //TODO-CRAWLCTL needs to be non-static

@@ -40,15 +40,16 @@ const MirrorFS = require('./MirrorFS');
 
 class CrawlManager {
 
-    constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
-                    maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={}) {
+    constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false,
+                    skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined,
+                    defaultDetailsSearch=undefined, defaultDetailsRelated=undefined,callbackDrainOnce=false, name=undefined}={}) {
         this.clearState();
-        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated});
+        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
         const self = this;
         this._taskQ = queue((task, cb) => {
             task.process(this, (err)=> {
                 this.completed++;
-                if (err) this.errors.push({task: task, error: err});
+                if (err) this.errors.push({task: task, error: err, date: (new Date(Date.now()).toISOString())});
                 cb(err);
             }); //Task should be an instance of a class with a process method
         }, this.concurrency);
@@ -96,9 +97,11 @@ class CrawlManager {
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
-        maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined, defaultDetailsRelated=undefined}={},  cb) {
+        maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined,
+        callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined}={},  cb) {
         const parent = [];
-        const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch});
+        const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache,
+            maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             Object_filter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (MirrorFS.copyDirectory) {
@@ -107,33 +110,36 @@ class CrawlManager {
             debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", MirrorFS.directories);
         }
         CM.restart();
-        CM.drainedCb = cb;
+        CM.drainedCb = cb; // Whether its called on each drain, or just once depends on callbackDrainOnce
     }
     drained() {
         debug("Crawl finished %d tasks with %d errors", this.completed, this.errors.length);
         this.errors.forEach(e => debug("ERR:%o %s %o %o %s",
             e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || "", e.task.related || "", e.error.message));
-        if (this.drainedCb) this.drainedCb()
+            const drainedCb = this.drainedCb;
+            if (this.callbackDrainOnce) { this.drainedCb = undefined; this.callbackDrainOnce = undefined }  // Dont call it if restarted
+            if (drainedCb) drainedCb();
     }
 
     // CONTROL FUNCTIONS UNDER DEV
-    restart() {
+    restart() { // UI [<<]
         this.empty();   // Note there may be some un-stoppable file retrievals happening
         this.clearState();
         this.pushTask(this.initialItemTaskList); // Push original tasks onto list
     }
-    pause() {
+    pause() { // UI  [||]
         this._taskQ.pause();
     }
-    resume() {
+    resume() { // UI [>]
         this._taskQ.resume();
     }
-    empty() {
+    empty() { // UI [X]
         this._taskQ.remove(task=>true); // Passed {data, priority} but removing all anyway
     }
 
     status() {
         return {
+            name: this.name,
             queue: {
                 length: this._taskQ.length(),    // How many waiting to run
                 running: this._taskQ.running(),  // How many being run by tasks
@@ -141,11 +147,12 @@ class CrawlManager {
                 concurrency: this._taskQ.concurrency,
                 completed:  this.completed,      // May want to split into files and items
                 pushed: this.pushed, // Should be length + running + completed
+                paused: this._taskQ.paused,
             },
             opts: Object_fromEntries(CrawlManager.optsallowed.map(k => [k, this[k]])),
             initialItemTaskList: this.initialItemTaskList,
             //config: config.apps.crawl, //TODO this wont work - config is not global
-            errors: this.errors, // [ { task, error } ]
+            errors: this.errors.map(err => { return {date: err.date, task: err.task, error: { name: err.error.name, message: err.error.message}}}), // [ { task, error } ]
         }
     }
     static status() {
@@ -217,6 +224,9 @@ class CrawlFile extends Crawlable {
 
 class CrawlItem extends Crawlable {
     constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined, crawlmanager}={}, parent) { //TODO-API crawlmanager
+        if ("identifier" === "/") {
+            identifier = "home"; } // Obsolete home identifier was "/" may not be used anywhere
+        if ("identifier" === "" && !this.query) { identifier = "home"; } // Obsolete home identifier was "/"
         super(identifier || query, parent);
         this.identifier = identifier;
         this.level = level;
@@ -224,9 +234,10 @@ class CrawlItem extends Crawlable {
         this.query = query;
         this.search = search;
         this.related = related;
-        if (this.identifier === "/" || this.identifier === "home" ||(this.identifier === "" && !this.query)) {
-            this.identifier = "home"; this.debugname = "home"; this.query = homeQuery;
-        }
+        // Instead of setting this.query here, this.search_collection is set in fetch_metadata by specialidentifiers
+        //if (this.identifier === "/" || this.identifier === "home" ||(this.identifier === "" && !this.query)) {
+        //    this.identifier = "home"; this.debugname = "home"; this.query = homeQuery;
+        //}
         if ( ["details","full"].includes(this.level)) {
             if (!this.search)    this.search = crawlmanager.defaultDetailsSearch;
             if (!this.related)  this.related = crawlmanager.defaultDetailsRelated;

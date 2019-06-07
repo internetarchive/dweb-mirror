@@ -17,7 +17,7 @@ const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
-const {gateway, gatewayServer, parmsFrom, Object_fromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
+const {gateway, gatewayServer, parmsFrom, Object_fromEntries, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 
@@ -513,7 +513,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=fal
 
     const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
 
-    if (!namepart) {
+    if (!namepart || Object.keys(specialidentifiers).includes(namepart)) { // Skip thumbnail if no itemid, or special with no thumbnail
         cb(null, wantStream ? undefined : this);
     } else {
         //MirrorFS._mkdir(dirpath, (err) => { // No longer making since a) comes after .save and b) mirrorFS.cacheAndOrStream does so
@@ -553,6 +553,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=fal
             // noinspection JSUnresolvedVariable
             const servicesurl = `${gatewayServer()}${gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
             // Include direct link to services
+            if (!this.metadata.thumbnaillinks) this.metadata.thumbnaillinks = [];
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = relFilePath;
