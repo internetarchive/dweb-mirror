@@ -17,6 +17,7 @@ and managing a collection of material on the archive that others can download au
 * Details page - viewing a single item
 * Collection and Search pages - multiple items
 * Accessing Internet Archive resources
+* Managing Crawling
 * Downloading content for a different box
 * Managing collections on Internet Archive
 
@@ -77,7 +78,7 @@ in the same way tiles do.
 [issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) display size of download
 
 Click on the Crawl button till it turns Green and it will download a full copy of the book, 
-video or audio next time it crawls,  (TODO make that immediate). 
+video or audio next time it crawls,  (TODO make that immediate and in already initialized crawl). 
 These items will also appear on your Local page.  
 See the note above, usually you won’t want to leave it at blue.
 
@@ -101,7 +102,18 @@ but can be selected for crawling as for any other item.
 
 ## Managing crawling
 
-At the moment crawling has to be controlled from the command line. 
+Crawl control is still under development, 
+There is a page you can access at `/arc/archive.org/details/settings`. 
+TODO - this will be a button soon [issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
+
+On here you will see a list of crawls, (currently just one).
+You should get useful information about status, any errors etc. 
+Hitting `<<` will restart the crawl and `||` or `>' pause and resume,
+but note that any file already being downloaded will continue to do so.  
+
+### Advanced crawling
+
+If you have access to the command line on the server, then there is a lot more you can do with the crawler.
 
 The items selected for crawling (Green or Blue dots) are stored in a file `dweb-mirror.config.yaml` 
 in the one directory of the server, e.g. on IIAB its in /root/dweb-mirror.config.yaml 
@@ -115,7 +127,7 @@ cd /opt/iiab/internetarchive
 ```
 There are lots of options possible, try `./internetarchive —help` to get guidance.
 
-[issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)(This will be controllable via the UI fairly soon.
+This functionality will be gradually added to the UI in future releases.
 
 ## Downloading content for a different box
 
