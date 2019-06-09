@@ -36,6 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
+* 0.2.27: Add Local and Reload buttons to DwebNav
 * 0.2.26: Crawl controls - URL support for UI in dweb-archive
 * 0.2.25: Support for crawl/download on related; support for reload; 
 * 0.2.24: Correct default user config
