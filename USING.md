@@ -2,7 +2,7 @@
 
 ## Summary
 
-*Note: This aspect of the system is currently (May 2019) in rapid evolution, 
+*Note: This aspect of the system is currently (June 2019) in rapid evolution, 
 updating your system is likely to improve it: see [./INSTALLATION.md]*
 
 This file is intended to compliment the [README](./README.md) and [INSTALLATION](INSTALLATION.md) documents. 
@@ -33,16 +33,13 @@ The address to access will depend on your configuration.
 
 ## Using the page
 
-Whichever of these works it should bring you to your personal start page.
+Whichever of these works it should bring you to your `local` start page.
 
 If you have used the Internet Archive then the interface will be familiar, 
 but there are a few differences to support offline use. 
 
 Each tile on this page represents an item that your server will check for when it “crawls”.  
-First time you access the server this will depend on what the installer setup and there may be none. 
-
-and  (TODO) ways to access settings 
-[issue#132](https://github.com/internetarchive/dweb-mirror/issues/132) add a way to start/stop/control the crawler. 
+The first time you access the server this will depend on what was installed on the server, and it might be empty. 
 
 Notice that most of the tiles should have a White, Green or Blue dot in the top right to indicate that you are crawling them. 
 * A White dot means the item has been downloaded and enough of it has been downloaded to be viewed offline. 
@@ -72,7 +69,7 @@ the behavior depends on the kind of item.
 * Books display in a flip book format, pages you look at will be saved for offline use. 
 * Video and Audio will play immediately and you can skip around in them as normal
 
-The crawl button will indicate whether the object is being crawled and if not, whether it has been downloaded, 
+The crawl button at the top will indicate whether the object is being crawled and if not, whether it has been downloaded, 
 in the same way tiles do.
 
 [issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) display size of download
@@ -102,9 +99,9 @@ but can be selected for crawling as for any other item.
 
 ## Managing crawling
 
-Crawl control is still under development, 
-There is a page you can access at `/arc/archive.org/details/settings`. 
-TODO - this will be a button soon [issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
+Crawl control is still under development (as of June 2019), 
+
+If you click on the "Settings" button, it should bring up a page of settings to control Crawling.
 
 On here you will see a list of crawls, (currently just one).
 You should get useful information about status, any errors etc. 

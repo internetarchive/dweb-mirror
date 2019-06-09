@@ -39,7 +39,7 @@ const waterfall = require('async/waterfall');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 
 // IA packages
-const {gateway} = require('@internetarchive/dweb-archivecontroller/Util');
+const {gateway, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
 //auto test for presence of wrtc, its not available on rachel
 let wrtc;
 try {
@@ -263,10 +263,10 @@ function mirrorHttp(config, cb) {
         debug('Sending Thumbnail for %s', itemid);
         const noCache = req.opts.noCache;
 
-        if (itemid === "home") {
+        if (Object.keys(specialidentifiers).includes(itemid)) { //See SEE-OTHER-ADD-SPECIAL-PAGE (this should be automatic once added to specialidentifiers)
             res.redirect(url.format({
-                pathname: "/archive/images/archivelogo246x246.jpg",
-            }))
+                pathname: specialidentifiers[itemid].thumbnaillinks,
+            }));
         } else {
             MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {noCache}, (err, existingFilePath) => {
                 if (!err) {
