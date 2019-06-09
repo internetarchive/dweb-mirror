@@ -15,7 +15,7 @@ global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUndefinedPropertyAssignment
 global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 // noinspection JSUnusedLocalSymbols
-const {Object_filter} = require('@internetarchive/dweb-archivecontroller/Util');
+const {ObjectFilter} = require('@internetarchive/dweb-archivecontroller/Util');
 //This Repo
 // noinspection JSUnusedLocalSymbols
 const ArchiveItem = require('./ArchiveItemPatched');
@@ -171,7 +171,7 @@ function optsToConfig() {
         // noinspection ES6ConvertVarToLetConst
         global.debugidentifier = opts.debugidentifier }
     if (opts.verbose || opts.dummy) {
-        debug( "Config:"); debug(yaml.safeDump(Object_filter(config, (key, unusedValue) => key !== "configOpts")));
+        debug( "Config:"); debug(yaml.safeDump(ObjectFilter(config, (key, unusedValue) => key !== "configOpts")));
     }
     return null;
 }
@@ -240,7 +240,7 @@ function crawl(cb) {
     // Group explicit crawl opts from config, and any other opts that CrawlManager accepts, overriding existing defaults
     const crawlopts = Object.assign({},
         config.apps.crawl.opts,
-        Object_filter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")),
+        ObjectFilter(opts, (k,v)=> CrawlManager.optsallowed.includes(k) && (typeof v !== "undefined")),
         {callbackDrainOnce: true, name: "main"}
     );
     const tasks = _tasks(); // draws from opts and config.apps.crawl.tasks

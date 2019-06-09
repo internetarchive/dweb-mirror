@@ -1,7 +1,7 @@
 const debug = require('debug')('dweb-mirror:MirrorConfig');
 const ConfigController = require('./ConfigController');
 const CrawlManager = require('./CrawlManager');
-const {Object_deeperAssign} = require('@internetarchive/dweb-archivecontroller/Util');
+const {ObjectDeeperAssign} = require('@internetarchive/dweb-archivecontroller/Util');
 
 class MirrorConfig extends ConfigController {
     /*
@@ -54,7 +54,7 @@ class MirrorConfig extends ConfigController {
         } else {
             let task = this.findTask(identifier);
             if (!task) {
-                Object_deeperAssign(this, {apps: {crawl: {}}});
+                ObjectDeeperAssign(this, {apps: {crawl: {}}});
                 if (!this.apps.crawl.tasks) {
                     this.apps.crawl.tasks = []
                 }

@@ -17,7 +17,7 @@ const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
-const {gateway, gatewayServer, parmsFrom, Object_fromEntries, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
+const {gateway, gatewayServer, parmsFrom, ObjectFromEntries, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 
@@ -97,7 +97,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
                     ["meta", this.metadata],    // Maybe empty if is_dark
                     ["members", this.members],
                     ["files", this.exportFiles()],
-                    ["extra", Object_fromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
+                    ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
                     ["reviews", this.reviews],
                     ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
                 ],

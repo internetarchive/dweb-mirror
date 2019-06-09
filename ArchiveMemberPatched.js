@@ -11,7 +11,7 @@ const each = require('async/each');
 
 // Other IA repos
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
-const {gateway, Object_filter} = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
+const {gateway, ObjectFilter} = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 
@@ -62,7 +62,7 @@ ArchiveMember.prototype.save = function(opts = {}, cb) {
         const namepart = this.identifier; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
         const savedkeys = gateway.url_default_fl;
         // noinspection JSUnusedLocalSymbols
-        const jsonToSave = canonicaljson.stringify(Object_filter(this, (k, v) => savedkeys.includes(k)));
+        const jsonToSave = canonicaljson.stringify(ObjectFilter(this, (k, v) => savedkeys.includes(k)));
         //MirrorFS._mkdir(dirpath, (err) => { //Not mkdir any more
         const relFilePath = path.join(namepart, namepart + "_member.json");
         MirrorFS.writeFile(relFilePath, jsonToSave, (err) => {
