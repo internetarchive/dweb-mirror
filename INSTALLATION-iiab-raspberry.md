@@ -36,32 +36,29 @@ So this is what I did. (Edits welcome, if your experience differed)
 
 ## Install Internet In A Box
 
-I'm following (but editing) steps in [http://d.iiab.io/install.txt] with attention to [http://wiki.laptop.org/go/IIAB/FAQ]
+I'm following (but editing) steps in [http://d.iiab.io/install.txt] 
+with attention to [http://wiki.laptop.org/go/IIAB/FAQ]
 
-Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, and some bugs in the IIAB installer
+Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, 
+and some bugs in the IIAB installer
 
-#### Until Internet Archive is in the default IIAB distribution do this
-    
-* `sudo bash` # All of this needs to run as root
-* `curl -o /usr/sbin/iiab https://raw.githubusercontent.com/iiab/iiab-factory/master/iiab`
-* `nano /usr/sbin/iiab`
-* At about line 179 change `git clone https://github.com/iiab/iiab --depth 1` 
-* to `git clone https://github.com/mitra42/iiab -b distweb --depth 1`
-* which will get IIAB from my temporary distro.
-* `iiab` to run the install script
+#### Internet Archive is in the distribution.
 
-#### Once Internet Archives is in the default repo, you'll be able to do
-    
-* `sudo curl d.iiab.io/install.txt | sudo bash`
+Run `sudo curl d.iiab.io/install.txt | sudo bash` to install it.
+ 
+To enable it either
+a) select the `BIG` distribution, in which case Internet Archive is included 
 
-#### Either way ... 
+OR 
 
-* Selected 1 for choice of min/medium/max install, others should work as well
-* When it prompts you to edit `/etc/iiab/local_vars.yml` file say yes and set 
+b) select `MIN` or `MEDIUM` 
+When prompted to edit `/etc/iiab/local_vars.yml` respond `yes` and set the crucial two lines to:
 ```
-internetarchive_install: False
-internetarchive_enabled: False
+internetarchive_install: True
+internetarchive_enabled: True
 ```
+and then run `sudo iiab` to continue the installation.
+
 * Update of OS was quick as it probably duplicated the step in the auto-setup above
 * expect it to fail, and keep running `sudo iiab` to get it to complete.    
 * It will prompt to reset password from default `iiab-admin/g0admin`

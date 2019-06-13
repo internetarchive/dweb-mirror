@@ -34,6 +34,7 @@ The address to access will depend on your configuration.
 ## Using the page
 
 Whichever of these works it should bring you to your `local` start page.
+You can get back here at any time, via the `Local` button.
 
 If you have used the Internet Archive then the interface will be familiar, 
 but there are a few differences to support offline use. 
@@ -54,12 +55,9 @@ clicking on these will display the item.
 
 Some of the tiles will show a collection which is a group of items that someone has collected together, 
 most likely there will be at least one collection relevant to your project put on the page during installation.  
-It should show you how many items are in the collection and TODO how many have been downloaded 
+It should show you how many items are in the collection and how many have been downloaded 
 (e.g. 10/123 means 10 of the 123 items in the collection are downloaded for offline use).
-
-TODO - There is a Settings button on the page that .... 
-
-[issue#132]((https://github.com/internetarchive/dweb-mirror/issues/132) - There should be buttons for controlling crawling .... 
+[See issue#158](https://github.com/internetarchive/dweb-mirror/issues/158)
 
 ## Details page - viewing a single item
 
@@ -74,8 +72,8 @@ in the same way tiles do.
 
 [issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) display size of download
 
-Click on the Crawl button till it turns Green and it will download a full copy of the book, 
-video or audio next time it crawls,  (TODO make that immediate and in already initialized crawl). 
+Click on the Crawl button till it turns Green and it will download a full copy of the book, video or audio next time it crawls,  
+This crawling should be immediate and in already initialized crawl. [See issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
 These items will also appear on your Local page.  
 See the note above, usually you won’t want to leave it at blue.
 
@@ -99,9 +97,8 @@ but can be selected for crawling as for any other item.
 
 ## Managing crawling
 
-Crawl control is still under development (as of June 2019), 
-
 If you click on the "Settings" button, it should bring up a page of settings to control Crawling.
+This page is still under development (as of June 2019). 
 
 On here you will see a list of crawls, (currently just one).
 You should get useful information about status, any errors etc. 
@@ -125,6 +122,7 @@ cd /opt/iiab/internetarchive
 There are lots of options possible, try `./internetarchive —help` to get guidance.
 
 This functionality will be gradually added to the UI in future releases.
+See [issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
 
 ## Downloading content for a different box
 
