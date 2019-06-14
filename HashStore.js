@@ -17,13 +17,18 @@ class HashStore {
     _tablepath(table) {  // Return the file system path to where we have, or will create, a table
         return `${this.config.dir}${table}`;
     }
-    _db(table, cb) {
+    _db(table, retries=undefined, cb) {
+        if (typeof retries === "function") { cb=retries, retries=10}
         if (!this.tables[table]) {
             const tablepath = this._tablepath(table);
             level(tablepath, {}, (err, res) => {
                 if (err) {
-                    debug("Failed to open %s: %s", tablepath, err.message);
-                    cb(err);
+                    debug("Hashstore failed to open db at %s: %s", tablepath, err.message);
+                    if (retries) {
+                        setTimeout(() => this._db(table, --retries, cb),100);
+                    } else {
+                        cb(err);
+                    }
                 } else {
                     this.tables[table] = res;
                     cb(null, res)
@@ -61,7 +66,8 @@ class HashStore {
                         db.put(key, val, cb3);
                     } }
             ], (err) => {
-                if (err) { debug("put %s %s <- %s failed %s", table, key, val, err.message); }
+                if (err) {
+                    debug("put %s %s <- %s failed %s", table, key, val, err.message); }
                 cb2(err);
             });
         }

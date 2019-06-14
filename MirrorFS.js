@@ -11,6 +11,7 @@ const detect = require('async/detect');
 const detectSeries = require('async/detectSeries');
 const each = require('async/each');
 const waterfall = require('async/waterfall');
+const map = require('async/map');
 // noinspection ES6ConvertVarToLetConst
 var exec = require('child_process').exec;
 
@@ -475,6 +476,24 @@ class MirrorFS {
 
     };
 
+    static readDirRecursive(basedir, relpath, cb) {
+        fs.readdir(path.join(basedir, relpath), (err, files) => {
+            if (err) {  // Probably a directory
+                cb(null, [relpath])
+            } else {
+                map( files.map(f => path.join(relpath, f)),
+                  (relpathfile, cb1) => this.readDirRecursive(basedir, relpathfile, cb1),
+                  (err, res) => {  // res = [ [ ]* ]
+                      if (err) {
+                          cb(err);
+                      } else {
+                          cb(null, [].concat(...res)); // Flatten and return array via cb
+                      }
+                  })
+            }
+        });
+    }
+
     static _streamOfCachedItemPaths({cacheDirectory = undefined}) {
         // Note returns stream 's' immediately, then asynchronous reads directories and pipes relFilePath <item>/<file> or <item>/<subdir>/<file> into s.
         // Runs in parallel 100 at a time,
@@ -485,21 +504,12 @@ class MirrorFS {
                 files=[];
             }
                 return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories", paralleloptions: {silentwait: true}}) // Can exclude other non hashables here
-                    .map((identifier, cb) => fs.readdir(path.join(cacheDirectory, identifier),
-                        (err, files) => {
-                            if (err) { cb(null, path.join(cacheDirectory, identifier) );}      // Just pass on relPaths (identifiers) that aren't directories
-                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=>path.join(identifier, f))) }} ),
+                  .map((identifier, cb) => this.readDirRecursive(cacheDirectory, identifier, cb),  // Stream of arrays - it does it recursively
                         {name: "Read files dirs", async: true, paralleloptions: {limit:100, silentwait: true}})                                         //  [ /foo/mirrored/<item>/<file>* ]
-                    // Stream of <filename> (unlikely) and [<identifier>/<filename||subdirname>*]
+                    // Stream of arrays of [IDENTIFIER/FILENAME or IDENTIFIER/SUBDIRNAME/FILENAME] to whatever depth required
                     .flatten({name: "Flatten arrays"})                                                  //  /foo/mirrored/<item>/<file>
-                    // Stream of <filename> (unlikely) and <identifier>/<filename||subdirname>
+                    // Stream of FILENAME (unlikely) and IDENTIFIER/FILENAME and IDENTIFIER/SUBDIRNAME/FILENAME
                     // Flatten once more to handle subdirs
-                    .map((relFilePath, cb) => fs.readdir(path.join(cacheDirectory, relFilePath),
-                        (err, files) => {
-                            if (err) { cb(null,relFilePath) }      // Just pass on paths that aren't directories (should all be hashable files)
-                            else { cb(null, files.filter(f=>!f.startsWith(".")).map(f=> path.join(cacheDirectory, f))) }} ),
-                        {name: "Read files sub dirs", async: true, paralleloptions: {limit:100, silentwait: true}})                                         //  [ /foo/mirrored/<item>/<file>* ]
-                    .flatten({name: "Flatten arrays level 2"})                                                 //  <item>/<file> & <item>/<subdir>/<file>
                     .pipe(s);
         });
         return s;
@@ -507,10 +517,15 @@ class MirrorFS {
 
     //maybe redo to use async.each etc
     static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = false}, cb) {
-        // Normally before running this, will delete the old hashstore
-        // Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
-        // Runs in parallel 100 at a time,
+        /*
+        Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
+        Runs in parallel 100 at a time,
+        It catches the following issues.
+        - rebuilds hash tables at top of each volume (no report as we just rebuild it)
+        - Unlinks any files ending in part
+        */
         const tablename = `${algorithm}.relfilepath`;
+        const errs = [ ];
         each( (cacheDirectories && cacheDirectories.length) ? cacheDirectories : this.directories,
             (cacheDirectory, cb1) => {
                 this.hashstores[cacheDirectory].destroy(tablename, (err, unusedRes)=> {
@@ -518,11 +533,12 @@ class MirrorFS {
                         debug("Unable to destroy hashstore %s in %s", tablename,cacheDirectory);
                         cb1(err);
                     } else {
-                        MirrorFS._streamOfCachedItemPaths({cacheDirectory})
+                        MirrorFS._streamOfCachedItemPaths({cacheDirectory}) // Stream of relative file paths
                             .filter(relFilePath => {
                                 if (relFilePath.endsWith('.part')) {
                                     // Note the unlink is async, but we are not waiting for it.
-                                    fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug("unlink %s %s", relFilePath, err ? "Failed "+err.message : ""));
+                                    fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug("unlink %s %s", relFilePath, err ? "Failed " + err.message : ""));
+                                    errs.push({cacheDirectory, relFilePath, new Error("found file ending in .part")});
                                     return false; // Dont hash or add to IPFS
                                 } else {
                                     return true;
@@ -535,6 +551,7 @@ class MirrorFS {
                                 (err, multiHash) => {
                                     if (err) {
                                         debug("loadHashTable saw error: %s", err.message);
+                                        errs.push({cacheDirectory, relFilePath, err});
                                         cb2(err);
                                     } else {
                                         this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, (err, unusedRes) => {
@@ -552,7 +569,17 @@ class MirrorFS {
                     }
                 })
             },
-            cb)
+          (err, res) => {
+              if (err) {
+                  debug("maintenance failed with err = %o", err);
+              } else {
+                  debug("maintenance completed successfully");
+              }
+              debug("===== Completed last directory, error summary ==========");
+              //TODO make sure catch all errors here, (all should push to errs)
+              errs.forEach(e => debug("%s/%s %o", e.cacheDirectory, e.relFilePath, err));
+              cb();
+          })
     }
 
     static seed({directory, relFilePath, ipfs}, cb) {
