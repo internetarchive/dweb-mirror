@@ -538,7 +538,7 @@ class MirrorFS {
                                 if (relFilePath.endsWith('.part')) {
                                     // Note the unlink is async, but we are not waiting for it.
                                     fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug("unlink %s %s", relFilePath, err ? "Failed " + err.message : ""));
-                                    errs.push({cacheDirectory, relFilePath, new Error("found file ending in .part")});
+                                    errs.push({cacheDirectory, relFilePath, err: new Error("found file ending in .part")});
                                     return false; // Dont hash or add to IPFS
                                 } else {
                                     return true;
