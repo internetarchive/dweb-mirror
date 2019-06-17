@@ -542,7 +542,6 @@ function mirrorHttp(config, cb) {
         } else {
           next(); // Generic 404
         }
-        next()
     });
 
 // noinspection JSUnresolvedVariable
