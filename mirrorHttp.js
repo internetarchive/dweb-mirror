@@ -424,15 +424,21 @@ function mirrorHttp(config, cb) {
         })); // Move itemid into query and redirect to the html file
     });
 //TODO-BOOK this will be needed on dweb.me as well OR make archive.html handle /arc/archive.org/details/foo
-    app.get('/arc/archive.org/details/:itemid/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
+    app.get('/arc/archive.org/details/:identifier/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
         res.redirect(url.format({
             pathname: "/archive/archive.html",
-            query: Object.assign(req.query, {item: req.params['itemid'], page: req.params['page']})
+            query: Object.assign(req.query, {item: req.params['identifier'], page: req.params['page']})
         })); // Move itemid into query and redirect to the html file
     });
 // noinspection JSUnresolvedFunction
     app.get(gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
     app.get(gateway.urlDownload + '/:itemid/page/:page', sendBookReaderImages);
+    app.get(gateway.urlDownload + '/:identifier', (req, res) => {
+      res.redirect(url.format({
+        pathname: "/archive/archive.html",
+        query: Object.assign(req.query, {identifier: req.params['identifier'], download: 1})
+      }));
+    });
     app.get(gateway.urlDownload + '/:itemid/*', streamArchiveFile);
 
 // noinspection JSUnresolvedFunction
