@@ -77,9 +77,8 @@ This crawling should be immediate and in already initialized crawl. [See issue#1
 These items will also appear on your Local page.  
 See the note above, usually you won’t want to leave it at blue.
 
-[issue#139](https://github.com/internetarchive/dweb-mirror/issues/new) need a way to get back to the “Local” page
-
 [issue#129](https://github.com/internetarchive/dweb-mirror/issues/129). Show date crawled and add a refresh button 
+
 ## Collection and Search pages - multiple items
 
 If you click on a Collection, then we’ll display a grid of tiles for all the items that have been placed in the collection. 

@@ -3,10 +3,10 @@ const waterfall = require('async/waterfall');
 const each = require('async/each');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
-const {homeQuery, ObjectFilter, ObjectFromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
+const {ObjectFilter, ObjectFromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
 // Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
-require('./ArchiveFilePatched');
+const ArchiveFile = require('./ArchiveFilePatched');
 require('./ArchiveMemberPatched');
 const MirrorFS = require('./MirrorFS');
 /*
@@ -45,7 +45,6 @@ class CrawlManager {
                     defaultDetailsSearch=undefined, defaultDetailsRelated=undefined,callbackDrainOnce=false, name=undefined}={}) {
         this.clearState();
         this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
-        const self = this;
         this._taskQ = queue((task, cb) => {
             task.process(this, (err)=> {
                 this.completed++;
@@ -78,7 +77,7 @@ class CrawlManager {
     }
     pushTask(task) {
         /*
-            task:   { identifier, ... } args to CrawlItem
+            task:   { identifier, ... } args to CrawlItem  or [task*]
             Create a new CrawlItem
             If identifier is an array, then expand into multiple tasks.
             If task is an array, iterate over it
@@ -86,9 +85,13 @@ class CrawlManager {
         if (Array.isArray(task)) {
             task.forEach(t => this.pushTask(t));
         } else if (Array.isArray(task.identifier)) {
-            this._push(task.identifier.map(identifier => new CrawlItem(Object.assign({}, task, {identifier, crawlmanager: this}), [])));
+            task.identifier.forEach(identifier => this.pushTask(Object.assign({}, task, {identifier})));
         } else {
-            this._push(new CrawlItem(Object.assign({}, task, {crawlmanager: this}), []));
+            if (task.identifier.includes('/') && task.identifier !== "/") {
+                this._push(new CrawlFile({relfilepath: task.identifier}, []));
+            } else {
+                this._push(new CrawlItem(Object.assign({}, task, {crawlmanager: this}), []));
+            }
         }
     }
     setopts(opts={}) {
@@ -99,7 +102,6 @@ class CrawlManager {
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined,
         callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined}={},  cb) {
-        const parent = [];
         const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache,
             maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
@@ -134,7 +136,7 @@ class CrawlManager {
         this._taskQ.resume();
     }
     empty() { // UI [X]
-        this._taskQ.remove(task=>true); // Passed {data, priority} but removing all anyway
+        this._taskQ.remove(unusedTask=>true); // Passed {data, priority} but removing all anyway
     }
 
     status() {
@@ -184,31 +186,55 @@ class Crawlable {
 }
 
 class CrawlFile extends Crawlable {
-    constructor({file}, parent) {
+    constructor(opts, parent) {
         /*
+            requires: parent + (file|relfilepath|filename+(archiveitem|identifier))
             file    ArchiveFile
+            relfilepath     IDENTIFIER/FILENAME
+            filename    Path (within item, i.e. may contain /)
+            identifier  Identifier of item
+            archiveitem ArchiveItem
             parent  [str*] see Crawlable
          */
-        super(file.metadata.name, parent);
-        this.file = file;
+        // noinspection JSUnusedLocalSymbols
+        const {file=undefined, relfilepath=undefined, identifier=undefined, filename=undefined, archiveitem=undefined} = opts;
+        const name = relfilepath ? relfilepath : identifier ? [identifier,filename].join('/') : file.metadata.name;
+        super(name, parent);
+        Object.assign(this, opts);  // Handle opts in process as may be async
     }
     process(crawlmanager, cb) { //TODO-API
-        if (this.isUniq(crawlmanager)) {
-            if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
-                debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
-                const skipFetchFile = crawlmanager.skipFetchFile;
-                this.file.cacheAndOrStream({
-                    skipFetchFile,
-                    wantStream: false,
-                    start: 0,
-                    end: undefined,
-                }, cb);
+        if (!this.file) {
+            if (this.relfilepath) {
+                const pp = this.relfilepath.split('/');
+                this.identifier = pp.shift();
+                this.filename = pp.join('/'); // May contain /'s
+            }
+            // Should have identifier and filename by here
+            if (!this.archiveitem) {
+                this.archiveitem = new ArchiveItem({identifier: this.identifier})
+            }
+            ArchiveFile.new({archiveitem: this.archiveitem, filename: this.filename}, (err, res) => {
+                this.file = res;
+                this.process(crawlmanager, cb); // Recurse
+            });
+        } else {
+            if (this.isUniq(crawlmanager)) {
+                if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
+                    debug('Processing "%s" File via %o', this.file.metadata.name, this.parent); // Parent includes identifier
+                    const skipFetchFile = crawlmanager.skipFetchFile;
+                    this.file.cacheAndOrStream({
+                        skipFetchFile,
+                        wantStream: false,
+                        start: 0,
+                        end: undefined,
+                    }, cb);
+                } else {
+                    debug('Skipping "%s" File via %o, size %d > %d', this.file.metadata.name, this.parent, this.file.metadata.size, crawlmanager.maxFileSize);
+                    cb();
+                }
             } else {
-                debug('Skipping "%s" File via %o, size %d > %d', this.file.metadata.name, this.parent, this.file.metadata.size, crawlmanager.maxFileSize );
                 cb();
             }
-        } else {
-            cb();
         }
     }
     isUniq(crawlmanager) {
@@ -226,7 +252,7 @@ class CrawlItem extends Crawlable {
     constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined, crawlmanager}={}, parent) { //TODO-API crawlmanager
         if ("identifier" === "/") {
             identifier = "home"; } // Obsolete home identifier was "/" may not be used anywhere
-        if ("identifier" === "" && !this.query) { identifier = "home"; } // Obsolete home identifier was "/"
+        if ("identifier" === "" && !query) { identifier = "home"; } // Obsolete home identifier was "/"
         super(identifier || query, parent);
         this.identifier = identifier;
         this.level = level;
@@ -305,7 +331,7 @@ class CrawlItem extends Crawlable {
 
     process(crawlmanager, cb) {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
-        this.item = new ArchiveItem({itemid: this.identifier, query: this.query});
+        this.item = new ArchiveItem({identifier: this.identifier, query: this.query});
         if (this.isUniq(crawlmanager)) { //TODO-API
             const skipFetchFile = crawlmanager.skipFetchFile;
             const skipCache = crawlmanager.skipCache;

@@ -108,7 +108,7 @@ function mirrorHttp(config, cb) {
 
     function sendRelated(req, res, next) {
         // req.opts = { noCache}
-        const ai = new ArchiveItem({itemid: req.params[0]});
+        const ai = new ArchiveItem({identifier: req.params[0]});
         waterfall([
                 (cb) => ai.fetch_metadata(req.opts, cb),
                 (ai, cb) => ai.relatedItems({wantMembers: false, noCache: req.opts.noCache}, cb),
@@ -119,7 +119,7 @@ function mirrorHttp(config, cb) {
 
     function sendPlaylist(req, res, next) {
         // req.opts = { noCache}
-        const ai = new ArchiveItem({itemid: req.params[0]});
+        const ai = new ArchiveItem({identifier: req.params[0]});
         waterfall([
                 (cb) => ai.fetch_metadata(req.opts, cb),
                 (ai, cb) => ai.fetch_playlist({wantStream: true, noCache: req.opts.noCache}, cb)
@@ -176,7 +176,7 @@ function mirrorHttp(config, cb) {
             const opts = Object.assign({}, req.opts, {wantStream: true});
             let af; // Passed out from waterfall to end
             debug('Sending ArchiveFile %s/%s', itemid, filename);
-            const ai = new ArchiveItem({itemid});
+            const ai = new ArchiveItem({identifier: itemid});
             waterfall([
                     (cb) => ai.fetch_metadata(cb),
                     (archiveitem, cb) => ArchiveFile.new({archiveitem, filename}, cb),
@@ -219,8 +219,8 @@ function mirrorHttp(config, cb) {
             //TODO when Aaron has built entry point e.g. members/COLLECTION then rebuild this and dweb-archivecontroller.ArchiveItem._fetch_query to use it
             // Special case: query just looking for members of a collection
             //e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
-            const itemid = req.query.q.split(' OR ')[0].split(':')[1];
-            o = new ArchiveItem({sort: req.query.sort, itemid}); // Dont set query, allow _fetch_query to build default
+            const identifier = req.query.q.split(' OR ')[0].split(':')[1];
+            o = new ArchiveItem({sort: req.query.sort, identifier}); // Dont set query, allow _fetch_query to build default
         } else if (req.query.q && req.query.q.startsWith("identifier:")
             && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
             && (req.query.q.lastIndexOf(':(') === 10)) {
@@ -288,7 +288,7 @@ function mirrorHttp(config, cb) {
                     sendJpegStream(fs.createReadStream(existingFilePath));
                 } else {
                     // We dont already have the file
-                    const ai = new ArchiveItem({itemid});
+                    const ai = new ArchiveItem({identifier: itemid});
                     waterfall([
                             (cb) => ai.fetch_metadata({noCache}, cb),
                             (archiveitem, cb2) => archiveitem.saveThumbnail({noCache, wantStream: true, }, cb2)
@@ -316,7 +316,7 @@ function mirrorHttp(config, cb) {
 
     function sendBookReaderJSIA(req, res, next) {
         waterfall([
-            (cb) => new ArchiveItem({itemid: req.query.id})
+            (cb) => new ArchiveItem({identifier: req.query.id})
                 .fetch_metadata(req.opts, cb),
             (ai, cb) => ai.fetch_bookreader(req.opts, cb)
         ], (err, ai) => {
@@ -338,8 +338,8 @@ function mirrorHttp(config, cb) {
         // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
         // or http://localhost:4244/download/IDENTIFIER/page/cover_t.jpg
         // req.opts = { noCache}
-        const itemid = req.params['itemid'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
-        new ArchiveItem({itemid})
+        const identifier = req.params['identifier'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
+        new ArchiveItem({identifier})
             .fetch_page({
                     wantStream: true,
                     reqUrl: req.url,
@@ -427,12 +427,12 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/details/:identifier/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
         res.redirect(url.format({
             pathname: "/archive/archive.html",
-            query: Object.assign(req.query, {item: req.params['identifier'], page: req.params['page']})
+            query: Object.assign(req.query, {identifier: req.params['identifier'], page: req.params['page']})
         })); // Move itemid into query and redirect to the html file
     });
 // noinspection JSUnresolvedFunction
     app.get(gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-    app.get(gateway.urlDownload + '/:itemid/page/:page', sendBookReaderImages);
+    app.get(gateway.urlDownload + '/:identifier/page/:page', sendBookReaderImages);
     app.get(gateway.urlDownload + '/:identifier', (req, res) => {
       res.redirect(url.format({
         pathname: "/archive/archive.html",
@@ -449,8 +449,8 @@ function mirrorHttp(config, cb) {
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/metadata/:itemid', function (req, res, next) {
-        new ArchiveItem({itemid: req.params.itemid})
+    app.get('/arc/archive.org/metadata/:identifier', function (req, res, next) {
+        new ArchiveItem({identifier: req.params.identifier})
             .fetch_metadata(req.opts, (err, ai) => {
                 if (err) {
                     res.status(404).send(err.message); // Its neither local, nor from server
