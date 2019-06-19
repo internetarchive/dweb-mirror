@@ -1,6 +1,4 @@
 /node_modules
-package-lock.json
 testleveldb.Testtable
 radata
 userids_private.json
-yarn.lock
