@@ -66,8 +66,8 @@ TODO-THUMBNAILS The archive pattern for thumbnails is about to change (Jan2019) 
 ```
 copyDirectory   points at top level of a cache where want a copy
 relFilePath     path to file or item inside a cache <IDENTIFIER>/<FILENAME>
-skipCache       ignore anything in the cache - forces refetching and may cause upstream server to cache it
-skipFetchFile   as an argument causes file fetching to be supressed
+skipCache       ignore anything in the cache - forces refetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
+skipFetchFile   as an argument causes file fetching to be supressed (used for testing only)
 wantStream      Return results as a stream, just like received from the upstream.
 cb(err, res)    Unless otherwise documented callbacks return an error, (subclass of Error) or null, 
                 and optional return data.  
@@ -90,7 +90,7 @@ See MirrorFS.cacheAndOrStream for arguments.
 
 ##### isDownloaded(cb) 
 
-Returns true (via cb) if File has been downloaded
+Returns true (via cb) if File has been downloaded and sets downloaded flag (which is typically saved by ArchiveItem)
 
 ## ArchiveItem
 
@@ -229,11 +229,6 @@ config  MirrorConfig object
 Result: item.crawl is set to result of MirrorConfig.crawlInfo
 ```
 
-##### isDownloaded({level}, cb)
-
-Result is true if the Item is downloaded to the level specified, 
-for now only level=detail is supported.
-
 ## ArchiveMember
 
 
@@ -260,7 +255,7 @@ this.crawl = result of config.crawlInfo
 
 Apply addCrawlInfo to each member
 
-##### static addCrawlInfoRelated([rels], {config}, cb) 
+##### addCrawlInfoRelated([rels], {config}, cb) 
 
 Set .crawl field of each object in array returned by RelatedInfo API
 
@@ -268,7 +263,23 @@ Set .crawl field of each object in array returned by RelatedInfo API
 rels    { hits: { hits: [ _source: { same fields as ArchiveMember } ] } }
 cb(err)
 ```
+##### addDownloadedInfoFiles(cb(err, this))
+Add .downloaded info on all files, and summary on Item
+Side effect of fetch_metadata if not already done so.
 
+##### addDownloadedInfoToMembers(cb(err))
+Add downloaded info to all members in parallel
+
+##### summarizeMembers(cb(err))
+Build .downloaded.members_size and members_details_count fields to summarize 
+
+##### addDownloadedInfoMembers(cb(err))
+Add downloaded Info ToMembers, summarize, and add .downloaded.members_all_count
+
+##### addCrawlInfoMembers(cb(err))
+Add crawl info to each member (in parallel)
+
+ 
 ##### save(opts = {}, cb)
 
 Save a member (fields from the `savedkeys` list) as a `<IDENTIFIER>_member.json` file

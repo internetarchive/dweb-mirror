@@ -9,7 +9,6 @@ const debug = require('debug')('dweb-mirror:ArchiveItem');
 const canonicaljson = require('@stratumn/canonicaljson');
 const waterfall = require('async/waterfall');
 const each = require('async/each'); // https://caolan.github.io/async/docs.html#each
-const every = require('async/every'); // https://caolan.github.io/async/docs.html#every
 const parallel = require('async/parallel'); //https://caolan.github.io/async/docs.html#parallel
 const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
 
@@ -20,6 +19,14 @@ const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/R
 const {gateway, gatewayServer, parmsFrom, ObjectFromEntries, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
+
+/**
+ * Common arguments:
+ * noStore:            Like HTTP Cache-Control: no-store, don't store the result
+ * noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
+ * skipNet             dont load from net (only cache)
+ * skipCache:          dont load from cache (only net)  DEPRECATED - use noCache and/or noStore
+ */
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
@@ -34,6 +41,7 @@ ArchiveItem.prototype._namepart = function() {
 };
 
 function _save1file(key, obj, namepart, cb) {
+    // Returns nothing
     const relFilePath = path.join(namepart, `${namepart}_${key}.json`);
     if (typeof obj === "undefined") {
         cb(null);
@@ -192,6 +200,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
                 }
             }}),
         cb => _parse("files", (err, o) => {
+            // TODO note at this point o.downloaded is meaningful - want to push it up one level
             if (!err) { res.files = o; res.files_count = res.files.length; }
             cb(err); }),
         cb => _parse("reviews", (err, o) => {
@@ -208,7 +217,6 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
     ], (err, unused) => cb(err, res));
 };
 
-// noinspection JSUnresolvedVariable
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
 ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
     /*
@@ -288,7 +296,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
         waterfall([
           tryReadOrNet.bind(this),
           trySave.bind(this)
-        ], cb);
+        ], (err) => cb(err, this));
       } else {
         cb(null, this);
       }
@@ -306,7 +314,7 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, noCache=false, re
     waterfall([
         (cbw) => this.fetch_metadata(cbw),
         (ai, cbw) => {
-            // request URLs dont have server, and need to add datanode anyway - note passes scale & rotate
+            // request URLs dont have server, and need to add data node anyway - note passes scale & rotate
             const urls = page
                 ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
                 : "https://" + ai.server + reqUrl;
@@ -337,10 +345,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     Note that it adds information about the crawl and downloaded status
 
     Alternatives:
-    skipCache:          dont load from cache (only net)  DEPRECATED - use noCache and/or noStore
-    noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
-    noStore:            Like HTTP Cache-Control: no-store, don't store the result
-    skipNet             dont load from net (only cache)
+    opts { noStore, noCache, skipNet, skipCache } - see common args at top of this file
     cached:             return from cache
     !cached:            Load from net, save to cache
 
@@ -420,6 +425,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
   /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
       cb(err, [ArchiveMember])
 
+      opts = { skipNet, noCache, noStore,     see common argument documentation at top of this file
+                wantFullResp }                see _fetch_query
+
+
       Strategy is:
       * Read <IDENTIFIER>_members_cached.json if it exists into .members
       * Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
@@ -428,18 +437,18 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
       * Write each member to its own `<IDENTIFIER>_member.json`
    */
   if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-  const {noCache, noStore} = opts;
+  const {noCache, noStore, skipNet} = opts;
   if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
 
-  function f(cb) {
+  function f(cb1) {
     //TODO-CACHE-AGING
     // noinspection JSUnresolvedVariable
     const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
     const relFilePath = namepart && path.join(namepart, namepart + "_members_cached.json");
     waterfall([
-      (cb) => { // Read from members_cached.json files from cache if available
+      (cb2) => { // Read from members_cached.json files from cache if available
         if (!relFilePath) {
-            cb();
+            cb2();
         } else {
           if (!noCache) { // Dont read old members if not caching
             MirrorFS.readFile(relFilePath, (err, jsonstring) => {
@@ -452,51 +461,56 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
                   this.members = []
                 }
               }
-              cb();
+              cb2();
             });
           } else {
-            cb();
+            cb2();
           }
         } },
-      (cb) => { // Expand the members if necessary and possible locally, errors are ignored
+      (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...
         // or for identifier=fav-* when members loaded with unexpanded
-        if (this.members) {
-          map(this.members,
-            (ams,cb2) => {
-              if (ams instanceof ArchiveMember && ams.isExpanded() || noCache) { // Expanded or unexpanded or not using cache
-                cb2(null, ams)
-              } else { ams.read({},(err, o) =>
-                cb2(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
-            (err, arr) => {
-              this.members=arr; cb() }); // Expand where possible
-        } else {
-          cb();
-        }
+        if (!Array.isArray(this.members)) this.members = [];
+        map(this.members,
+          (ams,cb3) => {
+            if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
+              cb3(null, ams)
+            } else { ams.read({},(err, o) =>
+              cb3(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
+          (err, arr) => {
+            this.members=arr; cb2() }); // Expand where possible
       },
       // _fetch_query will optimize, it tries to expand any unexpanded members, and only does the query if needed (because too few pages retrieved)
       // unexpanded members are a valid response - client should do what it can to display them.
-      (cb) => {
-        this._fetch_query(opts, cb) }, // arr of search result or slice of existing members
-      (arr, cb) => {
-        // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
-        // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
-        if (this.members && relFilePath && !noStore) {
-          MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.members), (err) => cb(err, arr))
+      (cb2) => {
+        if (skipNet) {
+          cb2(null, this.members.slice((this.page - 1) * this.rows, this.page * this.rows)); // This page of members
         } else {
-          cb(null, arr);
+          this._fetch_query(opts, cb2) // arr of search result or slice of existing members
         }
       },
-      (arr, cb) => { // Save members
-        if (this.members && !noStore) {
-        // noinspection JSUnusedLocalSymbols
-          this.members.filter(ams => ams.isExpanded()).forEach(ams=>ams.save((unusederr)=>{}));
-        } // Note this returns before they are saved
-        cb(null, arr); // Return just the new members found by the query, dont worry about errors (logged in ams.save
-                       // Note that arr may or may not be wrapped in response by _fetch_query depending on opts
+      (res, cb2) => {
+        // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
+        // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
+        if (this.members && this.members.length && relFilePath && !noStore) {
+          MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.members), (err) => cb2(err, res))
+        } else {
+          cb2(null, res);
+        }
+      },
+      (res, cb2) => { // Save members
+        if (!noStore) {
+          each(this.members.filter(ams => ams.isExpanded()),
+            (ams, cb3) => ams.save((unusederr) => cb3(null)), // Ignore errors saving
+            (unusedErr, unusedRes) => {}); // Not waiting for this to finish
+        }
+        cb2(null, res); // Return just the new members found by the query, dont worry about errors (logged in ams.save
+                       // Note that res could be an array or a Response object, depending on opts
       }
-    ], cb );
+    ],
+      (err, res) =>
+    cb(err, res));
   }
 };
 
@@ -643,6 +657,11 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
     }
 };
 ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
+  /**
+   *   Add .crawlInfo and .downloaded for each result in rels the Related items API
+   *   rels  result of RelatedApi i.e. {hits: {hits: [ _id, _source: { FIELDS OF MEMBER }]}}
+   */
+
   const hits = rels.hits.hits;
   parallel([
     cb2 => each(hits,
@@ -652,79 +671,147 @@ ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
       },
       cb2),
     cb2 => each(hits,
-      // relatively expensive reads metadata files for each member,
-      (hit, cb3) => ArchiveItem.isDownloaded(hit._id, {level: "details"}, (err, res) => {
-        hit._source.downloaded = res;
-        cb3(err);
-      }),
-      cb2)
-  ], cb);
+      (hit, cb1) => { new ArchiveItem({identifier: hit._id}).addDownloadedInfoFiles((err, ai) => {
+        if (err) {
+          // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
+          debug("addCrawlInfoRelated -> addDownloadedInfoMembers failed for %s in %s: %o", this.itemid, hit._id, err);
+        } else {
+          hit._source.downloaded = ai.downloaded;
+        }
+        cb1(null); // Dont pass on error
+      })}, cb2),
+    ], cb);
 };
 
+ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
+  // Add .downloaded info on all files, and summary on Item
+  // Note ArchiveItem might not yet have metadata.
+    waterfall([
+      // Add info on files if not there already - this can be done in parallel
+      cb1 => this.fetch_metadata({skipNet: true}, cb1),
+      (unusedThis, cb1) => {
+        if ((typeof this.downloaded !== "object") || (this.downloaded === null)) // Could be undefined (legacy boolean or null as called for each member
+          this.downloaded = {};
+        if (!Array.isArray(this.files))
+          this.files = [];
+        // Add info on each file
+        each(this.files, // Could be empty
+          // relatively inexpensive, as caches result on files.json at final step, only needs to look at disk if uncached
+          (af, cb2) => af.isDownloaded(cb2),
+          cb1)},
+      cb1 => { // Add statistical data to item, (note this.files could be empty)
+        const filesDownloaded = this.files.filter(af => af.downloaded);
+        this.downloaded.files_all_size = this.files.reduce((sum, af) => sum + (parseInt(af.metadata.size)||0), 0);
+        this.downloaded.files_all_count = this.files.length;
+        this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size)||0), 0);
+        this.downloaded.files_count = filesDownloaded.length;
+        this.downloaded.details = this.minimumForUI().every(af => af.downloaded);
+        cb1(null);
+      },
+      cb1 => { // Save file as have changed files info
+        if (!(this.itemid && this.files.length)) {
+          cb1(null)
+        } else {
+          _save1file("files", this.exportFiles(), this._namepart(), cb1);
+        } }
+    ], err => {
+      // Report error but dont block
+      if (err) debug("Failure in addDownloadedInfoFiles for %s %o", this.itemid, err);
+      cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
+    });
+};
+
+ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
+  // Add data to all members - which can be done in parallel
+  each(this.members || [],
+    // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
+    //TODO-DOWNLOAD shortcut, dont attempt to find metadata https://github.com/internetarchive/dweb-mirror/issues/142
+    (member, cb1) => { new ArchiveItem({identifier: member.identifier}).addDownloadedInfoFiles((err, ai) => {
+      if (err) {
+        // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
+        debug("addDownloadedInfoMembers failed for %s in %s: %o", this.itemid, member.identifier, err);
+      } else {
+        member.downloaded = ai.downloaded;
+      }
+      cb1(null);
+    }) },
+    cb);
+};
+
+ArchiveItem.prototype.summarizeMembers = function(cb) {
+  // Add summary information about members to this.downloaded
+  // cb(err);
+  const membersDownloaded = this.members.filter(am => (typeof am.downloaded !== "undefined"));
+  this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + am.downloaded.files_size, 0);
+  this.downloaded.members_details_count = membersDownloaded.filter(am => am.downloaded.details).length;
+  cb(null);
+};
+
+ArchiveItem.prototype.addDownloadedInfoMembers = function(cb) {
+  // Fetch members from cache (but not net), add .downloaded field on all members, and summary on Item
+  if (typeof this.downloaded !== "object") { // Could be undefined, or legacy boolean
+    this.downloaded = {};
+  }
+  waterfall([
+    cb1 => {
+      if (!this.itemid) { cb1(null); } else {
+      ArchiveMember.fromIdentifier(this.itemid)
+        .read({}, (err, o) => {
+          if (!err) {
+            this.downloaded.members_all_count = o.item_count; // Unfortunately missing from item extras
+          }
+          cb1(null); // Ignore error from reading
+      })}},
+    cb1 => {
+      if (this.members) {
+        cb1(null, null);
+      } else {
+        this.fetch_query({skipNet: true}, cb1); // Page of members returned, can ignore
+      } },
+    (unusedArr, cb1) =>
+      this.addDownloadedInfoToMembers(cb1),
+    cb1 =>
+      this.summarizeMembers(cb1)
+    ],cb);
+};
+
+ArchiveItem.prototype.addCrawlInfoMembers = function({config}, cb) {
+  // Add .downloaded field on all members, and summary on Item
+  if ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean or null
+    this.downloaded = {};
+  }
+  if (!this.members) {
+    cb(null);
+  } else {
+    // Add data to all members - which can be done in parallel
+    each(this.members,
+      // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
+      (member, cb1) => member.addCrawlInfo({config}, cb1),
+      cb);
+  }
+};
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
-    // In place add
-    // Note that .itemid &| .metadata may be undefined
-    Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata && this.metadata.mediatype)});
-    parallel([
-        cb4 => {
-            if (!this.files) { cb4(null); } else {
-                each(this.files,
-                    // relatively expensive reads metadata files for each member,
-                    (af, cb3) => af.isDownloaded(cb3),
-                    cb4)
-            }
-        },
-        cb4 => {
-            if (!this.members) { cb4(null); } else {
-                parallel([
-                    cb2 => each(this.members,
-                        (member, cb3) => member.addCrawlInfo({config}, cb3),
-                        cb2),
-                    cb2 => each(this.members,
-                        // relatively expensive reads metadata files for each member,
-                        (member, cb3) => ArchiveItem.isDownloaded(member.identifier, {level: "details"}, (err, res) => {
-                            member.downloaded = res;
-                            cb3(err);
-                        }),
-                        cb2)
-                ], cb4);
-            }
-        }
-    ], (err) => {
-        if (err) { cb(err)
-        } else {
-            this.isDownloaded({level: "details"}, (unusederr, res) => {
-                this.downloaded = res;
-                cb(null, this);
-            })
-        }
-    });
-};
-
-// noinspection JSUnresolvedVariable
-ArchiveItem.prototype.isDownloaded = function({level=undefined}={}, cb) { // TODO use level
-    console.assert(level === "details", "isDownloaded is only defined for level=details but supplied "+level);
-    this.fetch_metadata({skipNet: true}, (err, unusedRes) => {
-        if (err) {
-            cb(null, false);
-        } else {
-            every(
-                this.minimumForUI(), // [ArchiveFile*]
-                (af, cb3) => af.isDownloaded(cb3),
-                (err, res) => cb (null, !!err || res)
-            );
-        }
-    });
-};
-ArchiveItem.isDownloaded = function(identifier, {level="details"}={}, cb) {
-    new ArchiveItem({itemid: identifier}).isDownloaded({level}, cb);
+  // In place add
+  // Note that .itemid &| .metadata may be undefined
+  Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata && this.metadata.mediatype)});
+  if (typeof this.downloaded !== "object") { // Could be undefined, or legacy boolean
+    this.downloaded = {};
+  }
+  parallel([
+    // Process files
+    cb1 => this.addDownloadedInfoFiles(cb1),
+    // Process members (collections only)
+    cb1 => this.addDownloadedInfoMembers(cb1),
+    cb1 => this.addCrawlInfoMembers({config}, cb1),
+   ], cb);
 };
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.exportFiles = function() {  // Note overridden in dweb-mirror.ArchiveItemPatched
-    return this.files.map(f => Object.assign({downloaded: f.downloaded}, f.metadata));
+  // Note we are storing d.downloaded in the metadata because we only have one level deep, this is undone when read back in TODO
+  return this.files.map(f => Object.assign({downloaded: f.downloaded}, f.metadata));
 };
 
 exports = module.exports = ArchiveItem;

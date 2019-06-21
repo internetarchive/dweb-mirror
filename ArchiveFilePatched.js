@@ -11,10 +11,13 @@ const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile
 // Local files
 const MirrorFS = require('./MirrorFS');
 
+// See API.md for documentation
+
 // noinspection JSUnresolvedVariable
 ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, noCache=false, start=0, end=undefined} = {}, cb) { //TODO-API
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
+    skipNet if set will stop it trying the net, and just return info about the current file
      */
     const itemid = this.itemid; // Not available in events otherwise
     const filename = this.metadata.name;
@@ -44,12 +47,13 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
                             debug("Unable to cacheOrStream %s", debugname);
                             cb(err);
                         } else {
+                            if (!wantStream && !(start || end)) { this.downloaded = true; }; // No error, and not streaming so must have downloaded
                             cb(null, wantStream ? streamOrUndefined : this);
                         }
                     });
                 }
             })
-        } else {
+        } else { // The local check succeeded
             this.downloaded = true;
             cb(null, wantStream ? streamOrUndefined : this);
         }
@@ -58,8 +62,14 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
 
 // noinspection JSUnresolvedVariable
 ArchiveFile.prototype.isDownloaded = function(cb) {
-    this.cacheAndOrStream({skipNet: true, wantStream: false}, (err, res) => {
-        this.downloaded = !err; cb(null, !err)});
+    if (this.downloaded === true) { // Already know its downloaded - note not rechecking, so its possible it was deleted.
+        cb(null, this.downloaded);
+    } else {                // Maybe, lets check
+        this.cacheAndOrStream({skipNet: true, wantStream: false}, (err, res) => {
+            // cacheAndOrStream has side effect of setting downloaded
+            cb(null, !err)
+        });
+    }
 };
 
 exports = module.exports = ArchiveFile;
