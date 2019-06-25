@@ -103,7 +103,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
             each(
                 [
                     ["meta", this.metadata],    // Maybe empty if is_dark
-                    ["members", this.members],
+                    ["members", this.membersFav], // Only save Favorited members
                     ["files", this.exportFiles()],
                     ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
                     ["reviews", this.reviews],
@@ -207,7 +207,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
             res.reviews = o; // Undefined if failed but not an error
             cb(null); }),
         cb => _parse("members", (err, o) => {
-            res.members = o; // Undefined if failed but not an error
+            res.membersFav = o; // Undefined if failed but not an error
             cb(null); }),
         cb => _parse("extra", (err, o) => {
             // Unavailable on archive.org but there on dweb.archive.org: collection_titles
@@ -445,6 +445,8 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
     // noinspection JSUnresolvedVariable
     const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
     const relFilePath = namepart && path.join(namepart, namepart + "_members_cached.json");
+    if (!Array.isArray(this.membersFav)) this.membersFav = [];
+    if (!Array.isArray(this.membersSearch)) this.membersSearch = [];
     waterfall([
       (cb2) => { // Read from members_cached.json files from cache if available
         if (!relFilePath) {
@@ -455,10 +457,10 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
               if (!err) {
                 try {
                   const data = canonicaljson.parse(jsonstring);
-                  this.members = data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
+                  this.membersSearch = data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
                 } catch (err) {
                   debug("Cant parse json in %s: %s", relFilePath, err.message);
-                  this.members = []
+                  this.membersSearch = []
                 }
               }
               cb2();
@@ -471,21 +473,35 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...
         // or for identifier=fav-* when members loaded with unexpanded
-        if (!Array.isArray(this.members)) this.members = [];
-        map(this.members,
+
+        map(this.membersSearch,
           (ams,cb3) => {
             if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
               cb3(null, ams)
             } else { ams.read({},(err, o) =>
               cb3(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
           (err, arr) => {
-            this.members=arr; cb2() }); // Expand where possible
+            this.membersSearch=arr; cb2() }); // Expand where possible
+      },
+      (cb2) => { // Favorites Expand the members if necessary and possible locally, errors are ignored
+        // unexpanded members typically come from either:
+        // a direct req from client to server for identifier:...
+        // or for identifier=fav-* when members loaded with unexpanded
+
+        map(this.membersFav,
+          (ams,cb3) => {
+            if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
+              cb3(null, ams)
+            } else { ams.read({},(err, o) =>
+              cb3(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
+          (err, arr) => {
+            this.membersFav=arr; cb2() }); // Expand where possible
       },
       // _fetch_query will optimize, it tries to expand any unexpanded members, and only does the query if needed (because too few pages retrieved)
       // unexpanded members are a valid response - client should do what it can to display them.
       (cb2) => {
         if (skipNet) {
-          cb2(null, this.members.slice((this.page - 1) * this.rows, this.page * this.rows)); // This page of members
+          cb2(null, this.currentPageOfMembers(opts.wantFullResp)); // This page of members
         } else {
           this._fetch_query(opts, cb2) // arr of search result or slice of existing members
         }
@@ -493,15 +509,16 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
       (res, cb2) => {
         // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
         // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
-        if (this.members && this.members.length && relFilePath && !noStore) {
-          MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.members), (err) => cb2(err, res))
+        if (this.membersSearch && this.membersSearch.length && relFilePath && !noStore) {
+          // Just store membersSearch, but pass on full set with possible response
+          MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.membersSearch), (err) => cb2(err, res));
         } else {
           cb2(null, res);
         }
       },
-      (res, cb2) => { // Save members
+      (res, cb2) => { // Save members to their cache
         if (!noStore) {
-          each(this.members.filter(ams => ams.isExpanded()),
+          each(this.membersFav.concat(this.membersSearch).filter(ams => ams.isExpanded()),
             (ams, cb3) => ams.save((unusederr) => cb3(null)), // Ignore errors saving
             (unusedErr, unusedRes) => {}); // Not waiting for this to finish
         }
@@ -715,15 +732,16 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
           _save1file("files", this.exportFiles(), this._namepart(), cb1);
         } }
     ], err => {
-      // Report error but dont block
-      if (err) debug("Failure in addDownloadedInfoFiles for %s %o", this.itemid, err);
+      // Done Report error because it could just be because havent downlodaed files info via metadata API,
+      // if (err) debug("Failure in addDownloadedInfoFiles for %s %O", this.itemid, err);
+      // Also dont block
       cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
     });
 };
 
 ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
   // Add data to all members - which can be done in parallel
-  each(this.members || [],
+  each((this.membersFav || []).concat(this.membersSearch || []),
     // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
     //TODO-DOWNLOAD shortcut, dont attempt to find metadata https://github.com/internetarchive/dweb-mirror/issues/142
     (member, cb1) => { new ArchiveItem({identifier: member.identifier}).addDownloadedInfoFiles((err, ai) => {
@@ -741,7 +759,7 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
 ArchiveItem.prototype.summarizeMembers = function(cb) {
   // Add summary information about members to this.downloaded
   // cb(err);
-  const membersDownloaded = this.members.filter(am => (typeof am.downloaded !== "undefined"));
+  const membersDownloaded = this.membersFav.concat(this.membersSearch || []).filter(am => (typeof am.downloaded !== "undefined"));
   this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + am.downloaded.files_size, 0);
   this.downloaded.members_details_count = membersDownloaded.filter(am => am.downloaded.details).length;
   cb(null);
@@ -762,8 +780,8 @@ ArchiveItem.prototype.addDownloadedInfoMembers = function(cb) {
           }
           cb1(null); // Ignore error from reading
       })}},
-    cb1 => {
-      if (this.members) {
+    cb1 => { // Load any members searched from _members_cached.json (_membersFav will already be loaded)
+      if (this.membersSearch) {
         cb1(null, null);
       } else {
         this.fetch_query({skipNet: true}, cb1); // Page of members returned, can ignore
@@ -780,15 +798,11 @@ ArchiveItem.prototype.addCrawlInfoMembers = function({config}, cb) {
   if ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean or null
     this.downloaded = {};
   }
-  if (!this.members) {
-    cb(null);
-  } else {
-    // Add data to all members - which can be done in parallel
-    each(this.members,
-      // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
-      (member, cb1) => member.addCrawlInfo({config}, cb1),
-      cb);
-  }
+  // Add data to all members - which can be done in parallel
+  each((this.membersFav || []).concat(this.membersSearch || [] ),
+    // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
+    (member, cb1) => member.addCrawlInfo({config}, cb1),
+    cb);
 };
 
 // noinspection JSUnresolvedVariable

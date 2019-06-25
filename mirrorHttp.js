@@ -221,22 +221,24 @@ function mirrorHttp(config, cb) {
             //e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
             const identifier = req.query.q.split(' OR ')[0].split(':')[1];
             o = new ArchiveItem({sort: req.query.sort, identifier}); // Dont set query, allow _fetch_query to build default
+        // Another special case - a query just looking to expand identifiers
         } else if (req.query.q && req.query.q.startsWith("identifier:")
             && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
             && (req.query.q.lastIndexOf(':(') === 10)) {
             // Special case: query just looking for fields on a list of identifiers
             const ids = req.query.q.slice(12,-1).split(' OR '); // ["foo","bar"]
             o = new ArchiveItem();
-            o.members = ids.map(identifier => ArchiveMember.fromIdentifier(identifier));
+            o.membersFav = ids.map(identifier => ArchiveMember.fromIdentifier(identifier));
             // The members will be expanded by fetch_query either from local cache or by querying upstream
         } else {
             o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
         }
-        // By this point via any route above, we have o as an object with either a .query or .members as array of unexpanded members (which fetch_query|_fetch_query will get)
-        o.rows = parseInt(req.query.rows, 10);
-        o.page = parseInt(req.query.page, 10); // Page incrementing is done by anything iterating over pages, not at this point
+        // By this point via any route above, we have o as an object with either a .query or .membersFav || .membersSeawrch
+        // as array of unexpanded members (which fetch_query|_fetch_query will get)
+        o.rows = parseInt(req.query.rows, 10) || 75;
+        o.page = parseInt(req.query.page, 10) || 1; // Page incrementing is done by anything iterating over pages, not at this point
         o.and = req.query.and; // I dont believe this is used anywhere
-        o.fetch_metadata(req.opts, (err, unused) => {
+        o.fetch_metadata(req.opts, (err, unused) => { // Not passing noCache as query usually after a fetch_metadata
             if (err) {
                 debug('streamQuery could not fetch metadata for %s', o.itemid);
                 next(err);
