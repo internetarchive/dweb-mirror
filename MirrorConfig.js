@@ -73,7 +73,6 @@ class MirrorConfig extends ConfigController {
     findTask(identifier) {
         return this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
     }
-    // TODO-UXLOCAL merge with similar code in dweb-archive/ConfigDetailsComponent/stateFromInfo
     crawlInfo(identifier, mediatype=undefined) {
         /*
            Check if member being crawled and return info suitable for adding into ArchiveMember and usable by the UI

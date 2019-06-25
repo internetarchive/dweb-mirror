@@ -697,7 +697,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
         // Add info on each file
         each(this.files, // Could be empty
           // relatively inexpensive, as caches result on files.json at final step, only needs to look at disk if uncached
-          (af, cb2) => af.isDownloaded(cb2),
+          (af, cb2) => af.isDownloaded(cb2), // Should never throw error
           cb1)},
       cb1 => { // Add statistical data to item, (note this.files could be empty)
         const filesDownloaded = this.files.filter(af => af.downloaded);

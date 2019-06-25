@@ -2,7 +2,7 @@
 process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
 //process.env.DEBUG=process.env.DEBUG + " bittorrent-tracker:*";  // Add Webtorrent debugging
 
-// TODO-MIRROR check using GUN for metadata
+// TODO-GUN check using GUN for metadata
 
 const debug = require('debug')("dweb-mirror:internetarchive");
 const getopts = require('getopts');
@@ -45,7 +45,6 @@ const opts = getopts(process.argv.slice(2),{
 });
 const httpOrHttps = "http"; // This server is running on http, not https (at least currently)
 
-//TODO allow specifying "crawl item/filename" to get just one file see https://github.com/internetarchive/dweb-mirror/issues/108
 //TODO make --maintenance also delete locks on any hashstores via new hashstores.maintenance call
 
 const help = `

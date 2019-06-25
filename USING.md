@@ -48,16 +48,17 @@ Notice that most of the tiles should have a White, Green or Blue dot in the top 
 * A Blue dot indicates we are crawling all the content of the item, this could be a lot of data, 
 for example a full resolution version of the video. Its rare that you’ll use this. 
 
-* [issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) add size (MB) indicator 
+* [issue#168](https://github.com/internetarchive/dweb-mirror/issues/168) for size indicator, then document here.
 
 Tiles come in two types, most shows items that can be displayed - books, videos, audio etc, 
 clicking on these will display the item. 
 
 Some of the tiles will show a collection which is a group of items that someone has collected together, 
 most likely there will be at least one collection relevant to your project put on the page during installation.  
-It should show you how many items are in the collection and how many have been downloaded 
-(e.g. 10/123 means 10 of the 123 items in the collection are downloaded for offline use).
-[See issue#158](https://github.com/internetarchive/dweb-mirror/issues/158)
+
+It shows you how many items are in the collection and how many have been downloaded 
+e.g. 400Mb in 10 of 123 items, means 10 of the 123 items in the collection are downloaded sufficient to view offline,
+and a total of 400Mb is downloaded in this collection. (Which includes some files, like thumbnails, in other items).
 
 ## Details page - viewing a single item
 
@@ -68,14 +69,15 @@ the behavior depends on the kind of item.
 * Video and Audio will play immediately and you can skip around in them as normal
 
 The crawl button at the top will indicate whether the object is being crawled and if not, whether it has been downloaded, 
-in the same way tiles do.
+in the same way tiles do, and also show you the total downloaded for this item. 
 
 [issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) display size of download
 
 Click on the Crawl button till it turns Green and it will download a full copy of the book, video or audio next time it crawls,  
 This crawling should be immediate and in already initialized crawl. [See issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
 These items will also appear on your Local page.  
-See the note above, usually you won’t want to leave it at blue.
+See the note above, usually you won’t want to leave it at yellow (all) as this will usually try
+(there are some size limits) to download all the files.
 
 [issue#129](https://github.com/internetarchive/dweb-mirror/issues/129). Show date crawled and add a refresh button 
 

@@ -195,8 +195,8 @@ which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere t
 opts { skipCache, ...}  skipCache means don't check the cache, behaves like the unpatched ArchiveItem.fetch_query
 ```
 Strategy is:
-* Read <IDENTIFIER>_members_cached.json if it exists into .members
-* Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
+* Read <IDENTIFIER>_members_cached.json if it exists into .membersSearch
+* Expand each of `.membersFav` && `.membersSearch` from its `<IDENTIFIER>_member.json` if necessary and file exists.
 * Run _fetch_query which will also handled fav-*'s `members.json` files, and `query` metadata field.
 * Write the result back to `<IDENTIFIER>_members_cached.json`
 * Write each member to its own `<IDENTIFIER>_member.json`
