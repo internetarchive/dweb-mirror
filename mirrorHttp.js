@@ -309,11 +309,13 @@ function mirrorHttp(config, cb) {
         }
     }
 
-    function sendInfo(req, res) {
-        // TODO this may change to include info on transports (IPFS, WebTransport etc)
-        // TODO-CONFIG needs hash for writing
-        res.status(200).set('Accept-Ranges', 'bytes').json({"config": config.configOpts});
-    }
+  function sendInfo(req, res) {
+    // TODO this may change to include info on transports (IPFS, WebTransport etc)
+    // TODO-CONFIG needs hash for writing
+    DwebTransports.p_statuses((err, transportStatuses) => {
+      res.status(200).set('Accept-Ranges', 'bytes').json({"config": config.configOpts, transportStatuses});
+    });
+  }
 
 
     function sendBookReaderJSIA(req, res, next) {
