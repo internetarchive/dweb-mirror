@@ -15,7 +15,6 @@ DONE file, need pass on
 See URL_MAPPING.md for summary of below rules plus what they call.
 
 TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
-TODO-OFFLINE - if it detects info fails, then goes offline, doesnt come back if auto-reconnects
  */
 // External packages
 //Not debugging: express:*
@@ -310,8 +309,6 @@ function mirrorHttp(config, cb) {
     }
 
   function sendInfo(req, res) {
-    // TODO this may change to include info on transports (IPFS, WebTransport etc)
-    // TODO-CONFIG needs hash for writing
     DwebTransports.p_statuses((err, transportStatuses) => {
       res.status(200).set('Accept-Ranges', 'bytes').json({"config": config.configOpts, transportStatuses});
     });
@@ -389,27 +386,22 @@ function mirrorHttp(config, cb) {
         });
     });
     //TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
-    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
     app.get('/admin/crawl/restart/:crawlid', (req, res) => {crawlid =
       CrawlManager.crawls[req.params["crawlid"]].restart();
       res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
     app.get('/admin/crawl/pause/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
       CrawlManager.crawls[req.params["crawlid"]].pause();
         res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
     app.get('/admin/crawl/resume/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
       CrawlManager.crawls[req.params["crawlid"]].resume();
         res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
     app.get('/admin/crawl/empty/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
       CrawlManager.crawls[req.params["crawlid"]].empty();
         res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    // TODO-UXLOCAL    [ ] TEST urls like admin/crawl/status etc THEN provide UI to get and display
     app.get('/admin/crawl/status', (req, res) => { //TODO-CRAWLCTL needs to be non-static
         res.json(CrawlManager.status());
     });
