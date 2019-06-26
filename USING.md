@@ -39,6 +39,32 @@ You can get back here at any time, via the `Local` button.
 If you have used the Internet Archive then the interface will be familiar, 
 but there are a few differences to support offline use. 
 
+At the top you'll see the Internet Archive's usual interface, a few of these buttons will (for now) only work 
+while online. 
+
+TODO grey out buttons that dont work offline
+
+Below that is a row of information specific to the offline application.
+    
+First are health indicators. 
+* If it shows "Mirror" in Red, it means we can't communicate with the mirror gateway, 
+this will only happen if the gateway goes offline part way through a process.
+* Normally you'll see an indicator for HTTP, which is Green when the gateway can talk to the Archive, and Red when you are offline.
+* Next to that might be indicators for WebTorrent or IPFS if they have been enabled. 
+
+TODO check what happens when click on them...
+
+* Then comes an indicator for this page, whether it is being crawled, and if so how much has been stored. 
+
+TODO size indicator broken on first page. 
+
+* Next comes a "Reload" button, you can click this to force it to check with the archive for an up to date list. 
+Of course it only works when "HTTP" is shown Green. 
+TODO grey out button when HTTP=red
+It is most useful on collections when someone else has added something, but your gateway might be remembering an old version.
+* Then there is a Settings button which brings up a page that includes status of any crawls.
+* Finally there is a Home button which will bring you back to this page. 
+
 Each tile on this page represents an item that your server will check for when it “crawls”.  
 The first time you access the server this will depend on what was installed on the server, and it might be empty. 
 
