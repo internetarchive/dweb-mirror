@@ -41,7 +41,7 @@ function installLatestBinary { #  arg is ipfs-update or go-ipfs
     TARGZ="${PACKAGE}_${LATEST_VERSION}_${GOOS}-${GOARCH}.tar.gz"
     URL=https://dist.ipfs.io/${PACKAGE}/${LATEST_VERSION}/${TARGZ}
         pushd /tmp \
-        && curl -o${TARGZ} ${URL} \
+        && curl -Lv -o${TARGZ} ${URL} \
         && tar xvf ${TARGZ} \
         && cd ${PACKAGE} \
         && ./install.sh \
@@ -64,16 +64,17 @@ else
 
     # Convert the portable uname results into go specific environment
     case `uname -m` in
-    "armv71") GOARCH="arm";;    # e.g. Raspberry 3. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
+    "armv7l") GOARCH="arm";;    # e.g. Raspberry 3. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
     "x86_64") GOARCH="amd64";;         # e.g. a Mac OSX
     i?86) GOARCH="386";;               # e.g. a Rachel3+
-    *) echo "Unknown processor type - please check install_ipfs.sh but will try source"; STRATEGY="source";;
+    *) echo "Unknown processor type `uname -m`- please check install_ipfs.sh but will try source"; STRATEGY="source";;
     esac
     case `uname -s` in
     "Darwin") GOOS="darwin";;   # e.g. a Mac OSX
     "Linux") GOOS="linux";;     # e.g. Raspberry 3 or Rachel3+
     *) echo "Unknown Operating system type - please check install_ipfs.sh but will try source"; STRATEGY="source";;
     esac
+
 
     [ -z "${STRATEGY}" ] && STRATEGY="update"
     case "${STRATEGY}" in
