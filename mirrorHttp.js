@@ -248,8 +248,11 @@ function mirrorHttp(config, cb) {
                         res.status(404).send(err.message);
                         next(err);
                     } else {
+                        // Note we are adding crawlinfo to o - the ArchiveItem, but the resp.response.docs
+                        // is an array of pointers into same objects so its getting updated as well
                         o.addCrawlInfo({config}, (unusederr, unusedmembers) => {
-                            res.json(resp);
+                          resp.response.downloaded = o.downloaded;
+                          res.json(resp);
                         });
                     }
                 });
@@ -366,7 +369,6 @@ function mirrorHttp(config, cb) {
 
     // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
     app.post('/admin/setconfig', function (req, res, next) {
-        debug("Testing setconfig %O", req.body);
         config.setAndWriteUser(req.body, err => {
             if (err) {
                 next(err);

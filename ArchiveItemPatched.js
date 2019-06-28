@@ -105,7 +105,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
                     ["meta", this.metadata],    // Maybe empty if is_dark
                     ["members", this.membersFav], // Only save Favorited members
                     ["files", this.exportFiles()],
-                    ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))],
+                    ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
                     ["reviews", this.reviews],
                     ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
                 ],
@@ -172,6 +172,7 @@ function _parse_common(namepart, part, cb) {
         }
     })
 }
+
 // noinspection JSUnresolvedVariable
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
 ArchiveItem.prototype.read = function(opts = {}, cb) {
@@ -212,7 +213,11 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
         cb => _parse("extra", (err, o) => {
             // Unavailable on archive.org but there on dweb.archive.org: collection_titles
             // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
-            ArchiveItem.extraFields.forEach(k => res[k] = o && o[k]);
+            if (o) {
+              ArchiveItem.extraFields.forEach(k => {
+                if (o[k]) res[k] = o[k];
+              });
+            }
             cb(null); }),
     ], (err, unused) => cb(err, res));
 };
@@ -469,7 +474,15 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
             cb2();
           }
         } },
-      (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
+        (cb2) => {
+          // Try and read extras file which for search will contain numFound (it wont have been read by fetch_metadata because no identifier)
+          _parse_common(namepart, "extra", (err, o) => {
+            if (!err) {
+              ArchiveItem.extraFields.forEach(k => { if (o[k]) this[k] = o[k]; } );
+            }
+            cb2();
+          })},
+        (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...
         // or for identifier=fav-* when members loaded with unexpanded
@@ -511,7 +524,14 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
         // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
         if (this.membersSearch && this.membersSearch.length && relFilePath && !noStore) {
           // Just store membersSearch, but pass on full set with possible response
-          MirrorFS.writeFile(relFilePath, canonicaljson.stringify(this.membersSearch), (err) => cb2(err, res));
+          each( [
+              ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
+              ["members_cached", this.membersSearch]
+            ],
+            (i, cbInner) => { // [ part, obj ]
+              _save1file(i[0], i[1], namepart, cbInner);
+            },
+            (err)=>{if (err) { cb2(err) } else { cb2(null, res);}});
         } else {
           cb2(null, res);
         }
@@ -767,18 +787,21 @@ ArchiveItem.prototype.summarizeMembers = function(cb) {
 
 ArchiveItem.prototype.addDownloadedInfoMembers = function(cb) {
   // Fetch members from cache (but not net), add .downloaded field on all members, and summary on Item
-  if (typeof this.downloaded !== "object") { // Could be undefined, or legacy boolean
+  if ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean
     this.downloaded = {};
   }
   waterfall([
     cb1 => {
-      if (!this.itemid) { cb1(null); } else {
-      ArchiveMember.fromIdentifier(this.itemid)
-        .read({}, (err, o) => {
-          if (!err) {
-            this.downloaded.members_all_count = o.item_count; // Unfortunately missing from item extras
-          }
-          cb1(null); // Ignore error from reading
+      if (!this.itemid) {
+        if (!this.downloaded.members_all_count) this.downloaded.members_all_count = this.numFound; // As in result of a search
+        cb1(null);
+      } else {
+        ArchiveMember.fromIdentifier(this.itemid)
+          .read({}, (err, o) => {
+            if (!err) {
+              this.downloaded.members_all_count = o.item_count; // Unfortunately missing from item extras
+            }
+            cb1(null); // Ignore error from reading
       })}},
     cb1 => { // Load any members searched from _members_cached.json (_membersFav will already be loaded)
       if (this.membersSearch) {
@@ -810,7 +833,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
   // In place add
   // Note that .itemid &| .metadata may be undefined
   Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata && this.metadata.mediatype)});
-  if (typeof this.downloaded !== "object") { // Could be undefined, or legacy boolean
+  if  ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean
     this.downloaded = {};
   }
   parallel([
