@@ -130,8 +130,10 @@ class ConfigController {
         ConfigController.writeYaml(ConfigController.resolve(filename), this.userConfig(), cb);
     }
     setAndWriteUserFile(filename, obj, cb) {
+        // obj to replace userconfig
+        // filename to store yaml ( ~ ./* ../* etc accepted)
         this.userconfig = obj;
-        this.setOpts(obj);                               // Merge into this.
+        this.setOpts(obj);                               // Merge into combined options
         // By now sendInfo will send correct result back
         // And write to user's file
         ConfigController.writeYaml(ConfigController.resolve(filename), obj, cb);

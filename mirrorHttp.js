@@ -378,12 +378,16 @@ function mirrorHttp(config, cb) {
         });
     });
     app.get('/admin/setconfig/:identifier/:level', function (req, res, next) {
-        debug("Testing setconfig %s level=%s", req.params["identifier"], req.params["level"]);
-        config.writeUserTaskLevel( req.params["identifier"],  req.params["level"], err => {
+        const identifier = req.params["identifier"];
+        const delayTillReconsider = 3000; // ms time to wait for another key press before running crawl
+        const crawlid = 0; // Just care about 1 crawl for now TODO reconsider if add more crawls
+        config.writeUserTaskLevel( identifier,  req.params["level"], err => {
             if (err) {
                 next(err);
             } else {
                 sendInfo(req, res);  // Send info again, as UI will need to display this
+                if ( CrawlManager.crawls.length)
+                  CrawlManager.crawls[crawlid].suspendAndReconsider({identifier, delayTillReconsider, config});
             }
         });
     });

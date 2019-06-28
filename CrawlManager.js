@@ -135,8 +135,11 @@ class CrawlManager {
     resume() { // UI [>]
         this._taskQ.resume();
     }
-    empty() { // UI [X]
-        this._taskQ.remove(unusedTask=>true); // Passed {data, priority} but removing all anyway
+    empty({identifier=undefined}={}) { // UI [X]
+        this._taskQ.remove(task => (
+          identifier
+            ? (identifier === task.identifier)
+            : true)); // Passed {data, priority} but removing all anyway
     }
 
     status() {
@@ -159,6 +162,16 @@ class CrawlManager {
     }
     static status() {
         return this.crawls.map(crawl => crawl.status());
+    }
+    suspendAndReconsider({identifier=undefined, delayTillReconsider=0, config=undefined}={}) {
+        // Handle a status change, by removing any queued tasks, debouncing (waiting in case user clicks again) and then running whatever final task chosen
+        this.empty({identifier}); //remove identifier from queue
+        setTimeout(()=> {
+            // reload initialItemTaskList from config after the timeout, during which it might have changed
+            this.setopts({initialItemTaskList: config.apps.crawl.tasks});
+            this.pushTask(  // Start a task for ...
+              this.initialItemTaskList.filter(t => t.identifier === identifier) ); // Any tasks that match identifier - maybe none or multiple but usually one
+        }, delayTillReconsider);
     }
 }
 //  *** NOTE THIS _levels LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js && assumptions about it in dweb-archive/dweb-archive-styles.css

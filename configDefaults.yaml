@@ -63,6 +63,7 @@ apps:
         sort: '-downloads'
         rows: 6
         level: tile
+      startOnChange: true
     # copyDirectory: /Volumes/Transcend/test2 # Testing only
 #============== Dont edit anything from here on down ============================
 # Information about specific URLs for services at archive.org, - should not need changing
