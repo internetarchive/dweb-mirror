@@ -476,12 +476,16 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
         } },
         (cb2) => {
           // Try and read extras file which for search will contain numFound (it wont have been read by fetch_metadata because no identifier)
-          _parse_common(namepart, "extra", (err, o) => {
-            if (!err) {
-              ArchiveItem.extraFields.forEach(k => { if (o[k]) this[k] = o[k]; } );
-            }
+          if (!namepart) { // Some queries e.g. for identifier dont have namepart  or cache
             cb2();
-          })},
+          } else {
+            _parse_common(namepart, "extra", (err, o) => {
+              if (!err) {
+                ArchiveItem.extraFields.forEach(k => { if (o[k]) this[k] = o[k]; } );
+              }
+              cb2();
+          })}
+        },
         (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...

@@ -36,7 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
-* 0.2.32: Split members>membersFav,membersSearch; /info now has Transport info; install_ipfs fixed; downloaded on searches; adding to live crawls; 
+* 0.2.33: Split members>membersFav,membersSearch; /info now has Transport info; install_ipfs fixed; downloaded on searches; adding to live crawls;	ef8d8f0	Mitra Ardron <mitra@mitra.biz>	28Jun2019 at 6:54 PM
 * 0.2.31: Support for expanded downloaded indicator (counts and sizes), crawling single files
 * 0.2.30: Support for /download/
 * 0.2.29: Improvements to MirrorFS/maintenance (to properly handle subdirectories) and HashStore/_db (to fix locks)
