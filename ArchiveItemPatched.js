@@ -105,7 +105,9 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
                     ["meta", this.metadata],    // Maybe empty if is_dark
                     ["members", this.membersFav], // Only save Favorited members
                     ["files", this.exportFiles()],
-                    ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
+                    ["extra", ObjectFromEntries(
+                      ArchiveItem.extraFields.map(k => [k, this[k]])
+                        .filter(kv=>!!kv[1]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
                     ["reviews", this.reviews],
                     ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
                 ],
@@ -214,11 +216,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
             // Unavailable on archive.org but there on dweb.archive.org: collection_titles
             // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
             // Its absence should be considered an error as "servers" etc are required for bookreader.
-            if (o) {
-              ArchiveItem.extraFields.forEach(k => {
-                if (o[k]) res[k] = o[k];
-              });
-            }
+            Object.assign(res, o); // Note this could have the bad download=null, but will be filtered through loadFromMetadataAPI
             cb(err); }),
     ], (err, unused) => cb(err, res));
 };
@@ -496,7 +494,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
           } else {
             _parse_common(namepart, "extra", (err, o) => {
               if (!err) {
-                ArchiveItem.extraFields.forEach(k => { if (o[k]) this[k] = o[k]; } );
+                this._mergeExtra(o);
               }
               cb2();
           })}
@@ -544,7 +542,9 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCac
         if (this.membersSearch && this.membersSearch.length && relFilePath && !noStore) {
           // Just store membersSearch, but pass on full set with possible response
           each( [
-              ["extra", ObjectFromEntries( ArchiveItem.extraFields.map(k => [k, this[k]]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
+              ["extra", ObjectFromEntries(
+                ArchiveItem.extraFields.map(k => [k, this[k]])
+                  .filter(kv=>!!kv[1]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
               ["members_cached", this.membersSearch]
             ],
             (i, cbInner) => { // [ part, obj ]
@@ -732,7 +732,11 @@ ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
           // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
           debug("addCrawlInfoRelated -> addDownloadedInfoMembers failed for %s in %s: %o", this.itemid, hit._id, err);
         } else {
-          hit._source.downloaded = ai.downloaded;
+          if (!hit._source.downloaded) {
+            hit._source.downloaded = ai.downloaded;
+          } else {
+            Object.assign(hit._source.downloaded, ai.downloaded);
+          }
         }
         cb1(null); // Dont pass on error
       })}, cb2),
