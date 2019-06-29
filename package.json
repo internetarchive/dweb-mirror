@@ -26,6 +26,7 @@
     "morgan": "^1.9.1",
     "multihashes": "^0.4.14",
     "parallel-streams": "^0.0.14",
+    "prettier-bytes": "^1.0.4",
     "readable-stream": "^3.1.1",
     "sha": "^2.0.1"
   },
@@ -46,5 +47,5 @@
     "install": "./install.sh",
     "update": "./install.sh"
   },
-  "version": "0.2.33"
+  "version": "0.2.34"
 }
