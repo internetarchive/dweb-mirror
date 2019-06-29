@@ -261,6 +261,57 @@ class CrawlFile extends Crawlable {
     }
 }
 
+class CrawlPage extends Crawlable {
+    constructor(opts, parent) {
+        /*
+            requires: parent + archiveitem + identifier + (page || scale+rotate+zip+file)
+            identifier  Identifier of item
+            archiveitem ArchiveItem
+            page    string - usually "cover_t.jp2"
+            scale   int usually 2 (larger = smaller image)
+            rotate  int usually 0
+            zip     name of directory
+            file    file inside zip
+            parent  [str*] see Crawlable
+         */
+        // noinspection JSUnusedLocalSymbols
+        const {file=undefined, relfilepath=undefined, identifier=undefined, zip=undefined, page=undefined, reqUrl=undefined, archiveitem=undefined} = opts;
+        const name = (page ? [identifier, page]  : [ identifier + zip, file]).join('/');
+        super(name, parent);
+        Object.assign(this, opts);  // Handle opts in process as may be async
+    }
+    process(crawlmanager, cb) { //TODO-API
+        console.assert(this.archiveitem);
+        if (this.isUniq(crawlmanager)) {
+            // if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
+            debug('Processing "%s" %s %s scale=%s rotate=%s via %o', this.identifier, this.page, this.zip, this.file, this.size, this.rotate, this.parent); // Parent includes identifier
+            const skipFetchFile = crawlmanager.skipFetchFile;
+            this.archiveitem.fetch_page({
+                wantStream: false, //TODO implement
+                noCache: false,
+                reqUrl: this.reqUrl,
+                zip: this.zip,
+                file: this.file,
+                scale: this.scale,
+                rotate: this.rotate,
+                page: this.page,
+                skipFetchFile, //TODO implement
+            }, cb);
+        } else {
+            cb();
+        }
+    }
+    isUniq(crawlmanager) {
+        const key = [this.identifier,this.page || this.zip, this.file].join('/');
+        const prevTasks = crawlmanager._uniqFiles[key];
+        if (prevTasks) { return false; }
+        else {
+            crawlmanager._uniqFiles[key] = this;
+            return true;
+        }
+    }
+}
+
 class CrawlItem extends Crawlable {
     constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined, crawlmanager}={}, parent) { //TODO-API crawlmanager
         if ("identifier" === "/") {
@@ -349,11 +400,18 @@ class CrawlItem extends Crawlable {
             const skipFetchFile = crawlmanager.skipFetchFile;
             const skipCache = crawlmanager.skipCache;
             waterfall([
-                (cb2) => {
+                (cb2) => { // Get metadata
                     if (["metadata", "details", "all"].includes(this.level) || (this.level === "tile" && !(this.member && this.member.thumbnaillinks) )) {
                         this.item.fetch_metadata(cb2);
                     } else {
                         cb2(null, this.item);
+                    }
+                },
+                (ai, cb2a) => {
+                    if (ai && ai.metadata && (ai.metadata.mediatype === "texts")) {
+                        ai.fetch_bookreader(cb2a);
+                    } else {
+                        cb2a(null, this.item)
                     }
                 },
                 (ai, cb3) => { // Save tile if level is set.
@@ -368,6 +426,7 @@ class CrawlItem extends Crawlable {
                     }
                 },
                 (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
+                    // Find the minimum set of files and push to queue
                     const asParent = this.asParent();
                     if (this.level === "details") { // Details
                         this.item.minimumForUI().forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
@@ -376,8 +435,38 @@ class CrawlItem extends Crawlable {
                     }
                     cb4(null);
                 },
-                //(cb) => { debug("XXX Finished fetching files for item %s", this.identifier); cb(); },
+                (cb4a) => {
+                    if (this.item && this.item.metadata && this.item.metadata.mediatype === "texts") {
+                        const asParent = this.asParent();
+                        if (['details', 'all'].includes(this.level)) { // Details
+                            crawlmanager._push(new CrawlPage({
+                                identifier: this.item.itemid,
+                                archiveitem: this.item,
+                                page: "cover_t.jpg",
+                                reqUrl: `/arc/archive.org/download/${this.identifier}/page/cover_t.jpg`,
+                                }, asParent)); //TODO <<CHECK URL
+                            this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(d => {
+                                // See ALMOST-SAME-CODE-BOOKMETA
+                                const url = new URL(d.uri);
+                                url.searchParams.append("scale",2);
+                                url.searchParams.append("rotate",0);
+                                crawlmanager._push(new CrawlPage({
+                                    identifier: this.item.itemid,
+                                    archiveitem: this.item,
+                                    file: url.searchParams.get("file"),
+                                    reqUrl: url.pathname + url.search,
+                                    zip: url.searchParams.get("zip"),
+                                    scale: 2,
+                                    rotate: 0,
+                                }, asParent));
+                            }));
+                        }
+                    } else {
+                        cb4a();
+                    }
+                },
                 (cb5) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
+                    // Get the related items
                     if (["details", "all"].includes(this.level) || this.related) {
                         const taskparms = this.related || crawlmanager.defaultDetailsRelated;
                         this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => {
@@ -396,8 +485,8 @@ class CrawlItem extends Crawlable {
                         cb5(null);
                     }
                 },
-                //(cb) => { debug("XXX Finished related items for item %s", this.identifier); cb(); },
                 (cb6) => {
+                    // If its a search or collection then do the query, and push members onto queue
                     if (this.search && (this.query || (this.item && this.item.metadata && (this.item.metadata.mediatype === "collection")))) {
                         const ai = this.item;
                         if (typeof ai.page === "undefined") ai.page = 0;

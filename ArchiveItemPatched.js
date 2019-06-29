@@ -213,12 +213,13 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
         cb => _parse("extra", (err, o) => {
             // Unavailable on archive.org but there on dweb.archive.org: collection_titles
             // Not relevant on dweb.archive.org, d1, d2, item_size, uniq, workable_servers
+            // Its absence should be considered an error as "servers" etc are required for bookreader.
             if (o) {
               ArchiveItem.extraFields.forEach(k => {
                 if (o[k]) res[k] = o[k];
               });
             }
-            cb(null); }),
+            cb(err); }),
     ], (err, unused) => cb(err, res));
 };
 
@@ -310,14 +311,28 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_page = function({wantStream=false, noCache=false, reqUrl=undefined, zip=undefined, file=undefined, scale=undefined, rotate=undefined, page=undefined}={}, cb) { //TODO-API noCache
+ArchiveItem.prototype.fetch_page = function({wantStream=false, wantSize=false, noCache=false, reqUrl=undefined,
+                                              zip=undefined, file=undefined, scale=undefined, rotate=undefined,
+                                              page=undefined, skipNet=false}={}, cb) { //TODO-API noCache
     /* Fetch a page from the item, caching it
-        cb(err, data || stream) returns either data, or if wantStream then a stream
+
+        page      usually "cover_t.jpg" to get the page
+        scale     factor to shrink raw image by (2 is about right for a full screen)
+        rotate    0 for normal, unsure what other values are
+        zip       Name of file holding the image
+        file      file within zip
+        noCache   Dont look in cache
+        wantStream  Want results streamed (typically false if crawling)
+        wantSize  Just want the size in bytes (downloaded)
+        skipNet   Dont check on the net
+        reqUrl    string as in brOptions.data ... uri from /BookReader.. (path and query, but not scale/rotate)
+        cb(err, data || stream || size) returns either data, or if wantStream then a stream
      */
     let zipfile;
     if (zip) zipfile = zip.split('/')[4];
     waterfall([
-        (cbw) => this.fetch_metadata(cbw),
+        (cbw) =>
+          this.fetch_metadata(cbw),
         (ai, cbw) => {
             // request URLs dont have server, and need to add data node anyway - note passes scale & rotate
             const urls = page
@@ -326,14 +341,14 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, noCache=false, re
             const debugname = `${this.itemid}_${file}`;
             const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
             if (page) { // This is the cover , its not scaled or rotated
-                MirrorFS.cacheAndOrStream({ urls, wantStream, debugname, noCache, relFilePath}, cbw);
+                MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet}, cbw);
             } else { // Looking for page by number with scale and rotation
-                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, // Find which valid scale/rotate we have,
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, skipNet, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
                     (err, relFilePath2) => { // undefined if not found
                         // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
                         //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
-                        MirrorFS.cacheAndOrStream({urls, wantStream, debugname, noCache, relFilePath: relFilePath2 || relFilePath }, cbw);
+                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, relFilePath: relFilePath2 || relFilePath }, cbw);
                     }
                 )
             } }
@@ -746,7 +761,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
         this.downloaded.files_all_count = this.files.length;
         this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size)||0), 0);
         this.downloaded.files_count = filesDownloaded.length;
-        this.downloaded.details = this.minimumForUI().every(af => af.downloaded);
+        this.downloaded.files_details = this.minimumForUI().every(af => af.downloaded);
         cb1(null);
       },
       cb1 => { // Save file as have changed files info
@@ -762,6 +777,70 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
       cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
     });
 };
+
+ArchiveItem.prototype.addDownloadedInfoPages = function(cb) {
+  // For texts, Add .downloaded info on all pages, and summary on Item
+  // Note ArchiveItem might not yet have bookreader field loaded when this is called.
+  this.fetch_metadata({skipNet: true}, (err, ai) => {
+    if (err || !ai || ai.metadata.mediatype !== "texts") {
+      cb(null, undefined); // Not a book - dont consider when checking if downloaded
+    } else {
+      this.fetch_bookreader({skipNet: true}, (err, ai) => {
+        if (err || !ai.bookreader) {
+          cb(null, false); // No book info, presume not downloaded
+        } else {
+          if ((typeof this.downloaded !== "object") || (this.downloaded === null)) this.downloaded = {}; // Could be undefined (legacy boolean or null as called for each member
+          waterfall([
+            cb0 => parallel([
+              cb1 => this.fetch_page({
+                wantSize: true,
+                reqUrl: `/arc/archive.org/download/${this.itemid}/cover_t.jpg`,
+                page: 'cover_t.jpg',
+                skipNet: true
+              }, cb1),  // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
+              cb1 => each(
+                [].concat(...this.bookreader.brOptions.data),
+                (d, cb2) => {
+                  if (d.downloaded) {
+                    cb2();
+                  } else {
+                    // See ALMOST-SAME-CODE-BOOKMETA
+                    const url = new URL(d.uri);
+                    url.searchParams.append("scale", 2);
+                    url.searchParams.append("rotate", 0);
+                    this.fetch_page({
+                      wantSize: true,
+                      zip: url.searchParams.get("zip"),
+                      file: url.searchParams.get("file"),
+                      scale: 2,
+                      rotate: 0,
+                      reqUrl: url.pathname + url.search,
+                      skipNet: true
+                    }, (err, size) => {
+                      if (err) {
+                        d.downloaded = false;
+                      } else {
+                        d.downloaded = true;
+                        d.size = size;
+                      }
+                      cb2();
+                    });
+                  }}, cb1),
+            ], (err, res) => cb0(null)),
+            cb0 => {
+              // Note .flat isnt valid till node 11.x
+              const downloadedPages = [].concat(...this.bookreader.brOptions.data).filter(pg => pg.downloaded);
+              this.downloaded.pages_size = downloadedPages.reduce((sum, pg) => sum + pg.size, 0);
+              this.downloaded.pages_count = downloadedPages.length;
+              this.downloaded.pages_details = downloadedPages.length === [].concat(...this.bookreader.brOptions.data).length;
+              _save1file("bookreader", this.bookreader, this._namepart(), cb0);
+            },
+          ], cb);
+        }
+      });
+    }
+  });
+}
 
 ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
   // Add data to all members - which can be done in parallel
@@ -840,13 +919,24 @@ ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
   if  ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean
     this.downloaded = {};
   }
-  parallel([
-    // Process files
-    cb1 => this.addDownloadedInfoFiles(cb1),
-    // Process members (collections only)
-    cb1 => this.addDownloadedInfoMembers(cb1),
-    cb1 => this.addCrawlInfoMembers({config}, cb1),
-   ], cb);
+  waterfall([
+    cb1 => this.fetch_metadata({skipNet: true}, cb1), // Fetch metadata first as wanted by multiple of these
+    (unusedAI, cb1) => parallel([ //TODO-bOOK put back to parallel
+      // Process files
+      cb2 => this.addDownloadedInfoFiles(cb2),
+      // Process pages (for texts only)
+      cb2 => this.addDownloadedInfoPages(cb2),
+      // Process members (collections only)
+      cb2 => this.addDownloadedInfoMembers(cb2),
+      cb2 => this.addCrawlInfoMembers({config}, cb2),
+     ], err => //TODO-BOOK re-collapse
+      cb1(err))
+    ], err => {
+      this.downloaded.details = this.metadata.mediatype !== "texts"
+        ? (this.downloaded.files_details && this.downloaded.pages_details)
+        : this.downloaded.files_details
+      cb(err);
+  });
 };
 
 // noinspection JSUnresolvedVariable

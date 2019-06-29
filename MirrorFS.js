@@ -185,7 +185,7 @@ class MirrorFS {
                 if (err) {
                     if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
                         // noinspection JSUnusedLocalSymbols
-                        fs.stat(directory, (err, stats) => {
+                        fs.stat(directory, (err, unusedStats) => {
                             if (err) throw new Error(`The root directory for mirroring: ${directory} is missing - please create by hand`);
                             debug("MirrorFS creating directory: %s", path.dirname(filepath));
                             MirrorFS._mkdir(path.dirname(filepath), err => {
@@ -315,10 +315,11 @@ class MirrorFS {
 
     static cacheAndOrStream({relFilePath=undefined, //TODO-API noCache
                                 existingFilePath=undefined,
-                                  debugname="UNDEFINED", urls=undefined,
-                                  expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false,
-                                  wantStream=false, wantBuff=false, noCache=false,
-                                  start=0, end=undefined} = {}, cb) {
+                                debugname="UNDEFINED", urls=undefined,
+                                expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false,
+                                wantStream=false, wantBuff=false, wantSize=false,
+                                noCache=false, skipNet=false,
+                                start=0, end=undefined} = {}, cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
 
@@ -333,7 +334,9 @@ class MirrorFS {
         ipfs:           IPFS hash if known
         wantStream:     True if want an open stream to the contents, (set to false, when crawling)
         wantBuff:       True if want a buffer of data (not stream)
+        wantSize:       Want the size of the data (cached or from net)
         noCache:        Dont read local cache, but will still store and maybe use cache if cant get from net (overridden by sha1)
+        skipNet:        Dont check the net
         start,end       First and last bytes wanted
         cb(err, s|undefined) if wantStream will call with a stream (see below)
 
@@ -349,7 +352,7 @@ class MirrorFS {
         this.checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1'},
           (err, existingFilePath) => {
             if (err) {  //Doesn't match
-                if (!urls || (Array.isArray(urls) && !urls.length)) {
+                if (!urls || (Array.isArray(urls) && !urls.length) || skipNet) {
                     cb(err); // Dont have it (which is reasonable, as caller such as AF.cacheOrStream might then find URLS and try again)
                 } else { // Have urls, retrieve and cache
                     _notcached.call(this);
@@ -376,6 +379,10 @@ class MirrorFS {
        function callbackEmptyOrData(existingFilePath) {
             if (wantBuff) {
                 fs.readFile(existingFilePath, cb); //TODO check if its a string or a buffer or what
+            } else if (wantSize) {
+                fs.stat(existingFilePath, (err, stats) => {
+                    cb(err, stats && stats.size);
+                });
             } else {
                 cb();
             }
