@@ -1,3 +1,4 @@
+const prettierBytes = require('prettier-bytes');
 const queue = require('async/queue');
 const waterfall = require('async/waterfall');
 const each = require('async/each');
@@ -242,7 +243,7 @@ class CrawlFile extends Crawlable {
                         end: undefined,
                     }, cb);
                 } else {
-                    debug('Skipping "%s" File via %o, size %d > %d', this.file.metadata.name, this.parent, this.file.metadata.size, crawlmanager.maxFileSize);
+                    debug('Skipping "%s" File via %o, size %s > %s', this.file.metadata.name, this.parent, prettierBytes(parseInt(this.file.metadata.size)), prettierBytes(crawlmanager.maxFileSize));
                     cb();
                 }
             } else {
@@ -444,7 +445,7 @@ class CrawlItem extends Crawlable {
                                 archiveitem: this.item,
                                 page: "cover_t.jpg",
                                 reqUrl: `/arc/archive.org/download/${this.identifier}/page/cover_t.jpg`,
-                                }, asParent)); //TODO <<CHECK URL
+                                }, asParent));
                             this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(d => {
                                 // See ALMOST-SAME-CODE-BOOKMETA
                                 const url = new URL(d.uri);
@@ -461,6 +462,7 @@ class CrawlItem extends Crawlable {
                                 }, asParent));
                             }));
                         }
+                        cb4a();
                     } else {
                         cb4a();
                     }
