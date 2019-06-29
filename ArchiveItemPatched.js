@@ -851,15 +851,24 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
   each((this.membersFav || []).concat(this.membersSearch || []),
     // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
     //TODO-DOWNLOAD shortcut, dont attempt to find metadata https://github.com/internetarchive/dweb-mirror/issues/142
-    (member, cb1) => { new ArchiveItem({identifier: member.identifier}).addDownloadedInfoFiles((err, ai) => {
-      if (err) {
-        // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
-        debug("addDownloadedInfoMembers failed for %s in %s: %o", this.itemid, member.identifier, err);
-      } else {
-        member.downloaded = ai.downloaded;
-      }
-      cb1(null);
-    }) },
+    (member, cb1) => {
+      const ai =  new ArchiveItem({identifier: member.identifier});
+      parallel([
+        cb2 => ai.addDownloadedInfoFiles(cb2),
+        cb2 => ai.addDownloadedInfoPages(cb2),
+      ], (err, res) => {
+        if (err) {
+          // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
+          debug("ERROR: addDownloadedInfoMembers strangely failed for %s in %s: %o", this.itemid, member.identifier, err);
+        } else {
+          if (!member.downloaded) {
+            member.downloaded = ai.downloaded;
+          } else {
+            Object.assign(member.downloaded, ai.downloaded);
+          }
+        }
+        cb1(null);
+      })},
     cb);
 };
 
@@ -867,7 +876,7 @@ ArchiveItem.prototype.summarizeMembers = function(cb) {
   // Add summary information about members to this.downloaded
   // cb(err);
   const membersDownloaded = this.membersFav.concat(this.membersSearch || []).filter(am => (typeof am.downloaded !== "undefined"));
-  this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + am.downloaded.files_size, 0);
+  this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + am.downloaded.files_size + (am.downloaded.pages_size || 0), 0);
   this.downloaded.members_details_count = membersDownloaded.filter(am => am.downloaded.details).length;
   cb(null);
 };
@@ -936,7 +945,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
      ], err => //TODO-BOOK re-collapse
       cb1(err))
     ], err => {
-      this.downloaded.details = this.metadata.mediatype !== "texts"
+      this.downloaded.details = (this.metadata && (this.metadata.mediatype === "texts"))
         ? (this.downloaded.files_details && this.downloaded.pages_details)
         : this.downloaded.files_details
       cb(err);
