@@ -40,7 +40,7 @@ const crawlTasks = [
 
 const crawlOptions = {
     skipFetchFile: true, // dont want the files, just want the gateway to push them into IPFS
-    skipCache: true, // Dont care if we already have it cached, its the gateway we want to be seeding it anyway
+    noCache: true, // Dont care if we already have it cached, its the gateway we want to be seeding it anyway
     defaultDetailsSearch: {sort: "-downloads", rows: "40", level: "tile"}, // Not used, specified above
     defaultDetailsRelated: {sort: "-downloads", rows: "6", level: "tile"}, // Get tiles for 6 related on each, so details page will display
 };

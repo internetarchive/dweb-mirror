@@ -66,7 +66,8 @@ TODO-THUMBNAILS The archive pattern for thumbnails is about to change (Jan2019) 
 ```
 copyDirectory   points at top level of a cache where want a copy
 relFilePath     path to file or item inside a cache <IDENTIFIER>/<FILENAME>
-skipCache       ignore anything in the cache - forces refetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
+noCache         ignore anything in the cache - forces refetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
+noStore         dont store results in cache
 skipFetchFile   as an argument causes file fetching to be supressed (used for testing only)
 wantStream      Return results as a stream, just like received from the upstream.
 cb(err, res)    Unless otherwise documented callbacks return an error, (subclass of Error) or null, 
@@ -137,7 +138,8 @@ Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-
 
 ```
 Alternatives:
-    skipCache:          load from net
+    noCache:            load from net
+    noStore:            dont store results in cache
     cached:             return from cache
     !cached:            Load from net, save to cache
     
@@ -172,7 +174,6 @@ A more flexible version than dweb-archive.ArchiveItem.fetch_metadata,
 which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
 ```
 Alternatives:
-    DEPRECATED skipCache:          dont load from cache (only net)
     noCache:            skip cache on reading, but write to it
     noStore:            skip cache on writing, but read from it
     skipNet             dont load from net (only cache)
@@ -192,7 +193,7 @@ A more flexible version than dweb-archive.ArchiveItem.fetch_query
 which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_query.
 
 ```
-opts { skipCache, ...}  skipCache means don't check the cache, behaves like the unpatched ArchiveItem.fetch_query
+opts { noCache, noStore, ...}  means don't check the cache, noStore means dont store to cache, behaves like the unpatched ArchiveItem.fetch_query
 ```
 Strategy is:
 * Read <IDENTIFIER>_members_cached.json if it exists into .membersSearch
@@ -512,13 +513,13 @@ defaultDetailsSearch    Default search to perform as part of "details" or "full"
 defaultDetailsRelated   Default crawl on related items when doing "details" or "full" (usually sufficient to paint tiles)
 copyDirectory   If set, the crawl will make a full copy here, for example on a USB drive
 debugidentifier Will be set to a global variable to help conditional debugging
-skipCache       If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
+noCache         If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
 skipFetchFile   If true will just comment on file, not actually fetch it (including thumbnails)
 maxFileSize     (int) If set, constrains maximum size of any one file
 concurrency     (int) Sets the number of tasks that can be processed at a time
 limitTotalTasks (int) If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
 ```
-#### new CrawlManager({copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency=1, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated} = {})
+#### new CrawlManager({copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency=1, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated} = {})
 
 See attributes for meaning of arguments.
 
@@ -530,9 +531,9 @@ Add a task to _taskQ provided performing some checks first (esp limitTotalTasks)
 
 #### setopts(opts={}) {
 
-Set any of the attributes, normally skipCache, skipFetchFile, maxFileSize, concurrency, limitTotalTasks
+Set any of the attributes, normally noCache, skipFetchFile, maxFileSize, concurrency, limitTotalTasks
 
-#### static startCrawl(initialItemTaskList, {skipFetchFile=false, skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+#### static startCrawl(initialItemTaskList, {skipFetchFile=false, noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
 ```
 initialItemTaskList config  // Configuration to push to the task list - see config
 see arguments for other parameters
@@ -618,7 +619,8 @@ scale       Factor to scale down an image
 sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
 rotate      Factor to rotate an image
 skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
-skipCache:  if set then do not check cache for results
+noCache:    if set then do not check cache for results
+noStore:    if set then do not store in the cache
 skipNet:    if set then do not try and fetch from the net
 url:        Single url (or in most cases array of urls) to retrieve
 wantBuff:   True if want a buffer of data (not stream)
@@ -733,7 +735,7 @@ General purpose crawler for the Archive.
 ```
 usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--search json] [--related json]
     [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*
-    [--skipfetchfile] [--skipcache] [--dummy] [identifier]*
+    [--skipfetchfile] [--noCache] [--dummy] [identifier]*
 
     h : help print this text
     v : verbose tell us which config being run (default is currently pretty verbose)
@@ -755,7 +757,7 @@ usage: crawl [-hv] [-l level] [-r rows] [ -d depth ] [--directory path] [--searc
     --limittotaltasks tasks : a maximum number of tasks to run, will be (approximately) the number of searches, plus the number of items crawled.
     --transport TRANSPORT : The names of transport to use, by default its HTTP, but can currenrly add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
     --skipfetchfile : Dont actually transfer the files (good for debugging)
-    --skipcache     : Ignore current contents of cache and always refetch
+    --noCache       : Ignore current contents of cache and always refetch
     --dummy         : Just print the result of the options in the JSON format used for configuration
 
    identifier       : Zero or more identifiers to crawl (if none, then it will use the default query from the configuration)

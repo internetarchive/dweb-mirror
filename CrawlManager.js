@@ -19,7 +19,7 @@ const MirrorFS = require('./MirrorFS');
     search: [ { sort, rows, level } ]
 
   opts {
-    skipCache: bool||false      If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
+    noCache: bool||false      If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
     skipFetchFile: bool||false  If true will just comment on file, not actually fetch it (including thumbnails)
     maxFileSize: 10000000       If set, constrains maximum size of any one file
 
@@ -42,10 +42,10 @@ const MirrorFS = require('./MirrorFS');
 class CrawlManager {
 
     constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false,
-                    skipCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined,
+                    noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined,
                     defaultDetailsSearch=undefined, defaultDetailsRelated=undefined,callbackDrainOnce=false, name=undefined}={}) {
         this.clearState();
-        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
+        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
         this._taskQ = queue((task, cb) => {
             task.process(this, (err)=> {
                 this.completed++;
@@ -100,10 +100,10 @@ class CrawlManager {
         if (opts.copyDirectory) MirrorFS.setCopyDirectory(opts.copyDirectory);  // If Crawling to a directory, tell MirrorFS - will resolve ~ and .
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
-    static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, skipCache=false,
+    static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, noCache=false,
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined,
         callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined}={},  cb) {
-        const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, skipCache,
+        const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache,
             maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             ObjectFilter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
@@ -178,7 +178,7 @@ class CrawlManager {
 //  *** NOTE THIS _levels LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js && assumptions about it in dweb-archive/dweb-archive-styles.css
 CrawlManager._levels = ["tile", "metadata", "details", "all"];
 CrawlManager.crawls = [];
-CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "skipCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory", "defaultDetailsSearch", "defaultDetailsRelated"];
+CrawlManager.optsallowed = ["debugidentifier", "skipFetchFile", "noCache", "maxFileSize", "concurrency", "limitTotalTasks", "copyDirectory", "defaultDetailsSearch", "defaultDetailsRelated"];
 // q.drain = function() { console.log('all items have been processed'); }; // assign a callback *
 // q.push({name: 'foo'}, function(err) { console.log('finished processing foo'); }); // add some items to the queue
 // q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function(err) { console.log('finished processing item'); }); // add some items to the queue (batch-wise)
@@ -399,7 +399,7 @@ class CrawlItem extends Crawlable {
         this.item = new ArchiveItem({identifier: this.identifier, query: this.query});
         if (this.isUniq(crawlmanager)) { //TODO-API
             const skipFetchFile = crawlmanager.skipFetchFile;
-            const skipCache = crawlmanager.skipCache;
+            const noCache = crawlmanager.noCache;
             waterfall([
                 (cb2) => { // Get metadata
                     if (["metadata", "details", "all"].includes(this.level) || (this.level === "tile" && !(this.member && this.member.thumbnaillinks) )) {
@@ -495,7 +495,7 @@ class CrawlItem extends Crawlable {
                         const search = Array.isArray(this.search) ? this.search : [this.search];
                         ai.rows = search.reduce((acc, queryPage) => acc + queryPage.rows, 0); // Single query all rows
                         ai.sort = search[0].sort;
-                        ai.fetch_query({skipCache}, (err, searchMembers) => { // Needs to update start, but note opts can override start
+                        ai.fetch_query({noCache}, (err, searchMembers) => { // Needs to update start, but note opts can override start
                             let start = 0;
                             search.forEach(queryPage => {
                                 if (queryPage.sort && (queryPage.sort !== this.item.sort)) {

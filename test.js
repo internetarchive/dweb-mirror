@@ -56,7 +56,7 @@ testCrawlOne = [
     { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, isDark, @brenton
 
 ]
-testcrawlpreseed = [ //skipFetchFile, skipcache, mediatype: collection
+testcrawlpreseed = [ //skipFetchFile, noCache, mediatype: collection
     // Get the tiles for the top 30 items on the top 60 collections in the top 100 collections of each media type
     { identifier: ["image","movies","texts","audio"], level: "details",
         search: { rows: 2, level: "details", sort: "-downloads",
@@ -77,7 +77,7 @@ DwebTransports.connect({
     //TODO-MIRROR this is working around default that HTTP doesnt officially support streams, till sure can use same interface with http & WT
     //CrawlManager.startCrawl(testCrawl, {skipFetchFile: true});
     CrawlManager.startCrawl(testCrawl,
-        {debugidentifier: "Doctorin1946", skipFetchFile: false, skipCache: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300,
+        {debugidentifier: "Doctorin1946", skipFetchFile: false, maxFileSize: 200000000, concurrency: 10, limitTotalTasks: 300,
          defaultDetailsSearch: config.apps.crawl.opts.defaultDetailsSearch,
          defaultDetailsRelated: config.apps.crawl.opts.defaultDetailsRelated,
         });

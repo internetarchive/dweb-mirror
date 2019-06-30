@@ -25,7 +25,6 @@ const MirrorFS = require('./MirrorFS');
  * noStore:            Like HTTP Cache-Control: no-store, don't store the result
  * noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
  * skipNet             dont load from net (only cache)
- * skipCache:          dont load from cache (only net)  DEPRECATED - use noCache and/or noStore
  */
 
 // noinspection JSUnresolvedVariable
@@ -363,7 +362,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     Note that it adds information about the crawl and downloaded status
 
     Alternatives:
-    opts { noStore, noCache, skipNet, skipCache } - see common args at top of this file
+    opts { noStore, noCache, skipNet } - see common args at top of this file
     cached:             return from cache
     !cached:            Load from net, save to cache
 
@@ -424,8 +423,6 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     }
     function f(cb) {
         if (this.itemid && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
-            if (opts.skipCache) {
-                opts.noCache = true; opts.noStore = true; } // skipCache is deprecated
             waterfall([
                 tryReadOrNet.bind(this), // passes doStore to cb
                 trySave.bind(this),
@@ -439,7 +436,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_query = function(opts={}, cb) { //TODO-API add noCache & noStore
+ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
   /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
       cb(err, [ArchiveMember])
 
