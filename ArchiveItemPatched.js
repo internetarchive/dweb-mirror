@@ -757,13 +757,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
           (af, cb2) => af.isDownloaded(cb2), // Should never throw error
           cb1)},
       cb1 => { // Add statistical data to item, (note this.files could be empty)
-        const filesDownloaded = this.files.filter(af => af.downloaded);
-        this.downloaded.files_all_size = this.files.reduce((sum, af) => sum + (parseInt(af.metadata.size)||0), 0);
-        this.downloaded.files_all_count = this.files.length;
-        this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size)||0), 0);
-        this.downloaded.files_count = filesDownloaded.length;
-        this.downloaded.files_details = this.minimumForUI().every(af => af.downloaded);
-        cb1(null);
+        this.summarizeFiles(cb1);
       },
       cb1 => { // Save file as have changed files info
         if (!(this.itemid && this.files.length)) {
@@ -863,15 +857,31 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
           } else {
             Object.assign(member.downloaded, ai.downloaded);
           }
+          member.downloaded.details = (member.mediatype === "texts")
+            ? (member.downloaded.files_details && member.downloaded.pages_details)
+            : member.downloaded.files_details
         }
         cb1(null);
       })},
     cb);
 };
 
+ArchiveItem.prototype.summarizeFiles = function(cb) {
+  // See ALMOST-IDENTICAL-CODE-SUMMARIZEFILES
+  const filesDownloaded = this.files.filter(af => af.downloaded);
+  this.downloaded.files_all_size = this.files.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
+  this.downloaded.files_all_count = this.files.length;
+  this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
+  this.downloaded.files_count = filesDownloaded.length;
+  this.downloaded.files_details = this.minimumForUI().every(af => af.downloaded);
+  cb(null);
+}
+
 ArchiveItem.prototype.summarizeMembers = function(cb) {
   // Add summary information about members to this.downloaded
   // cb(err);
+  const item = this;
+  // See ALMOST-IDENTICAL-CODE-SUMMARIZEMEMBERS
   const membersDownloaded = this.membersFav.concat(this.membersSearch || []).filter(am => (typeof am.downloaded !== "undefined"));
   this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + am.downloaded.files_size + (am.downloaded.pages_size || 0), 0);
   this.downloaded.members_details_count = membersDownloaded.filter(am => am.downloaded.details).length;

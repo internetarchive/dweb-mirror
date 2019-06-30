@@ -42,7 +42,7 @@ but there are a few differences to support offline use.
 At the top you'll see the Internet Archive's usual interface, a few of these buttons will (for now) only work 
 while online. 
 
-TODO grey out buttons that dont work offline
+[issue#182](https://github.com/internetarchive/dweb-mirror/issues/182) Buttons that dont work when offline should be greyed out
 
 Below that is a row of information specific to the offline application.
     
@@ -52,15 +52,15 @@ this will only happen if the gateway goes offline part way through a process.
 * Normally you'll see an indicator for HTTP, which is Green when the gateway can talk to the Archive, and Red when you are offline.
 * Next to that might be indicators for WebTorrent or IPFS if they have been enabled. 
 
-TODO check what happens when click on them...
+[issue#183](https://github.com/internetarchive/dweb-mirror/issues/183) These buttons should control whether IPFS/WebTorrent are enabled
 
 * Then comes an indicator for this page, whether it is being crawled, and if so how much has been stored. 
 
-TODO size indicator broken on first page. 
+[issue#168](https://github.com/internetarchive/dweb-mirror/issues/168) Size indicator is wrong on first page. 
 
-* Next comes a "Reload" button, you can click this to force it to check with the archive for an up to date list. 
-Of course it only works when "HTTP" is shown Green. 
-TODO grey out button when HTTP=red
+* If the mirror is online to the Internet Archive (HTTP shows Green) then next comes a "Reload" button, 
+you can click this to force it to check with the Archive for an up to date list. 
+
 It is most useful on collections when someone else has added something, but your gateway might be remembering an old version.
 * Then there is a Settings button which brings up a page that includes status of any crawls.
 * Finally there is a Home button which will bring you back to this page. 
@@ -74,7 +74,8 @@ Notice that most of the tiles should have a White, Green or Blue dot in the top 
 * A Blue dot indicates we are crawling all the content of the item, this could be a lot of data, 
 for example a full resolution version of the video. Its rare that you’ll use this. 
 
-* [issue#168](https://github.com/internetarchive/dweb-mirror/issues/168) for size indicator, then document here.
+This button also shows how much has been downloaded, for an item its the total size of downloaded files/pages,
+for a collection its the total amount in all collection members. 
 
 Tiles come in two types, most shows items that can be displayed - books, videos, audio etc, 
 clicking on these will display the item. 
@@ -95,17 +96,16 @@ the behavior depends on the kind of item.
 * Video and Audio will play immediately and you can skip around in them as normal
 
 The crawl button at the top will indicate whether the object is being crawled and if not, whether it has been downloaded, 
-in the same way tiles do, and also show you the total downloaded for this item. 
+in the same way tiles do, and also show you (approximately) the total downloaded for this item. 
 
-[issue#142](https://github.com/internetarchive/dweb-mirror/issues/142) display size of download
-
-Click on the Crawl button till it turns Green and it will download a full copy of the book, video or audio next time it crawls,  
-This crawling should be immediate and in already initialized crawl. [See issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
+Click on the Crawl button till it turns Green and it will download a full copy of the book, video or audio.
+It waits about 30 seconds to do this, allowing time to cycle back to the desired level of crawling.
 These items will also appear on your Local page.  
 See the note above, usually you won’t want to leave it at yellow (all) as this will usually try
 (there are some size limits) to download all the files.
 
-[issue#129](https://github.com/internetarchive/dweb-mirror/issues/129). Show date crawled and add a refresh button 
+There is a Reload button which will force the server to try archive.org, 
+this is useful if you think the item has changed, or for debugging.
 
 ## Collection and Search pages - multiple items
 
@@ -149,7 +149,6 @@ cd /opt/iiab/internetarchive
 There are lots of options possible, try `./internetarchive —help` to get guidance.
 
 This functionality will be gradually added to the UI in future releases.
-See [issue#132](https://github.com/internetarchive/dweb-mirror/issues/132)
 
 ## Downloading content for a different box
 
@@ -159,7 +158,7 @@ All the content will appear as if it was downloaded there.
 
 To put content onto a device, at the moment requires accessing the command line on the server.
 
-[issue#141](https://github.com/internetarchive/dweb-mirror/issues/141)
+[issue#175](https://github.com/internetarchive/dweb-mirror/issues/175)
 ``` 
 # CD into your device e.g. on an IIAB it would be 
 cd /media/pi/foo
