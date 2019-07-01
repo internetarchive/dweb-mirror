@@ -54,9 +54,7 @@ this will only happen if the gateway goes offline part way through a process.
 
 [issue#183](https://github.com/internetarchive/dweb-mirror/issues/183) These buttons should control whether IPFS/WebTorrent are enabled
 
-* Then comes an indicator for this page, whether it is being crawled, and if so how much has been stored. 
-
-[issue#168](https://github.com/internetarchive/dweb-mirror/issues/168) Size indicator is wrong on first page. 
+* Then comes an indicator for this page, whether it is being crawled, and if so approximately how much has been stored. 
 
 * If the mirror is online to the Internet Archive (HTTP shows Green) then next comes a "Reload" button, 
 you can click this to force it to check with the Archive for an up to date list. 

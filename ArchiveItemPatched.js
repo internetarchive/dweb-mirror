@@ -852,11 +852,8 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
           // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
           debug("ERROR: addDownloadedInfoMembers strangely failed for %s in %s: %o", this.itemid, member.identifier, err);
         } else {
-          if (!member.downloaded) {
-            member.downloaded = ai.downloaded;
-          } else {
-            Object.assign(member.downloaded, ai.downloaded);
-          }
+          if ((typeof member.downloaded !== "object" || member.downloaded === null)) member.downloaded = {};
+          Object.assign(member.downloaded, ai.downloaded); // Works even if ai.downloaded undefined or null
           member.downloaded.details = (member.mediatype === "texts")
             ? (member.downloaded.files_details && member.downloaded.pages_details)
             : member.downloaded.files_details
@@ -883,7 +880,7 @@ ArchiveItem.prototype.summarizeMembers = function(cb) {
   const item = this;
   // See ALMOST-IDENTICAL-CODE-SUMMARIZEMEMBERS
   const membersDownloaded = this.membersFav.concat(this.membersSearch || []).filter(am => (typeof am.downloaded !== "undefined"));
-  this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + am.downloaded.files_size + (am.downloaded.pages_size || 0), 0);
+  this.downloaded.members_size = membersDownloaded.reduce((sum, am) => sum + (am.downloaded.files_size||0) + (am.downloaded.pages_size || 0), 0);
   this.downloaded.members_details_count = membersDownloaded.filter(am => am.downloaded.details).length;
   cb(null);
 };
