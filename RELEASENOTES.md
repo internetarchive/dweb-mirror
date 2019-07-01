@@ -36,6 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
+* 0.2.36: Turn off IPFS install by default, dist.ipfs.io servers are too slow and unreliable. See https://github.com/ipfs/ipfs-update/issues/105
 * 0.2.35: download count improvements, and copyDirectory refactor
 * 0.2.34: Prettier byte; edge cases with _extra.json and downloaded crawling and downloaded indicators on mediatype=texts
 * 0.2.33: Split members>membersFav,membersSearch; /info now has Transport info; install_ipfs fixed; downloaded on searches; adding to live crawls;	ef8d8f0	Mitra Ardron <mitra@mitra.biz>	28Jun2019 at 6:54 PM
