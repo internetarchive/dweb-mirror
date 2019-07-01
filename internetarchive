@@ -266,12 +266,18 @@ waterfall([
     cb => { if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}}, // Must be after server start since needs for IPFS, should be before crawl
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
     cb => {
-    if (!opts.server && server) {
-        debug("Closing server");
-        server.close(cb)} else {
-        cb(null); } }, // Stop express server unless explicit -s option
-    cb => {
-    if (!opts.server && (opts.maintenance || opts.crawl)) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
+        if (!opts.server && server) {
+            debug("Closing server");
+            server.close((err) => {
+                if (err)
+                    debug("Failed to stop server: %s, but it might just because it was already started", err.message);
+                cb(null); // Dont pass on failure, still want to stop transports
+            });
+            server = undefined; // Its obviously not running
+        } else {
+            cb(null); } }, // Stop express server unless explicit -s option
+    cb => { // If we aren't leaving a server running, then stop the transports
+        if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {
     if (err) {
         debug("Failed: %s", err.message)

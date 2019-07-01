@@ -39,13 +39,13 @@ ArchiveItem.prototype._namepart = function() {
     }
 };
 
-function _save1file(key, obj, namepart, cb) {
+function _save1file(key, obj, namepart, {copyDirectory=undefined}, cb) {
     // Returns nothing
     const relFilePath = path.join(namepart, `${namepart}_${key}.json`);
     if (typeof obj === "undefined") {
         cb(null);
     } else {
-        MirrorFS.writeFile(relFilePath, canonicaljson.stringify(obj), (err) => {
+        MirrorFS.writeFile({relFilePath, copyDirectory}, canonicaljson.stringify(obj), (err) => {
             if (err) {
                 console.error(`Unable to write ${key} to ${relFilePath}`);
                 cb(err);
@@ -59,7 +59,7 @@ function _save1file(key, obj, namepart, cb) {
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.save = function(opts = {}, cb) {
+ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
     /*
         Save metadata for this file as JSON in multiple files.
         .metadata -> <IDENTIFIER>.meta.json
@@ -72,7 +72,6 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
 
     */
-    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     if (!this.itemid) {
         // Must be a Search so dont try and save files - might save members
         debug("Search so not saving");
@@ -82,7 +81,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 
         if (!(this.metadata || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
-            this.fetch_metadata((err, data) => {
+            this.fetch_metadata({copyDirectory}, (err, data) => {
                 if (err) {
                     console.error(`Cant save because could not fetch metadata for %s: %s`, this.itemid, err.message);
                     cb(err);
@@ -111,7 +110,7 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
                     ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
                 ],
                 (i, cbInner) => { // [ part, obj ]
-                    _save1file(i[0], i[1], namepart, cbInner);
+                    _save1file(i[0], i[1], namepart, {copyDirectory}, cbInner);
                 },
                 (err)=>{if (err) { cb(err) } else { cb(null, this);}});
         }
@@ -119,12 +118,11 @@ ArchiveItem.prototype.save = function(opts = {}, cb) {
 
 };
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.saveBookReader = function(opts = {}, cb) {
+ArchiveItem.prototype.saveBookReader = function({copyDirectory=undefined}={}, cb) {
     /*
         Save BookReader for this file as JSON
         .bookreader -> <IDENTIFIER>.bookreader.json =
     */
-    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     if (!this.itemid) {
         // Must be a Search so dont try and save files or bookreader - might save members
         debug("Search so not saving bookReader");
@@ -134,7 +132,7 @@ ArchiveItem.prototype.saveBookReader = function(opts = {}, cb) {
 
         if (!(this.bookreader || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
-            this.fetch_bookreader((err, ai) => {
+            this.fetch_bookreader({copyDirectory}, (err, ai) => {
                 if (err) {
                     console.error(`Cant save because could not fetch bookreader for %s: %s`, this.itemid, err.message);
                     cb(err);
@@ -149,14 +147,14 @@ ArchiveItem.prototype.saveBookReader = function(opts = {}, cb) {
             // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
             // noinspection JSPotentiallyInvalidUsageOfThis
             // Note all these files should be in MirrorFS.isSpecialFile
-            _save1file("bookreader", this.bookreader, namepart, (err) => { if (err) {cb(err) } else {cb(null, this) }})
+            _save1file("bookreader", this.bookreader, namepart, {copyDirectory}, (err) => { if (err) {cb(err) } else {cb(null, this) }})
         }
     }
 };
 
-function _parse_common(namepart, part, cb) {
+function _parse_common(namepart, part, {copyDirectory=undefined}, cb) {
     const relFilePath = path.join(namepart, `${namepart}_${part}.json` );
-    MirrorFS.readFile(relFilePath, (err, jsonstring) => {
+    MirrorFS.readFile(relFilePath, {copyDirectory}, (err, jsonstring) => {
         if (err) {
             cb(err);    // Not logging as not really an err for there to be no file, as will read
         } else {
@@ -176,7 +174,7 @@ function _parse_common(namepart, part, cb) {
 
 // noinspection JSUnresolvedVariable
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
-ArchiveItem.prototype.read = function(opts = {}, cb) {
+ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
         cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure fields of ArchiveItem
@@ -184,7 +182,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
     const res = {};
-    function _parse(part, cb) { _parse_common(namepart, part, cb); }
+    function _parse(part, cb) { _parse_common(namepart, part, {copyDirectory}, cb); }
     // This is a set of parallel reads, failure of some cause the whole thing to fail; some require postprocessing; and playlist occurs after metadata&files succeed
     parallel([
         cb => _parse("meta",(err, o) => {
@@ -221,7 +219,7 @@ ArchiveItem.prototype.read = function(opts = {}, cb) {
 };
 
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
-ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
+ArchiveItem.prototype.read_bookreader = function({copyDirectory=undefined}, cb) {
     /*
        Read bookreader data from file and place in bookreader field on item
        file = { data, brOptions, lendingInfo, possibly metadata }
@@ -229,9 +227,8 @@ ArchiveItem.prototype.read_bookreader = function(opts = {}, cb) {
        API returns { data: { data, brOptions, lendingInfo, possibly metadata } }
        cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
     */
-    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid; // Possible undefined
-    function _parse(part, cb) { _parse_common(namepart, part, cb); }
+    function _parse(part, cb) { _parse_common(namepart, part,  {copyDirectory}, cb); }
     _parse("bookreader", (err, o) => { // { data, brOptions, lendingInfo }
         if (err) {
             cb(err);
@@ -250,6 +247,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
   opts = {
     noCache             Dont check cache, refetch from server, and store locally
     noStore             Dont store result
+    copyDirectory       Where to store result if not default
   }
   Alternatives:
   cached:             return from cache
@@ -261,7 +259,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
   Result is ai.bookreader = { brOptions, data, lendingInfo}
    */
   if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-  const {noCache, noStore} = opts;
+  const { noCache, noStore, copyDirectory=undefined } = opts;
   // noinspection JSUnresolvedVariable
   if (cb) { try { f.call(this, cb) } catch(err) {
       cb(err)}}
@@ -271,7 +269,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
     if (noCache) {
       cb(new Error("no-cache"));
     } else {
-      this.read_bookreader(cb); // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
+      this.read_bookreader({copyDirectory}, cb); // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
     }
   }
   function tryReadOrNet(cb) { // Try both files and net, cb(err, doSave)
@@ -280,13 +278,13 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
         this._fetch_bookreader(opts, (err, unusedRes)=>cb(err, true)); // Will process and add to this.bookreader, but want to save as came from net
       } else {
         this.loadFromBookreaderAPI(bookapi);  // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-        cb(null, !!MirrorFS.copyDirectory);   // If copyDirectory explicitly specified then save to it, otherwise its from file so no need to save.
+        cb(null, !!copyDirectory);   // If copyDirectory explicitly specified then save to it, otherwise its from file so no need to save.
       }
     });
   }
   function trySave(doSave, cb) {
     if (!noStore && doSave) {
-      this.saveBookReader({}, cb)
+      this.saveBookReader({copyDirectory}, cb)
     } else {
       cb(null);
     }
@@ -308,9 +306,9 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_page = function({wantStream=false, wantSize=false, noCache=false, reqUrl=undefined,
+ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, noCache=false, reqUrl=undefined,
                                               zip=undefined, file=undefined, scale=undefined, rotate=undefined,
-                                              page=undefined, skipNet=false}={}, cb) { //TODO-API noCache
+                                              page=undefined, skipNet=false, copyDirectory=undefined }={}, cb) { //TODO-API noCache
     /* Fetch a page from the item, caching it
 
         page      usually "cover_t.jpg" to get the page
@@ -322,6 +320,7 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, wantSize=false, n
         wantStream  Want results streamed (typically false if crawling)
         wantSize  Just want the size in bytes (downloaded)
         skipNet   Dont check on the net
+        copyDirectory Where to cache it
         reqUrl    string as in brOptions.data ... uri from /BookReader.. (path and query, but not scale/rotate)
         cb(err, data || stream || size) returns either data, or if wantStream then a stream
      */
@@ -329,7 +328,7 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, wantSize=false, n
     if (zip) zipfile = zip.split('/')[4];
     waterfall([
         (cbw) =>
-          this.fetch_metadata(cbw),
+          this.fetch_metadata({copyDirectory}, cbw),
         (ai, cbw) => {
             // request URLs dont have server, and need to add data node anyway - note passes scale & rotate
             const urls = page
@@ -338,14 +337,14 @@ ArchiveItem.prototype.fetch_page = function({wantStream=false, wantSize=false, n
             const debugname = `${this.itemid}_${file}`;
             const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
             if (page) { // This is the cover , its not scaled or rotated
-                MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet}, cbw);
+                MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory }, cbw);
             } else { // Looking for page by number with scale and rotation
-                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, skipNet, // Find which valid scale/rotate we have,
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, skipNet, copyDirectory, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
                     (err, relFilePath2) => { // undefined if not found
                         // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
                         //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
-                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, relFilePath: relFilePath2 || relFilePath }, cbw);
+                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, copyDirectory, relFilePath: relFilePath2 || relFilePath }, cbw);
                     }
                 )
             } }
@@ -362,7 +361,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     Note that it adds information about the crawl and downloaded status
 
     Alternatives:
-    opts { noStore, noCache, skipNet } - see common args at top of this file
+    opts { noStore, noCache, skipNet, copyDirectory } - see common args at top of this file
     cached:             return from cache
     !cached:            Load from net, save to cache
 
@@ -373,6 +372,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     // noinspection JSUnresolvedVariable
+    const {copyDirectory} = opts; //TODO get other args from opts here
     if (cb) { try { f.call(this, cb) } catch(err) {
         cb(err)}}
     else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
@@ -380,7 +380,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         if (opts.noCache) {
             cb(new Error("NoCache"));
         } else {
-            this.read((err, metadata) => {
+            this.read({copyDirectory}, (err, metadata) => {
                 if (err) {
                     cb(err);
                 } else {
@@ -407,7 +407,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
                         cb(err, true); // If net succeeded then save
                     });
                 } else { // cached
-                    cb(null, !!MirrorFS.copyDirectory); // cached but check for explicit requirement to copy
+                    cb(null, !!copyDirectory); // cached but check for explicit requirement to copy
                 }
             })
         } else {
@@ -418,7 +418,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         if (!doSave || opts.noStore) {
             cb(null);
         } else {
-            this.save(cb);
+            this.save({copyDirectory}, cb);
         }
     }
     function f(cb) {
@@ -441,7 +441,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       cb(err, [ArchiveMember])
 
       opts = { skipNet, noCache, noStore,     see common argument documentation at top of this file
-                wantFullResp }                see _fetch_query
+                wantFullResp, copyDirectory }                see _fetch_query
 
 
       Strategy is:
@@ -452,7 +452,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       * Write each member to its own `<IDENTIFIER>_member.json`
    */
   if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-  const {noCache, noStore, skipNet} = opts;
+  const { noCache, noStore, skipNet, copyDirectory } = opts;
   if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
 
   function f(cb1) {
@@ -468,7 +468,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
             cb2();
         } else {
           if (!noCache) { // Dont read old members if not caching
-            MirrorFS.readFile(relFilePath, (err, jsonstring) => {
+            MirrorFS.readFile(relFilePath, {copyDirectory}, (err, jsonstring) => {
               if (!err) {
                 try {
                   const data = canonicaljson.parse(jsonstring);
@@ -489,7 +489,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
           if (!namepart) { // Some queries e.g. for identifier dont have namepart  or cache
             cb2();
           } else {
-            _parse_common(namepart, "extra", (err, o) => {
+            _parse_common(namepart, "extra", {copyDirectory}, (err, o) => {
               if (!err) {
                 this._mergeExtra(o);
               }
@@ -505,7 +505,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
           (ams,cb3) => {
             if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
               cb3(null, ams)
-            } else { ams.read({},(err, o) =>
+            } else { ams.read({copyDirectory},(err, o) =>
               cb3(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
           (err, arr) => {
             this.membersSearch=arr; cb2() }); // Expand where possible
@@ -519,7 +519,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
           (ams,cb3) => {
             if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
               cb3(null, ams)
-            } else { ams.read({},(err, o) =>
+            } else { ams.read({copyDirectory},(err, o) =>
               cb3(null, o ? new ArchiveMember(o) : ams)); }}, // If failed to read, just pass on ams to next stage
           (err, arr) => {
             this.membersFav=arr; cb2() }); // Expand where possible
@@ -545,7 +545,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
               ["members_cached", this.membersSearch]
             ],
             (i, cbInner) => { // [ part, obj ]
-              _save1file(i[0], i[1], namepart, cbInner);
+              _save1file(i[0], i[1], namepart, {copyDirectory}, cbInner);
             },
             (err)=>{if (err) { cb2(err) } else { cb2(null, res);}});
         } else {
@@ -555,7 +555,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       (res, cb2) => { // Save members to their cache
         if (!noStore) {
           each(this.membersFav.concat(this.membersSearch).filter(ams => ams.isExpanded()),
-            (ams, cb3) => ams.save((unusederr) => cb3(null)), // Ignore errors saving
+            (ams, cb3) => ams.save({copyDirectory}, (unusederr) => cb3(null)), // Ignore errors saving
             (unusedErr, unusedRes) => {}); // Not waiting for this to finish
         }
         cb2(null, res); // Return just the new members found by the query, dont worry about errors (logged in ams.save
@@ -569,7 +569,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=false, wantStream=false} = {}, cb) {  //TODO-API
+ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=false, wantStream=false, copyDirectory=undefined } = {}, cb) {  //TODO-API
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
@@ -608,7 +608,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=fal
                 } // Clear cb so not called when complete
                 let af;
                 if (typeof (af = thumbnailFiles.shift()) !== "undefined") {
-                    af.cacheAndOrStream({skipFetchFile, noCache, wantStream}, recursable); // Recurse
+                    af.cacheAndOrStream({ skipFetchFile, noCache, wantStream, copyDirectory }, recursable); // Recurse
                     // Exits, allowing recursable to recurse with next iteration
                 } else { // Completed loop
                     // cb will be set except in the case of wantStream in which case will have been called with first stream
@@ -624,7 +624,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=fal
             if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = relFilePath;
-            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname,
+            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname, copyDirectory,
                 urls: this.metadata.thumbnaillinks,
             }, (err, streamOrUndefined) => {
                 if (err) {
@@ -640,7 +640,7 @@ ArchiveItem.prototype.saveThumbnail = function({skipFetchFile=false, noCache=fal
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false} = {}, cb) { //TODO-API noCache
+ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false, copyDirectory=undefined } = {}, cb) {
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true if want stream) alternative is obj. obj will be processed, stream will always be raw (assuming client processes it)
@@ -652,7 +652,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_playlist.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache, copydirectory,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: `https://archive.org/embed/${identifier}?output=json`, // Hard coded, would rather have in Util.gateway.url_playlist but complex
             debugname: identifier + "/" + identifier + "_playlist.json"
@@ -672,7 +672,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=false, noCache=false} = {}, cb) { //TODO-API noCache
+ArchiveItem.prototype.relatedItems = function({ wantStream=false, wantMembers=false, noCache=false, copyDirectory=false } = {}, cb) { //TODO-API noCache
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true => cb(err, stream)
@@ -685,7 +685,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache, copyDirectory,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: gateway.url_related + identifier, //url_related currently ends in /
             debugname: identifier + "/" + identifier + "_related.json"
@@ -709,7 +709,7 @@ ArchiveItem.prototype.relatedItems = function({wantStream=false, wantMembers=fal
         cb(null, wantMembers ? [] : undefined);
     }
 };
-ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
+ArchiveItem.addCrawlInfoRelated = function(rels, {copyDirectory, config=undefined}={}, cb) {
   /**
    *   Add .crawlInfo and .downloaded for each result in rels the Related items API
    *   rels  result of RelatedApi i.e. {hits: {hits: [ _id, _source: { FIELDS OF MEMBER }]}}
@@ -724,7 +724,7 @@ ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
       },
       cb2),
     cb2 => each(hits,
-      (hit, cb1) => { new ArchiveItem({identifier: hit._id}).addDownloadedInfoFiles((err, ai) => {
+      (hit, cb1) => { new ArchiveItem({identifier: hit._id}).addDownloadedInfoFiles({copyDirectory}, (err, ai) => {
         if (err) {
           // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
           debug("addCrawlInfoRelated -> addDownloadedInfoMembers failed for %s in %s: %o", this.itemid, hit._id, err);
@@ -740,12 +740,12 @@ ArchiveItem.addCrawlInfoRelated = function(rels, {config=undefined}={}, cb) {
     ], cb);
 };
 
-ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
+ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
   // Add .downloaded info on all files, and summary on Item
   // Note ArchiveItem might not yet have metadata.
     waterfall([
       // Add info on files if not there already - this can be done in parallel
-      cb1 => this.fetch_metadata({skipNet: true}, cb1),
+      cb1 => this.fetch_metadata({skipNet: true, copyDirectory}, cb1),
       (unusedThis, cb1) => {
         if ((typeof this.downloaded !== "object") || (this.downloaded === null)) // Could be undefined (legacy boolean or null as called for each member
           this.downloaded = {};
@@ -754,7 +754,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
         // Add info on each file
         each(this.files, // Could be empty
           // relatively inexpensive, as caches result on files.json at final step, only needs to look at disk if uncached
-          (af, cb2) => af.isDownloaded(cb2), // Should never throw error
+          (af, cb2) => af.isDownloaded({copyDirectory}, cb2), // Should never throw error
           cb1)},
       cb1 => { // Add statistical data to item, (note this.files could be empty)
         this.summarizeFiles(cb1);
@@ -763,7 +763,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
         if (!(this.itemid && this.files.length)) {
           cb1(null)
         } else {
-          _save1file("files", this.exportFiles(), this._namepart(), cb1);
+          _save1file("files", this.exportFiles(), this._namepart(), {copyDirectory}, cb1);
         } }
     ], err => {
       // Done Report error because it could just be because havent downlodaed files info via metadata API,
@@ -773,14 +773,14 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function(cb) {
     });
 };
 
-ArchiveItem.prototype.addDownloadedInfoPages = function(cb) {
+ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined}, cb) {
   // For texts, Add .downloaded info on all pages, and summary on Item
   // Note ArchiveItem might not yet have bookreader field loaded when this is called.
-  this.fetch_metadata({skipNet: true}, (err, ai) => {
+  this.fetch_metadata({skipNet: true, copyDirectory}, (err, ai) => {
     if (err || !ai || ai.metadata.mediatype !== "texts") {
       cb(null, undefined); // Not a book - dont consider when checking if downloaded
     } else {
-      this.fetch_bookreader({skipNet: true}, (err, ai) => {
+      this.fetch_bookreader({copyDirectory, skipNet: true}, (err, ai) => {
         if (err || !ai.bookreader) {
           cb(null, false); // No book info, presume not downloaded
         } else {
@@ -788,6 +788,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function(cb) {
           waterfall([
             cb0 => parallel([
               cb1 => this.fetch_page({
+                copyDirectory,
                 wantSize: true,
                 reqUrl: `/arc/archive.org/download/${this.itemid}/cover_t.jpg`,
                 page: 'cover_t.jpg',
@@ -804,6 +805,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function(cb) {
                     url.searchParams.append("scale", 2);
                     url.searchParams.append("rotate", 0);
                     this.fetch_page({
+                      copyDirectory,
                       wantSize: true,
                       zip: url.searchParams.get("zip"),
                       file: url.searchParams.get("file"),
@@ -828,7 +830,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function(cb) {
               this.downloaded.pages_size = downloadedPages.reduce((sum, pg) => sum + pg.size, 0);
               this.downloaded.pages_count = downloadedPages.length;
               this.downloaded.pages_details = downloadedPages.length === [].concat(...this.bookreader.brOptions.data).length;
-              _save1file("bookreader", this.bookreader, this._namepart(), cb0);
+              _save1file("bookreader", this.bookreader, this._namepart(), {copyDirectory}, cb0);
             },
           ], cb);
         }
@@ -837,7 +839,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function(cb) {
   });
 }
 
-ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
+ArchiveItem.prototype.addDownloadedInfoToMembers = function({copyDirectory=undefined}, cb) {
   // Add data to all members - which can be done in parallel
   each((this.membersFav || []).concat(this.membersSearch || []),
     // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
@@ -845,8 +847,8 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function(cb) {
     (member, cb1) => {
       const ai =  new ArchiveItem({identifier: member.identifier});
       parallel([
-        cb2 => ai.addDownloadedInfoFiles(cb2),
-        cb2 => ai.addDownloadedInfoPages(cb2),
+        cb2 => ai.addDownloadedInfoFiles({copyDirectory}, cb2),
+        cb2 => ai.addDownloadedInfoPages({copyDirectory}, cb2),
       ], (err, res) => {
         if (err) {
           // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
@@ -885,7 +887,7 @@ ArchiveItem.prototype.summarizeMembers = function(cb) {
   cb(null);
 };
 
-ArchiveItem.prototype.addDownloadedInfoMembers = function(cb) {
+ArchiveItem.prototype.addDownloadedInfoMembers = function({copyDirectory=undefined}={}, cb) {
   // Fetch members from cache (but not net), add .downloaded field on all members, and summary on Item
   if ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean
     this.downloaded = {};
@@ -897,7 +899,7 @@ ArchiveItem.prototype.addDownloadedInfoMembers = function(cb) {
         cb1(null);
       } else {
         ArchiveMember.fromIdentifier(this.itemid)
-          .read({}, (err, o) => {
+          .read({copyDirectory}, (err, o) => {
             if (!err) {
               this.downloaded.members_all_count = o.item_count; // Unfortunately missing from item extras
             }
@@ -907,16 +909,16 @@ ArchiveItem.prototype.addDownloadedInfoMembers = function(cb) {
       if (this.membersSearch) {
         cb1(null, null);
       } else {
-        this.fetch_query({skipNet: true}, cb1); // Page of members returned, can ignore
+        this.fetch_query({copyDirectory, skipNet: true}, cb1); // Page of members returned, can ignore
       } },
     (unusedArr, cb1) =>
-      this.addDownloadedInfoToMembers(cb1),
+      this.addDownloadedInfoToMembers({copyDirectory}, cb1),
     cb1 =>
       this.summarizeMembers(cb1)
     ],cb);
 };
 
-ArchiveItem.prototype.addCrawlInfoMembers = function({config}, cb) {
+ArchiveItem.prototype.addCrawlInfoMembers = function({config, copyDirectory=undefined }, cb) {
   // Add .downloaded field on all members, and summary on Item
   if ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean or null
     this.downloaded = {};
@@ -924,12 +926,12 @@ ArchiveItem.prototype.addCrawlInfoMembers = function({config}, cb) {
   // Add data to all members - which can be done in parallel
   each((this.membersFav || []).concat(this.membersSearch || [] ),
     // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
-    (member, cb1) => member.addCrawlInfo({config}, cb1),
+    (member, cb1) => member.addCrawlInfo({config, copyDirectory}, cb1),
     cb);
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
+ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}={}, cb) {
   // In place add
   // Note that .itemid &| .metadata may be undefined
   Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata && this.metadata.mediatype)});
@@ -937,15 +939,15 @@ ArchiveItem.prototype.addCrawlInfo = function({config}, cb) {
     this.downloaded = {};
   }
   waterfall([
-    cb1 => this.fetch_metadata({skipNet: true}, cb1), // Fetch metadata first as wanted by multiple of these
+    cb1 => this.fetch_metadata({copyDirectory, skipNet: true}, cb1), // Fetch metadata first as wanted by multiple of these
     (unusedAI, cb1) => parallel([ //TODO-bOOK put back to parallel
       // Process files
-      cb2 => this.addDownloadedInfoFiles(cb2),
+      cb2 => this.addDownloadedInfoFiles({copyDirectory}, cb2),
       // Process pages (for texts only)
-      cb2 => this.addDownloadedInfoPages(cb2),
+      cb2 => this.addDownloadedInfoPages({copyDirectory}, cb2),
       // Process members (collections only)
-      cb2 => this.addDownloadedInfoMembers(cb2),
-      cb2 => this.addCrawlInfoMembers({config}, cb2),
+      cb2 => this.addDownloadedInfoMembers({copyDirectory}, cb2),
+      cb2 => this.addCrawlInfoMembers({config, copyDirectory}, cb2),
      ], err => //TODO-BOOK re-collapse
       cb1(err))
     ], err => {

@@ -70,6 +70,7 @@ noCache         ignore anything in the cache - forces refetching and may cause u
 noStore         dont store results in cache
 skipFetchFile   as an argument causes file fetching to be supressed (used for testing only)
 wantStream      Return results as a stream, just like received from the upstream.
+copyDirectory   Specify alternate directory to store results in rather than config.directories[0]
 cb(err, res)    Unless otherwise documented callbacks return an error, (subclass of Error) or null, 
                 and optional return data.  
                 Some functions also support an absent cb as returning a Promise, otherwise cb is required 
@@ -83,19 +84,19 @@ only changes made in dweb-mirror appear here.
 
 ## ArchiveFile
 
-##### cacheAndOrStream({skipFetchFile, skipNet, wantStream, start, end}, cb)
+##### cacheAndOrStream({skipFetchFile, skipNet, wantStream, start, end, copyDirectory}, cb)
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
 See MirrorFS.cacheAndOrStream for arguments.
 
-##### isDownloaded(cb) 
+##### isDownloaded({copyDirectory}, cb) 
 
 Returns true (via cb) if File has been downloaded and sets downloaded flag (which is typically saved by ArchiveItem)
 
 ## ArchiveItem
 
-##### save(opts={}, cb)
+##### save({copyDirectory}, cb)
 
 Save metadata for this file as JSON in multiple files (see File Outline)
 ```
@@ -104,7 +105,7 @@ cb(err, this)   Errors if cant fetch metadata, or save failed
 
 If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
 
-##### saveBookReader(opts={}, cb)
+##### saveBookReader({copyDirectory}, cb)
 
 Save `.bookreader` to `IDENTIFIER.bookreader.json`. 
 
@@ -118,7 +119,7 @@ Read metadata, playlist, reviews, files and extra from corresponding files - see
 cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, server})  data structure suitable for "item" field of ArchiveItem
 ```
 
-##### read_bookreader(opts={}, cb)
+##### read_bookreader({copyDirectory}}, cb)
 
 Read bookreader data from file and place in bookreader field on item.
 
@@ -140,6 +141,9 @@ Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-
 Alternatives:
     noCache:            load from net
     noStore:            dont store results in cache
+    copyDirectory:      where to store
+
+Strategy:
     cached:             return from cache
     !cached:            Load from net, save to cache
     
@@ -149,7 +153,7 @@ Alternatives:
 Result is `ai.bookreader` set to `{ brOptions, data, lendingInfo}`
 
 
-#### fetch_page ({wantStream, reqUrl, zip, file, scale rotate, page}, cb)
+#### fetch_page ({wantStream, copyDirectory, reqUrl, zip, file, scale rotate, page}, cb)
 
 Fetch a page from the item, caching it
 ```
@@ -166,7 +170,7 @@ cb(err, data || stream) returns either data, or if wantStream then a stream
 
 For file location is see `MirrorFS.checkWhereValidFileRotatedScaled`
 
-##### fetch_metadata({noCache, noStore, skipNet ....}, cb)
+##### fetch_metadata({noCache, noStore, copyDirectory, skipNet ....}, cb)
 
 Fetch the metadata for this item if it hasn't already been.
 
@@ -202,25 +206,25 @@ Strategy is:
 * Write the result back to `<IDENTIFIER>_members_cached.json`
 * Write each member to its own `<IDENTIFIER>_member.json`
 
-##### saveThumbnail({skipFetchFile=false, wantStream=false} = {}, cb)
+##### saveThumbnail({skipFetchFile=false, copyDirectory=undefined, wantStream=false} = {}, cb)
 
 Save a thumbnail to the cache,
 ```
 cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
 ```
 
-##### fetch_playlist({wantStream}, cb) 
+##### fetch_playlist({wantStream, copyDirectory, noCache}, cb) 
 
 Save the related items to the cache
 cb(err, stream || [{...}*])
 
-##### relatedItems({wantStream, wantMembers}, cb)
+##### relatedItems({wantStream, wantMembers, copyDirectory}, cb)
 Extend ArchiveItem.relatedItems, saves related items to the cache and returns either members or a stream
 ```
 cb(err, obj)  Callback on completion with related items object or stream
 ```
 
-##### addCrawlInfo({config}, cb)
+##### addCrawlInfo({config, copyDirectory}, cb)
 
 Extract crawl information from config, and apply to item.
 
@@ -246,13 +250,13 @@ cb(err, data structure from file)
 ```
 
 
-##### addCrawlInfo({config}, cb)
+##### addCrawlInfo({config, copyDirectory}, cb)
 ```
 config  MirrorConfig object
 this.crawl = result of config.crawlInfo
 ```
 
-##### static addCrawlInfo([ArchiveMember*], {config}, cb) 
+##### static addCrawlInfo([ArchiveMember*], {config, copyDirectory}, cb) 
 
 Apply addCrawlInfo to each member
 
@@ -264,35 +268,36 @@ Set .crawl field of each object in array returned by RelatedInfo API
 rels    { hits: { hits: [ _source: { same fields as ArchiveMember } ] } }
 cb(err)
 ```
-##### addDownloadedInfoFiles(cb(err, this))
+##### addDownloadedInfoFiles({copyDirectory}, cb(err, this))
 Add .downloaded info on all files, and summary on Item
 Side effect of fetch_metadata if not already done so.
 
-##### addDownloadedInfoToMembers(cb(err))
+##### addDownloadedInfoToMembers({copyDirectory}, cb(err))
 Add downloaded info to all members in parallel
 
 ##### summarizeMembers(cb(err))
 Build .downloaded.members_size and members_details_count fields to summarize 
 
-##### addDownloadedInfoMembers(cb(err))
+##### addDownloadedInfoMembers({copyDirectory}, cb(err))
 Add downloaded Info ToMembers, summarize, and add .downloaded.members_all_count
 
-##### addCrawlInfoMembers(cb(err))
+##### addCrawlInfoMembers({copyDirectory}, cb(err))
 Add crawl info to each member (in parallel)
 
  
-##### save(opts = {}, cb)
+##### save({copyDirectory, ...others?...} = {}, cb) //TODO-API
 
 Save a member (fields from the `savedkeys` list) as a `<IDENTIFIER>_member.json` file
 ```
 cb(err, this)
 ```
 
-##### saveThumbnail({skipFetchFile=false, wantStream=false} = {}, cb)
+##### saveThumbnail({skipFetchFile=false, copyDirectory=undefined, wantStream=false} = {}, cb)
 Save a thumbnail to the cache, note must be called after fetch_metadata
 ```
 wantStream      true if want stream instead of ArchiveItem returned
 skipFetchFile   true if should skip net retrieval - used for debugging
+copyDirectory   define alternative to default directory
 resolve or cb(err, res)  this on completion or stream on opening
 ```
 
@@ -666,7 +671,7 @@ str     string to get the hash of
 options { algorithm, format }
 ```
 
-##### static readFile(relFilePath, cb) 
+##### static readFile(relFilePath, {copyDirectory}, cb) 
 
 Look for a path in one of the directories, and return (via fs.readFile)
 
@@ -675,11 +680,11 @@ Look for a path in one of the directories, and return (via fs.readFile)
 Look for a path in one of the directories, create parent directory if required, 
 and write it (via fs.writeFile)
 
-##### checkWhereValidFileRotatedScaled({relFileDir, file, scale, rotate}, cb)
+##### checkWhereValidFileRotatedScaled({relFileDir, file, scale, rotate, copyDirectory}, cb)
 
 Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return its path if found.
 
-#### static checkWhereValidFile(relFilePath, {digest=undefined, format=undefined, algorithm=undefined}, cb)
+#### static checkWhereValidFile(relFilePath, {digest, format, algorithm, copyDirectory}, cb)
 Checks if file or digest exists in one of the cache Directories.
 ```
 Note - either relFilePath or digest/format/algorithm can be omitted, 
@@ -690,7 +695,7 @@ if relPath && digest the hash will be recalculated and checked.
 cb(err, filepath)
 ```
     
-##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, noCache, start, end}, cb)
+##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, noCache, start, end, copyDirectory}, cb)
 
 Complicated function to encapsulate in one place the logic around the cache.
 ```

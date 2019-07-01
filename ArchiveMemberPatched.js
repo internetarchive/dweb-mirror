@@ -15,7 +15,7 @@ const {gateway, ObjectFilter} = require('@internetarchive/dweb-archivecontroller
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 
-ArchiveMember.read = function({identifier = undefined}, cb) {
+ArchiveMember.read = function({ identifier=undefined, copyDirectory=undefined }, cb) {
     /*
         Read member info for an item
         identifier: Where to look - can be a real identifier or pseudo-one for a saved search
@@ -24,7 +24,7 @@ ArchiveMember.read = function({identifier = undefined}, cb) {
     const namepart = identifier;
     const part = "member";
     const relFilePath = path.join(namepart, `${namepart}_${part}.json`);
-    MirrorFS.readFile(relFilePath, (err, jsonstring) => {
+    MirrorFS.readFile(relFilePath, {copyDirectory}, (err, jsonstring) => {
         if (err) {
             cb(err);    // Not logging as not really an err for there to be no file, as will read
         } else {
@@ -44,19 +44,17 @@ ArchiveMember.prototype.addCrawlInfo = function({config}, cb) {
     Object.assign(this, {crawl: config.crawlInfo(this.identifier)});
     cb(null);
 };
-ArchiveMember.addCrawlInfo = function(arr, {config=undefined}={}, cb) { // Should work on an [ArchiveMember*]
-    each(arr, (memb, cb2)  => memb.addCrawlInfo({config}, cb2), cb);
+ArchiveMember.addCrawlInfo = function(arr, {config=undefined, copyDirectory=undefined}={}, cb) { // Should work on an [ArchiveMember*]
+    each(arr, (memb, cb2)  => memb.addCrawlInfo({config, copyDirectory}, cb2), cb);
 };
-ArchiveMember.prototype.read = function(unusedopts = {}, cb) {
-    if (typeof unusedopts === "function") { cb = unusedopts; unusedopts={}; }
-    ArchiveMember.read({identifier: this.identifier}, cb);
+ArchiveMember.prototype.read = function({copyDirectory}, cb) {
+    ArchiveMember.read({identifier: this.identifier, copyDirectory}, cb);
 };
 
 
 
 // noinspection JSUnresolvedVariable
-ArchiveMember.prototype.save = function(opts = {}, cb) {
-    if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+ArchiveMember.prototype.save = function({copyDirectory=undefined} = {}, cb) {
     if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function f(cb) {
         const namepart = this.identifier; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
@@ -65,14 +63,14 @@ ArchiveMember.prototype.save = function(opts = {}, cb) {
         const jsonToSave = canonicaljson.stringify(ObjectFilter(this, (k, v) => savedkeys.includes(k)));
         //MirrorFS._mkdir(dirpath, (err) => { //Not mkdir any more
         const relFilePath = path.join(namepart, namepart + "_member.json");
-        MirrorFS.writeFile(relFilePath, jsonToSave, (err) => {
+        MirrorFS.writeFile({ relFilePath, copyDirectory }, jsonToSave, (err) => {
             if (err) {
                 debug("Unable to write metadata to %s: %s", relFilePath, err.message); cb(err);
             } else {
                 cb(null, this);
             }}); }};
 
-ArchiveMember.prototype.saveThumbnail = function({skipFetchFile=false, noCache=false, wantStream=false} = {}, cb) {  //TODO-API
+ArchiveMember.prototype.saveThumbnail = function({skipFetchFile=false, noCache=false, wantStream=false, copyDirectory=undefined } = {}, cb) {  //TODO-API
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
@@ -93,7 +91,7 @@ ArchiveMember.prototype.saveThumbnail = function({skipFetchFile=false, noCache=f
             const relFilePath = path.join(this.identifier, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = namepart + "/__ia_thumb.jpg";
             MirrorFS.cacheAndOrStream({
-                relFilePath, skipFetchFile, wantStream, debugname, noCache,
+                relFilePath, skipFetchFile, wantStream, debugname, noCache, copyDirectory,
                 urls: this.thumbnaillinks,
             }, (err, streamOrUndefined) => {
                 if (err) {

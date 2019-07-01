@@ -14,7 +14,8 @@ const MirrorFS = require('./MirrorFS');
 // See API.md for documentation
 
 // noinspection JSUnresolvedVariable
-ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, noCache=false, start=0, end=undefined} = {}, cb) { //TODO-API
+ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, noCache=false,
+                                                    copyDirectory=undefined, start=0, end=undefined} = {}, cb) { //TODO-API
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
     skipNet if set will stop it trying the net, and just return info about the current file
@@ -23,7 +24,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
     const filename = this.metadata.name;
     const debugname = [itemid, filename].join('/');
     MirrorFS.cacheAndOrStream({ // Try first time without Urls, keep local - note noCache will make this return error unless sha1 specified as no urls either.
-        skipFetchFile, wantStream, start, end, debugname, noCache,
+        skipFetchFile, wantStream, start, end, debugname, noCache, copyDirectory,
         sha1: this.metadata.sha1,
         relFilePath: path.join(itemid, filename),
         expectsize: this.metadata.size,
@@ -37,7 +38,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
                     cb(err);
                 } else {
                     MirrorFS.cacheAndOrStream({
-                        urls, skipFetchFile, wantStream, start, end, debugname, noCache,
+                        urls, skipFetchFile, wantStream, start, end, debugname, noCache, copyDirectory,
                         sha1: this.metadata.sha1,
                         relFilePath: path.join(itemid, filename),
                         expectsize: this.metadata.size,
@@ -61,11 +62,11 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveFile.prototype.isDownloaded = function(cb) {
+ArchiveFile.prototype.isDownloaded = function({copyDirectory=undefined}, cb) {
     if (this.downloaded === true) { // Already know its downloaded - note not rechecking, so its possible it was deleted.
         cb(null, this.downloaded);
     } else {                // Maybe, lets check
-        this.cacheAndOrStream({skipNet: true, wantStream: false}, (err, res) => {
+        this.cacheAndOrStream({  copyDirectory, skipNet: true, wantStream: false }, (err, res) => {
             // cacheAndOrStream has side effect of setting downloaded
             cb(null, !err)
         });

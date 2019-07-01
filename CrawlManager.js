@@ -10,6 +10,8 @@ const ArchiveItem = require('./ArchiveItemPatched');
 const ArchiveFile = require('./ArchiveFilePatched');
 require('./ArchiveMemberPatched');
 const MirrorFS = require('./MirrorFS');
+const HashStore = require('./HashStore');
+
 /*
   Manage crawls
 
@@ -97,7 +99,10 @@ class CrawlManager {
     }
     setopts(opts={}) {
         Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
-        if (opts.copyDirectory) MirrorFS.setCopyDirectory(opts.copyDirectory);  // If Crawling to a directory, tell MirrorFS - will resolve ~ and .
+        if (opts.copyDirectory) { // If Crawling to a directory
+            // Make sure MirrorFS has a hashstore there
+            MirrorFS.hashstores[opts.copyDirectory] = new HashStore({dir: opts.copyDirectory+"/.hashStore."}); // Note trailing "." is intentional"
+        }
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, noCache=false,
@@ -107,8 +112,8 @@ class CrawlManager {
             maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             ObjectFilter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
-        if (MirrorFS.copyDirectory) {
-            debug("Will use %s for the crawl and %o as a cache",MirrorFS.copyDirectory, MirrorFS.directories);
+        if (copyDirectory) {
+            debug("Will use %s for the crawl and %o as a cache",copyDirectory, MirrorFS.directories);
         } else {
             debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", MirrorFS.directories);
         }
@@ -217,6 +222,7 @@ class CrawlFile extends Crawlable {
         Object.assign(this, opts);  // Handle opts in process as may be async
     }
     process(crawlmanager, cb) { //TODO-API
+        const copyDirectory = crawlmanager.copyDirectory
         if (!this.file) {
             if (this.relfilepath) {
                 const pp = this.relfilepath.split('/');
@@ -227,7 +233,7 @@ class CrawlFile extends Crawlable {
             if (!this.archiveitem) {
                 this.archiveitem = new ArchiveItem({identifier: this.identifier})
             }
-            ArchiveFile.new({archiveitem: this.archiveitem, filename: this.filename}, (err, res) => {
+            ArchiveFile.new({archiveitem: this.archiveitem, filename: this.filename, copyDirectory}, (err, res) => {
                 this.file = res;
                 this.process(crawlmanager, cb); // Recurse
             });
@@ -238,6 +244,7 @@ class CrawlFile extends Crawlable {
                     const skipFetchFile = crawlmanager.skipFetchFile;
                     this.file.cacheAndOrStream({
                         skipFetchFile,
+                        copyDirectory,
                         wantStream: false,
                         start: 0,
                         end: undefined,
@@ -285,9 +292,10 @@ class CrawlPage extends Crawlable {
         console.assert(this.archiveitem);
         if (this.isUniq(crawlmanager)) {
             // if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
-            debug('Processing "%s" %s %s scale=%s rotate=%s via %o', this.identifier, this.page, this.zip, this.file, this.size, this.rotate, this.parent); // Parent includes identifier
-            const skipFetchFile = crawlmanager.skipFetchFile;
+            debug('Processing "%s" %s x1/%s rotate=%s via %o', this.identifier, this.page || (this.zip + "/" + this.file), this.scale, this.rotate, this.parent); // Parent includes identifier
+            const skipFetchFile = crawlmanager.skipFetchFile
             this.archiveitem.fetch_page({
+                copyDirectory: crawlmanager.copyDirectory,
                 wantStream: false, //TODO implement
                 noCache: false,
                 reqUrl: this.reqUrl,
@@ -400,17 +408,18 @@ class CrawlItem extends Crawlable {
         if (this.isUniq(crawlmanager)) { //TODO-API
             const skipFetchFile = crawlmanager.skipFetchFile;
             const noCache = crawlmanager.noCache;
+            const copyDirectory = crawlmanager.copyDirectory;
             waterfall([
                 (cb2) => { // Get metadata
                     if (["metadata", "details", "all"].includes(this.level) || (this.level === "tile" && !(this.member && this.member.thumbnaillinks) )) {
-                        this.item.fetch_metadata(cb2);
+                        this.item.fetch_metadata({copyDirectory}, cb2);
                     } else {
                         cb2(null, this.item);
                     }
                 },
                 (ai, cb2a) => {
                     if (ai && ai.metadata && (ai.metadata.mediatype === "texts")) {
-                        ai.fetch_bookreader(cb2a);
+                        ai.fetch_bookreader({copyDirectory}, cb2a);
                     } else {
                         cb2a(null, this.item)
                     }
@@ -418,9 +427,9 @@ class CrawlItem extends Crawlable {
                 (ai, cb3) => { // Save tile if level is set.
                     if (["tile", "metadata", "details", "all"].includes(this.level)) {
                         if (this.member && this.member.thumbnaillinks) {
-                            this.member.saveThumbnail({skipFetchFile, wantStream: false}, cb3);
+                            this.member.saveThumbnail({skipFetchFile, copyDirectory, wantStream: false}, cb3);
                         } else {
-                            this.item.saveThumbnail({skipFetchFile, wantStream: false}, cb3);
+                            this.item.saveThumbnail({skipFetchFile, copyDirectory, wantStream: false}, cb3);
                         }
                     } else {
                         cb3(null, this.item);
@@ -449,7 +458,9 @@ class CrawlItem extends Crawlable {
                             this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(d => {
                                 // See ALMOST-SAME-CODE-BOOKMETA
                                 const url = new URL(d.uri);
+                                // noinspection JSCheckFunctionSignatures
                                 url.searchParams.append("scale",2);
+                                // noinspection JSCheckFunctionSignatures
                                 url.searchParams.append("rotate",0);
                                 crawlmanager._push(new CrawlPage({
                                     identifier: this.item.itemid,
@@ -471,11 +482,11 @@ class CrawlItem extends Crawlable {
                     // Get the related items
                     if (["details", "all"].includes(this.level) || this.related) {
                         const taskparms = this.related || crawlmanager.defaultDetailsRelated;
-                        this.item.relatedItems({wantStream: false, wantMembers: true}, (err, searchmembers) => {
+                        this.item.relatedItems({copyDirectory, wantStream: false, wantMembers: true}, (err, searchmembers) => {
                             if (err) {
                                 cb5(err);
                             } else {
-                                each(searchmembers, (sm, cb1) => sm.save(cb1), (unusederr) => { // Errors reported in save
+                                each(searchmembers, (sm, cb1) => sm.save({copyDirectory}, cb1), (unusederr) => { // Errors reported in save
                                     searchmembers.slice(0, taskparms.rows)
                                         .forEach(sm =>
                                           crawlmanager._push(CrawlItem.fromSearchMember(sm, taskparms, this.asParent(), crawlmanager)));
@@ -495,7 +506,7 @@ class CrawlItem extends Crawlable {
                         const search = Array.isArray(this.search) ? this.search : [this.search];
                         ai.rows = search.reduce((acc, queryPage) => acc + queryPage.rows, 0); // Single query all rows
                         ai.sort = search[0].sort;
-                        ai.fetch_query({noCache}, (err, searchMembers) => { // Needs to update start, but note opts can override start
+                        ai.fetch_query({noCache, copyDirectory}, (err, searchMembers) => { // Needs to update start, but note opts can override start
                             let start = 0;
                             search.forEach(queryPage => {
                                 if (queryPage.sort && (queryPage.sort !== this.item.sort)) {

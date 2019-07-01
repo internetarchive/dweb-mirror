@@ -74,6 +74,7 @@ function mirrorHttp(config, cb) {
         }
         // Detect if want server to skip cache
         req.opts.noCache = req.headers["cache-control"] && ["no-cache", "max-age=0"].includes(req.headers["cache-control"]);
+        req.opts.copyDirectory = req.query.copyDirectory; // Usually undefined
         next();
     });
   function errAndNext(req, res, next, err) {
@@ -106,12 +107,12 @@ function mirrorHttp(config, cb) {
 
 
     function sendRelated(req, res, next) {
-        // req.opts = { noCache}
+        // req.opts = { noCache, copyDirectory}
         const ai = new ArchiveItem({identifier: req.params[0]});
         waterfall([
                 (cb) => ai.fetch_metadata(req.opts, cb),
-                (ai, cb) => ai.relatedItems({wantMembers: false, noCache: req.opts.noCache}, cb),
-                (res, cb) => ArchiveItem.addCrawlInfoRelated(res, {config}, (err) => cb(err, res)),
+                (ai, cb) => ai.relatedItems({copyDirectory: req.opts.copyDirectory, wantMembers: false, noCache: req.opts.noCache}, cb),
+                (res, cb) => ArchiveItem.addCrawlInfoRelated(res, {config, copyDirectory: req.opts.copyDirectory}, (err) => cb(err, res)),
             ], (err, obj) => res.json(obj)
         );
     }
@@ -121,7 +122,7 @@ function mirrorHttp(config, cb) {
         const ai = new ArchiveItem({identifier: req.params[0]});
         waterfall([
                 (cb) => ai.fetch_metadata(req.opts, cb),
-                (ai, cb) => ai.fetch_playlist({wantStream: true, noCache: req.opts.noCache}, cb)
+                (ai, cb) => ai.fetch_playlist({copyDirectory: req.opts.copyDirectory, wantStream: true, noCache: req.opts.noCache}, cb)
             ], (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"})
         );
     }
@@ -168,7 +169,7 @@ function mirrorHttp(config, cb) {
     function streamArchiveFile(req, res, next) {
         // Note before this is called req.opts = {start, end}
         //TODO-CACHE-AGING Look at cacheControl in options https://expressjs.com/en/4x/api.html#res.sendFile (maxAge, immutable)
-        // req.opts { start, end, noCache }
+        // req.opts { start, end, noCache, copyDirectory }
         try {
             const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
             const itemid = req.params['itemid'];
@@ -177,8 +178,8 @@ function mirrorHttp(config, cb) {
             debug('Sending ArchiveFile %s/%s', itemid, filename);
             const ai = new ArchiveItem({identifier: itemid});
             waterfall([
-                    (cb) => ai.fetch_metadata(cb),
-                    (archiveitem, cb) => ArchiveFile.new({archiveitem, filename}, cb),
+                    (cb) => ai.fetch_metadata({copyDirectory: req.opts.copyDirectory}, cb), // Dont pass on noCache, we'll be streaming after already fetched
+                    (archiveitem, cb) => ArchiveFile.new({archiveitem, filename, copyDirectory: req.opts.copyDirectory}, cb),
                     // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
                     (archivefile, cb) => {
                         af = archivefile;
@@ -242,7 +243,7 @@ function mirrorHttp(config, cb) {
                 debug('streamQuery could not fetch metadata for %s', o.itemid);
                 next(err);
             } else {
-                o.fetch_query({wantFullResp: true, noCache: req.opts.noCache}, (err, resp) => { // [ArchiveMember*]
+                o.fetch_query({copyDirectory: req.opts.copyDirectory, wantFullResp: true, noCache: req.opts.noCache}, (err, resp) => { // [ArchiveMember*]
                     if (err) {
                         debug('streamQuery for q="%s" failed with %s', o.query, err.message);
                         res.status(404).send(err.message);
@@ -250,7 +251,7 @@ function mirrorHttp(config, cb) {
                     } else {
                         // Note we are adding crawlinfo to o - the ArchiveItem, but the resp.response.docs
                         // is an array of pointers into same objects so its getting updated as well
-                        o.addCrawlInfo({config}, (unusederr, unusedmembers) => {
+                        o.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr, unusedmembers) => {
                           resp.response.downloaded = o.downloaded;
                           res.json(resp);
                         });
@@ -287,15 +288,15 @@ function mirrorHttp(config, cb) {
                 pathname: specialidentifiers[itemid].thumbnaillinks,
             }));
         } else {
-            MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {noCache}, (err, existingFilePath) => {
+            MirrorFS.checkWhereValidFile(itemid + "/__ia_thumb.jpg", {noCache, copyDirectory: req.opts.copyDirectory}, (err, existingFilePath) => {
                 if (!err) {
                     sendJpegStream(fs.createReadStream(existingFilePath));
                 } else {
                     // We dont already have the file
                     const ai = new ArchiveItem({identifier: itemid});
                     waterfall([
-                            (cb) => ai.fetch_metadata({noCache}, cb),
-                            (archiveitem, cb2) => archiveitem.saveThumbnail({noCache, wantStream: true, }, cb2)
+                            (cb) => ai.fetch_metadata({noCache, copyDirectory: req.opts.copyDirectory}, cb),
+                            (archiveitem, cb2) => archiveitem.saveThumbnail({noCache, copyDirectory: req.opts.copyDirectory, wantStream: true, }, cb2)
                         ],
                         (err, s) => {
                             if (err) {
@@ -345,6 +346,7 @@ function mirrorHttp(config, cb) {
         const identifier = req.params['identifier'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
         new ArchiveItem({identifier})
             .fetch_page({
+                    copyDirectory: req.opts.copyDirectory,
                     wantStream: true,
                     reqUrl: req.url,
                     zip: req.query.zip,
@@ -457,7 +459,7 @@ function mirrorHttp(config, cb) {
                 if (err) {
                     res.status(404).send(err.message); // Its neither local, nor from server
                 } else {
-                    ai.addCrawlInfo({config}, (unusederr) => {
+                    ai.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr) => {
                         res.json(ai.exportMetadataAPI());
                     })
                 }
@@ -513,7 +515,8 @@ function mirrorHttp(config, cb) {
         MirrorFS.checkWhereValidFile(undefined, {
                 digest: req.params['contenthash'],
                 format: 'multihash58',
-                algorithm: "sha1"
+                algorithm: "sha1",
+                copyDirectory: req.opts.copyDirectory,
             },
             (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => {
                 if (err) next()

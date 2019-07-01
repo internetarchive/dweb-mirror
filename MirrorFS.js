@@ -31,7 +31,6 @@ class MirrorFS {
     Utility subclass that knows about the file system.
 
     properties:
-      copyDirectory:  place to put a copy
       hashstores: { directory: hashstore }  esp sha1.filestore
 
     Common parameters to functions
@@ -56,13 +55,6 @@ class MirrorFS {
         this.hashstores = ObjectFromEntries(               // Mapping
             this.directories.map(d =>                         // of each config.directories
                 [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
-    }
-    static _copyDirectory() {
-        return this.copyDirectory || this.directories[0];
-    }
-    static setCopyDirectory(dir) {
-        this.copyDirectory = dir;
-        this.hashstores[dir] = new HashStore({dir: dir+"/.hashStore."}); // Note trailing "." is intentional"
     }
 
     static _mkdir(dirname, cb) {
@@ -143,26 +135,26 @@ class MirrorFS {
         return stream
     }
 
-    static readFile(relFilePath, cb) {
+    static readFile(relFilePath, {copyDirectory}, cb) {
         // like fs.readFile, but checks relevant places first
-        this.checkWhereValidFile(relFilePath, {}, (err, existingFilePath) => {
+        this.checkWhereValidFile(relFilePath, {copyDirectory}, (err, existingFilePath) => {
             if (err) cb(err);
             else fs.readFile(existingFilePath, cb);
         });
     }
-    static writeFile(relFilePath, data, cb) {
+    static writeFile({copyDirectory=undefined, relFilePath}, data, cb) { //TODO-API copyDirectory and {}
         // Like fs.writeFile but will mkdir the directory before writing the file
         //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; this.directories[0] (which comes from config.directories)
-        const filepath = path.join(this._copyDirectory(), relFilePath);
+        const filepath = path.join(copyDirectory || this.directories[0], relFilePath);
         const dirpath = path.dirname(filepath);
-        MirrorFS._mkdir(dirpath, (err) => {
+        this._mkdir(dirpath, (err) => {
             if (err) {
-                debug("MirrorFS.writeFile: Cannot mkdir %s", dirpath, err.message);
+                debug("ERROR: MirrorFS.writeFile: Cannot mkdir %s", dirpath, err.message);
                 cb(err);
             } else {
                 fs.writeFile(filepath, data, (err) => {
                     if (err) {
-                        debug("MirrorFS.writeFile: Unable to write to %s: %s", filepath, err.message);
+                        debug("ERROR: MirrorFS.writeFile: Unable to write to %s: %s", filepath, err.message);
                         cb(err);
                     } else {
                         cb(null);
@@ -170,7 +162,24 @@ class MirrorFS {
             }});
     }
 
-    static _fileopenwrite(relFilePath, cb) {
+    static copyFile(sourcePath, destnPath, cb) {
+        this._mkdir(path.dirname(destnPath), (err) => {
+            if (err) {
+                debug("ERROR: MirrorFS.copyFile: Cannot mkdir %s: %s",path.dirname(destnPath), err.message);
+                cb(err);
+            } else {
+                fs.copyFile(sourcePath, destnPath, (err) => {
+                    if (err) {
+                        debug("ERROR: MirrorFS.copyFile: Unable to copy %s to %s: %s", sourcePath, destnPath, err.message);
+                        cb(err);
+                    } else {
+                        cb(null);
+                    }
+                });
+            }
+        });
+    }
+    static _fileopenwrite({relFilePath, cacheDirectory}={}, cb) { //TODO-API
         /*
         directory top level directory of cache - must exist
         filepath path to file (rooted preferably)
@@ -178,14 +187,13 @@ class MirrorFS {
         cb(err, fd)     Open file descriptor
          */
         try {
-            const directory = this._copyDirectory();
-            const filepath = path.join(directory, relFilePath);
+            const filepath = path.join(cacheDirectory, relFilePath);
             fs.open(filepath, 'w', (err, fd) => {
                 if (err) {
-                    if (err.code === "ENOENT") {    // Doesnt exist, which means the directory or subdir -
+                    if (err.code === "ENOENT") {    // Doesnt exist, which means the cacheDirectory or subdir -
                         // noinspection JSUnusedLocalSymbols
-                        fs.stat(directory, (err, unusedStats) => {
-                            if (err) throw new Error(`The root directory for mirroring: ${directory} is missing - please create by hand`);
+                        fs.stat(cacheDirectory, (err, unusedStats) => {
+                            if (err) throw new Error(`The root directory for mirroring: ${cacheDirectory} is missing - please create by hand`);
                             debug("MirrorFS creating directory: %s", path.dirname(filepath));
                             MirrorFS._mkdir(path.dirname(filepath), err => {
                                 if (err) {
@@ -193,7 +201,7 @@ class MirrorFS {
                                     cb(err);
                                 } else {
                                     fs.open(filepath, 'w', (err, fd) => {
-                                        if (err) { // This shouldnt happen, we just checked the directory.
+                                        if (err) { // This shouldnt happen, we just checked the cacheDirectory.
                                             console.error("Failed to open", filepath, "after mkdir");
                                             cb(err);
                                         } else {
@@ -216,25 +224,8 @@ class MirrorFS {
         }
     }
 
-    /* Not currently used
-    // noinspection JSUnusedGlobalSymbols
-    static writableStreamTo(directory, filepath, cb) {
-        this._fileopenwrite(relFilePath, (err, fd) => {
-            if (err) {
-                debug("Unable to write to %s: %s", filepath, err.message);
-                cb(err);
-            } else {
-                // fd is the file descriptor of the newly opened file;
-                const writable = fs.createWriteStream(null, {fd: fd});
-                cb(null, writable);
-                // Note at this point file is neither finished, nor closed, its a stream open for writing.
-                //fs.close(fd); Should be auto closed when stream to it finishes
-            }
-        });
-    }
-    */
-
-    static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined, noCache=undefined}, cb) { //TODO-API noCache
+    static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined,
+                                                 noCache=undefined, copyDirectory=undefined}, cb) { //TODO-API noCache
         /*
             relFileDir: Item's dir
             file:       File within dir
@@ -246,11 +237,12 @@ class MirrorFS {
         const scales = [];
         for(let i=Math.floor(scale); i>0; i--) { scales.push(i); }  // A = e.g. [ 8...1 ]
         detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
-            (rel, cb2) => this.checkWhereValidFile(rel, {noCache}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger or same size as
+            (rel, cb2) => this.checkWhereValidFile(rel, {noCache, copyDirectory}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger or same size as
             cb
         )
     }
-    static checkWhereValidFile(relFilePath, {existingFilePath=undefined, noCache=false, digest=undefined, format=undefined, algorithm=undefined}, cb) { //TODO-API
+    static checkWhereValidFile(relFilePath, {existingFilePath=undefined, noCache=false, digest=undefined,
+        format=undefined, algorithm=undefined, copyDirectory=undefined}, cb) { //TODO-API
         /*
         digest      Digest of file to find
         format      hex or multihash - how hash formatted
@@ -271,8 +263,9 @@ class MirrorFS {
         } else if (existingFilePath) {
           cb(null, existingFilePath); // Got it
         } else {
-          detect( this.directories, (cacheDirectory, cb2) => { // Looking for first success
-            waterfall([
+          detect( copyDirectory ? [].concat(copyDirectory, this.directories) : this.directories, // If copyDirectory specified then look there first whether or not its in this.directories
+            (cacheDirectory, cb2) => { // Looking for first success
+              waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
                             cb3(null);
@@ -299,26 +292,28 @@ class MirrorFS {
                         });
                     }
                 }
-            ], (err, unused) => cb2(null, !err)) // Did the detect find one
-          }, (err, res) => {
-            // Three possibilities - err (something failed) res (found) !err && !res (not found)
-            if (err)
-                cb(err);
-            else if (!res)
-                cb (new Error(`${relFilePath} not found in caches`));
-            else
-                cb(null, path.join(res, relFilePath)); // relFilePath should have been set by time get here
-          });
+              ], (err, unused) => cb2(null, !err)) // Did the detect find one
+            }, (err, res) => {
+                // Three possibilities - err (something failed) res (found) !err && !res (not found)
+                if (err)
+                    cb(err);
+                else if (!res)
+                    cb (new Error(`${relFilePath} not found in caches`));
+                else
+                    cb(null, path.join(res, relFilePath)); // relFilePath should have been set by time get here
+            });
         }
     }
 
-    static cacheAndOrStream({relFilePath=undefined, //TODO-API noCache
+    static cacheAndOrStream({ relFilePath=undefined, //TODO-API noCache, copyDirectory
                                 existingFilePath=undefined,
                                 debugname="UNDEFINED", urls=undefined,
                                 expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false,
                                 wantStream=false, wantBuff=false, wantSize=false,
                                 noCache=false, skipNet=false,
-                                start=0, end=undefined} = {}, cb) {
+                                start=0, end=undefined,
+                                copyDirectory=undefined } = {},
+                                cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
 
@@ -348,7 +343,8 @@ class MirrorFS {
             If !wantStream, then cb will only call back (with undefined) when the file has been written to disk and the file renamed.
             In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
         */
-        this.checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1'},
+        const cacheDirectory = copyDirectory || this.directories[0]; // Where the file should be put if creating it
+        this.checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory},
           (err, existingFilePath) => {
             if (err) {  //Doesn't match
                 if (!urls || (Array.isArray(urls) && !urls.length) || skipNet) {
@@ -361,17 +357,20 @@ class MirrorFS {
             }
         });
         function haveExistingFile(existingFilePath, sha1) {
-            if (this.copyDirectory && !existingFilePath.startsWith(this.copyDirectory)) {
-                const copyFilePath = path.join(this.copyDirectory, relFilePath);
-                fs.copyFile(existingFilePath, copyFilePath , (err) => {
+            if (copyDirectory && !existingFilePath.startsWith(copyDirectory)) {
+                // We have the right file, but in the wrong place
+                const copyFilePath = path.join(copyDirectory, relFilePath);
+                this.copyFile(existingFilePath, copyFilePath , (err) => {
                     if (err) {
-                        debug("Failed to copy %s to %s", relFilePath, copyFilePath);
+                        debug("ERROR: MirrorFS.cacheAndOrStream of %s failed %s", relFilePath, err.message);
                     } else {
-                        debug("copied cached file to %s", copyFilePath);
+                        debug("Copied existing file %sfrom %s to %s", sha1 ? "with matching sha1 " : "", existingFilePath, copyFilePath);
+                        callbackEmptyOrDataOrStream(existingFilePath, sha1);
                     }
-                    callbackEmptyOrDataOrStream(existingFilePath, sha1);
                 })
             } else {
+                // Write file and either right place, or we dont care where
+                debug("Already cached existing file %s%s %s", sha1 ? "with matching sha1 " : "", existingFilePath);
                 callbackEmptyOrDataOrStream(existingFilePath, sha1);
             }
         }
@@ -388,10 +387,9 @@ class MirrorFS {
         }
         function callbackEmptyOrDataOrStream(existingFilePath, sha1) {
             if (wantStream) {
-                debug("streaming %s from cache as %s", existingFilePath, sha1 ? "sha1 matches" : "sha1 not specified");
+                debug("streaming %s from cache", existingFilePath);
                 cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
             } else {
-                debug("Already cached %s %s", existingFilePath, sha1 ? "with correct sha1" : "sha1 not specified");
                 callbackEmptyOrData(existingFilePath);
             }
         }
@@ -417,12 +415,12 @@ class MirrorFS {
                             // Dont try and write it
                         } else {
                             // Now create a stream to the file
-                            const newFilePath = path.join(this._copyDirectory(), relFilePath);
+                            const newFilePath = path.join(cacheDirectory, relFilePath);
                             const relFilePathTemp = relFilePath + ".part";
-                            const filepathTemp = path.join(this._copyDirectory(), relFilePathTemp);
-                            MirrorFS._fileopenwrite(relFilePathTemp, (err, fd) => { // Will make directory if reqd
+                            const filepathTemp = path.join(cacheDirectory, relFilePathTemp);
+                            MirrorFS._fileopenwrite({ relFilePath: relFilePathTemp, cacheDirectory }, (err, fd) => { // Will make directory if reqd
                                 if (err) {
-                                    debug("Unable to write to %s: %s", filepathTemp, err.message);
+                                    debug("ERROR MirrorFS.cacheAndOrStream: Unable to write to %s: %s", filepathTemp, err.message);
                                     cb(err);
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
@@ -448,9 +446,9 @@ class MirrorFS {
                                                     console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
-                                                    this.hashstores[this._copyDirectory()].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath, (err)=>{
+                                                    this.hashstores[cacheDirectory].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath, (err)=>{
                                                         debug(`Closed ${debugname} size=${writable.bytesWritten} %s`,err ? err.message : "");
-                                                        this.seed({relFilePath, directory: this._copyDirectory()}, (err, res) => { }); // Seed to IPFS, WebTorrent etc
+                                                        this.seed({relFilePath, directory: cacheDirectory}, (unusedErr, unusedRes) => { }); // Seed to IPFS, WebTorrent etc
                                                         //Ignore err & res, its ok to fail to seed and will be logged inside seed()
                                                         // Also - its running background, we are not making caller wait for it to complete
                                                         // noinspection JSUnresolvedVariable
@@ -575,7 +573,7 @@ class MirrorFS {
                     }
                 })
             },
-          (err, res) => {
+          (err, unusedRes) => {
               if (err) {
                   debug("maintenance failed with err = %o", err);
               } else {
