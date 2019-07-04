@@ -773,7 +773,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
   // For texts, Add .downloaded info on all pages, and summary on Item
   // Note ArchiveItem might not yet have bookreader field loaded when this is called.
   this.fetch_metadata({skipNet: true, copyDirectory}, (err, ai) => {
-    if (err || !ai || ai.metadata.mediatype !== "texts") {
+    if (err || !ai || (ai.metadata.mediatype !== "texts") || (this.subtype() !== "bookreader")) {
       cb(null, undefined); // Not a book - dont consider when checking if downloaded
     } else {
       this.fetch_bookreader({copyDirectory, skipNet: true}, (err, ai) => {
@@ -945,9 +945,10 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
       cb2 => this.addCrawlInfoMembers({config, copyDirectory}, cb2),
      ], cb1)
     ], err => {
-      this.downloaded.details = (this.metadata && (this.metadata.mediatype === "texts"))
-        ? (this.downloaded.files_details && this.downloaded.pages_details)
-        : this.downloaded.files_details
+      this.downloaded.details =
+        this.metadata
+        && this.downloaded.files_details
+        && (typeof this.downloaded.pages_details === "undefined" || this.downloaded.pages_details);
       cb(err);
   });
 };
