@@ -314,7 +314,7 @@ function mirrorHttp(config, cb) {
 
   function sendInfo(req, res) {
     DwebTransports.p_statuses((err, transportStatuses) => {
-      res.status(200).set('Accept-Ranges', 'bytes').json({"config": config.configOpts, transportStatuses});
+      res.status(200).set('Accept-Ranges', 'bytes').json({"config": config.configOpts, transportStatuses, directories: config.directories});
     });
   }
 
@@ -412,6 +412,15 @@ function mirrorHttp(config, cb) {
     });
     app.get('/admin/crawl/status', (req, res) => {
         res.json(CrawlManager.status());
+    });
+    app.get('/admin/crawl/add/:identifier', (req, res) => {
+      CrawlManager.add({config, identifier: req.params.identifier, copyDirectory: req.opts.copyDirectory}, err => {
+        if (err) { // No errors expected
+          next(err);
+        } else {
+          sendInfo(req, res); // Send info again for UI
+        }
+      });
     });
     app.get('/arc/archive.org', (req, res) => {
         res.redirect(url.format({pathname: "/archive/archive.html", query: req.query}));

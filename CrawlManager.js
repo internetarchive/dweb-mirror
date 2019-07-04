@@ -179,6 +179,21 @@ class CrawlManager {
               this.initialItemTaskList.filter(t => t.identifier === identifier) ); // Any tasks that match identifier - maybe none or multiple but usually one
         }, delayTillReconsider);
     }
+    static findOrCreateCrawlManager({config, copyDirectory}) {
+        // Find a crawlmanager to use for a copyDirectory - creating if reqd
+        return this.crawls.find(cm => cm.copyDirectory === copyDirectory)
+                || new CrawlManager(Object.assign({}, config.apps.crawl.opts, {copyDirectory, debugidentifier: copyDirectory, name: copyDirectory}));
+    }
+    //Test is curl -Lv http://localhost:4244/admin/crawl/add/AboutBan1935?copyDirectory=/Volumes/Transcend/archiveorgtest20190701
+    static add({identifier=undefined, config=undefined, copyDirectory=undefined}, cb) {
+        // Called by mirrorHttp to do a one-time crawl of an item
+        const crawlmanager = copyDirectory
+          ? this.findOrCreateCrawlManager({config, copyDirectory})
+          : this.crawls[0];
+        crawlmanager._push(new CrawlItem({identifier, level: "details", crawlmanager}, []));
+        // Note this wont restart a paused crawl, if crawl has finished then pushing a task will make it continue
+        cb(null); // No errors currently
+    }
 }
 //  *** NOTE THIS _levels LINE IS IN dweb-mirror.CrawlManager && dweb-archive/components/ConfigDetailsComponent.js && assumptions about it in dweb-archive/dweb-archive-styles.css
 CrawlManager._levels = ["tile", "metadata", "details", "all"];
