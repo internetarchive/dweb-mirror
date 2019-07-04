@@ -459,32 +459,28 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     //TODO-CACHE-AGING
     // noinspection JSUnresolvedVariable
     const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
-    const relFilePath = namepart && path.join(namepart, namepart + "_members_cached.json");
+    const defaultSort = (!this.sort || (this.sort === ((this.metadata && this.metadata.collection_sort_order) || "-downloads"))); // Check if its non-default sort
+    const part = "members_" +   (defaultSort ? "cached" : (this.sort.join("_")+"_cached"));
     if (!Array.isArray(this.membersFav)) this.membersFav = [];
+    //TODO-SEARCHORDER check what happens when switch tabs, at this point membersSearch should be empty
     if (!Array.isArray(this.membersSearch)) this.membersSearch = [];
     waterfall([
       (cb2) => { // Read from members_cached.json files from cache if available
-        if (!relFilePath) {
+        if (!namepart) {
             cb2();
         } else {
           if (!noCache) { // Dont read old members if not caching
-            MirrorFS.readFile(relFilePath, {copyDirectory}, (err, jsonstring) => {
-              if (!err) {
-                try {
-                  const data = canonicaljson.parse(jsonstring);
-                  this.membersSearch = data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
-                } catch (err) {
-                  debug("Cant parse json in %s: %s", relFilePath, err.message);
-                  this.membersSearch = []
-                }
-              }
+            _parse_common(namepart, part, {copyDirectory}, (err, data) => {
+              this.membersSearch = err
+                ? []
+                : data.map(o => new ArchiveMember(o, {unexpanded: !o.publicdate}));
               cb2();
             });
           } else {
             cb2();
           }
         } },
-        (cb2) => {
+      (cb2) => {
           // Try and read extras file which for search will contain numFound (it wont have been read by fetch_metadata because no identifier)
           if (!namepart) { // Some queries e.g. for identifier dont have namepart  or cache
             cb2();
@@ -496,7 +492,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
               cb2();
           })}
         },
-        (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
+      (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...
         // or for identifier=fav-* when members loaded with unexpanded
@@ -536,13 +532,13 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       (res, cb2) => {
         // arr will be matching ArchiveMembers, possibly wrapped in Response (depending on opts) or undefined if not a collection or search
         // fetch_query.members will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
-        if (this.membersSearch && this.membersSearch.length && relFilePath && !noStore) {
+        if (this.membersSearch && this.membersSearch.length && namepart && !noStore) {
           // Just store membersSearch, but pass on full set with possible response
           each( [
               ["extra", ObjectFromEntries(
                 ArchiveItem.extraFields.map(k => [k, this[k]])
                   .filter(kv=>!!kv[1]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
-              ["members_cached", this.membersSearch]
+              [part, this.membersSearch]  // part is e.g. members_cached or members_-titleSorter_cached
             ],
             (i, cbInner) => { // [ part, obj ]
               _save1file(i[0], i[1], namepart, {copyDirectory}, cbInner);

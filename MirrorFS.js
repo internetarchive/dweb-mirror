@@ -599,7 +599,8 @@ class MirrorFS {
     }
 
     static isSpecialFile(relFilePath) { // Note special files should match between MirrorFS.isSpecialFile and ArchiveItemPatched.save
-        return ["_meta.json", "_extra.json", "_member.json", "_members_cached.json", "_members.json","_files.json","_extra.json","_reviews.json", ".part", "_related.json", "_playlist.json", "_bookreader.json"].some(ending=>relFilePath.endsWith(ending));
+
+        return ["_meta.json", "_extra.json", "_member.json", "_cached.json", "_members.json","_files.json","_extra.json","_reviews.json", ".part", "_related.json", "_playlist.json", "_bookreader.json"].some(ending=>relFilePath.endsWith(ending));
     }
 }
 
