@@ -537,7 +537,7 @@ class MirrorFS {
                         debug("Unable to destroy hashstore %s in %s", tablename,cacheDirectory);
                         cb1(err);
                     } else {
-                        MirrorFS._streamOfCachedItemPaths({cacheDirectory}) // Stream of relative file paths
+                        MirrorFS._streamOfCachedItemPaths({cacheDirectory}) // Stream of relative file paths //TODO should be a stream of AF
                             .filter(relFilePath => {
                                 if (relFilePath.endsWith('.part')) {
                                     // Note the unlink is async, but we are not waiting for it.

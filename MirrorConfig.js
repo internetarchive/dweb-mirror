@@ -24,7 +24,7 @@ class MirrorConfig extends ConfigController {
 
     setOpts(...opts) {
         // Extend base class to handle specific derivations of opts
-        super.setOpts(...opts);
+        super.setOpts(...opts); // Just combined and store ops
         this.directories = ConfigController.resolves(this.directories); // Handle ~/ ./ ../ and expand * or ?? etc
         // noinspection JSUnresolvedVariable
         this.archiveui.directory = ConfigController.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match

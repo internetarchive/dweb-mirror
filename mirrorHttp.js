@@ -394,23 +394,23 @@ function mirrorHttp(config, cb) {
         });
     });
     //TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
-    app.get('/admin/crawl/restart/:crawlid', (req, res) => {crawlid =
+    app.get('/admin/crawl/restart/:crawlid', (req, res) => {
       CrawlManager.crawls[req.params["crawlid"]].restart();
       res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    app.get('/admin/crawl/pause/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+    app.get('/admin/crawl/pause/:crawlid', (req, res) => {
       CrawlManager.crawls[req.params["crawlid"]].pause();
         res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    app.get('/admin/crawl/resume/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+    app.get('/admin/crawl/resume/:crawlid', (req, res) => {
       CrawlManager.crawls[req.params["crawlid"]].resume();
         res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    app.get('/admin/crawl/empty/:crawlid', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+    app.get('/admin/crawl/empty/:crawlid', (req, res) => {
       CrawlManager.crawls[req.params["crawlid"]].empty();
         res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
-    app.get('/admin/crawl/status', (req, res) => { //TODO-CRAWLCTL needs to be non-static
+    app.get('/admin/crawl/status', (req, res) => {
         res.json(CrawlManager.status());
     });
     app.get('/arc/archive.org', (req, res) => {
@@ -530,6 +530,7 @@ function mirrorHttp(config, cb) {
   app.get('/metadata*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
   app.get('/search*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
   app.get('/details/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
+  app.get('/download/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
 
 // noinspection JSUnresolvedVariable
     app.get('/favicon.ico', (req, res, next) => res.sendFile(config.archiveui.directory + "/favicon.ico", {

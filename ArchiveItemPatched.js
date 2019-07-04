@@ -200,7 +200,7 @@ ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
                 }
             }}),
         cb => _parse("files", (err, o) => {
-            // TODO note at this point o.downloaded is meaningful - want to push it up one level
+            // Note that downloaded is stored here in o.x.downloaded but pushed up by AF.constructor to AF.downloaded instead of AF.metadata.downloaded
             if (!err) { res.files = o; res.files_count = res.files.length; }
             cb(err); }),
         cb => _parse("reviews", (err, o) => {
@@ -361,7 +361,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     Note that it adds information about the crawl and downloaded status
 
     Alternatives:
-    opts { noStore, noCache, skipNet, copyDirectory } - see common args at top of this file
+    opts { noStore, noCache, darkOk, skipNet, copyDirectory } - see common args at top of this file
     cached:             return from cache
     !cached:            Load from net, save to cache
 
@@ -372,7 +372,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
      */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     // noinspection JSUnresolvedVariable
-    const {copyDirectory} = opts; //TODO get other args from opts here
+    const {copyDirectory} = opts;
     if (cb) { try { f.call(this, cb) } catch(err) {
         cb(err)}}
     else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
@@ -652,7 +652,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_playlist.json");
         // noinspection JSUnresolvedVariable
-        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache, copydirectory,
+        MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache, copyDirectory,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
             urls: `https://archive.org/embed/${identifier}?output=json`, // Hard coded, would rather have in Util.gateway.url_playlist but complex
             debugname: identifier + "/" + identifier + "_playlist.json"
@@ -843,7 +843,6 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function({copyDirectory=undef
   // Add data to all members - which can be done in parallel
   each((this.membersFav || []).concat(this.membersSearch || []),
     // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
-    //TODO-DOWNLOAD shortcut, dont attempt to find metadata https://github.com/internetarchive/dweb-mirror/issues/142
     (member, cb1) => {
       const ai =  new ArchiveItem({identifier: member.identifier});
       parallel([
@@ -940,7 +939,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
   }
   waterfall([
     cb1 => this.fetch_metadata({copyDirectory, skipNet: true}, cb1), // Fetch metadata first as wanted by multiple of these
-    (unusedAI, cb1) => parallel([ //TODO-bOOK put back to parallel
+    (unusedAI, cb1) => parallel([
       // Process files
       cb2 => this.addDownloadedInfoFiles({copyDirectory}, cb2),
       // Process pages (for texts only)
@@ -948,8 +947,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
       // Process members (collections only)
       cb2 => this.addDownloadedInfoMembers({copyDirectory}, cb2),
       cb2 => this.addCrawlInfoMembers({config, copyDirectory}, cb2),
-     ], err => //TODO-BOOK re-collapse
-      cb1(err))
+     ], cb1)
     ], err => {
       this.downloaded.details = (this.metadata && (this.metadata.mediatype === "texts"))
         ? (this.downloaded.files_details && this.downloaded.pages_details)
@@ -960,7 +958,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.exportFiles = function() {  // Note overridden in dweb-mirror.ArchiveItemPatched
-  // Note we are storing d.downloaded in the metadata because we only have one level deep, this is undone when read back in TODO
+  // Note we are storing as AF.downloaded.metadata as only store that, but reading back in AF.constructor converted to AF.downloade
   return this.files.map(f => Object.assign({downloaded: f.downloaded}, f.metadata));
 };
 

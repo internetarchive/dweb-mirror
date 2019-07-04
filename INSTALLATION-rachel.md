@@ -71,9 +71,11 @@ sudo apt-get update && sudo apt-get install yarn
 #### Updating Node (buggy)
 
 Many tools now require Node v10 to work, but Node no longer supports 32 bit by default. 
-Note there is an issue open on the community about this ...
+Note there is an issue open on the Rachel community about this 
+and Refael Ackermann from the node-js team helped make 32 bit compiles available, 
+but there is noone at Rachel who has time to look at it...
 [http://community.rachelfriends.org/t/installing-usable-version-of-node/1082/4]
-and Refael Ackermann from the node-js team is helping. 
+
 
 This next list only gets to v9 at present, its worth looking at `/etc/apt/sources.list.d/nodesource.list` if debugging this.
 ```
@@ -96,6 +98,11 @@ TODO-RACHEL figure out the issues around `path` etc for services accessing node 
 ## Now continue from the general INSTALLATION.md starting at step 2.
 
 ## Step 7 - Auto running
+The final step requires integration by the Rachel team, 
+We've had an issue open since March 2019, but there isn't anyone available, 
+http://community.rachelfriends.org/t/integrating-installation-of-internet-archive-as-a-server/1284
+so its going to be a bit of a guesswork if you want to complete this.
+
 * TODO-RACHEL - hook into supervisorctl etc [http://community.rachelfriends.org/t/starting-at-boot-supervisorctl/1202]
   * THEN TODO-RACHEL - auto start mirrorHttp
 * TODO-RACHEL - run crawl under cron
