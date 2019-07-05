@@ -54,6 +54,7 @@ const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadat
 const ArchiveMember = require('./ArchiveMemberPatched');
 
 const httpOrHttps = "http"; // This server is running on http, not https (at least currently)
+
 const app = express();
 function mirrorHttp(config, cb) {
     debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
@@ -77,6 +78,10 @@ function mirrorHttp(config, cb) {
         req.opts.copyDirectory = req.query.copyDirectory; // Usually undefined
         next();
     });
+  function reqQuery(req, ...more) {
+    // New query parameters have defaults for mirror and transport which can be overridden and ... more which can't
+    return Object.assign( {mirror: req.headers.host, transport: "HTTP"}, req.query, ...more)
+  }
   function errAndNext(req, res, next, err) {
     // There might be an easier way to do this, but this is how to handle something that could fail but want to try for others
     if (err) {
@@ -233,7 +238,7 @@ function mirrorHttp(config, cb) {
         } else {
             o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
         }
-        // By this point via any route above, we have o as an object with either a .query or .membersFav || .membersSeawrch
+        // By this point via any route above, we have o as an object with either a .query or .membersFav || .membersSearch
         // as array of unexpanded members (which fetch_query|_fetch_query will get)
         o.rows = parseInt(req.query.rows, 10) || 75;
         o.page = parseInt(req.query.page, 10) || 1; // Page incrementing is done by anything iterating over pages, not at this point
@@ -365,7 +370,7 @@ function mirrorHttp(config, cb) {
     app.get('/', (req, res) => {
         res.redirect(url.format({
             pathname: "/archive/archive.html",
-            query: {transport: "HTTP", mirror: req.headers.host, item: "local"}
+            query: reqQuery(req, {identifier: "local"})
         }))
     });
 
@@ -423,24 +428,24 @@ function mirrorHttp(config, cb) {
       });
     });
     app.get('/arc/archive.org', (req, res) => {
-        res.redirect(url.format({pathname: "/archive/archive.html", query: req.query}));
+        res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
     });
     app.get('/arc/archive.org/advancedsearch', streamQuery);
     app.get('/arc/archive.org/details', (req, res) => {
-        res.redirect(url.format({pathname: "/archive/archive.html", query: req.query}));
+        res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
     });
 // noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/details/:itemid', (req, res) => {
+    app.get('/arc/archive.org/details/:identifier', (req, res) => {
         res.redirect(url.format({
             pathname: "/archive/archive.html",
-            query: Object.assign(req.query, {item: req.params['itemid']})
+            query:  reqQuery(req, {identifier: req.params['identifier']})
         })); // Move itemid into query and redirect to the html file
     });
 //TODO-BOOK this will be needed on dweb.me as well OR make archive.html handle /arc/archive.org/details/foo
     app.get('/arc/archive.org/details/:identifier/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
         res.redirect(url.format({
             pathname: "/archive/archive.html",
-            query: Object.assign(req.query, {identifier: req.params['identifier'], page: req.params['page']})
+            query: reqQuery(req, {identifier: req.params['identifier'], page: req.params['page']})
         })); // Move itemid into query and redirect to the html file
     });
 // noinspection JSUnresolvedFunction
@@ -449,7 +454,7 @@ function mirrorHttp(config, cb) {
     app.get(gateway.urlDownload + '/:identifier', (req, res) => {
       res.redirect(url.format({
         pathname: "/archive/archive.html",
-        query: Object.assign(req.query, {identifier: req.params['identifier'], download: 1})
+        query: reqQuery(req, {identifier: req.params['identifier'], download: 1})
       }));
     });
     app.get(gateway.urlDownload + '/:itemid/*', streamArchiveFile);
@@ -489,7 +494,7 @@ function mirrorHttp(config, cb) {
   app.get('/arc/archive.org/search', (req, res) => {
     res.redirect(url.format({
       pathname: "/archive/archive.html",
-      query: Object.assign(req.query)
+      query: reqQuery(req)
     })); // redirect to archive.html with same query
   });
   // noinspection JSUnresolvedFunction
@@ -497,7 +502,7 @@ function mirrorHttp(config, cb) {
   app.get('/arc/archive.org/search.php', (req, res) => {
     res.redirect(url.format({
       pathname: "/archive/archive.html",
-      query: Object.assign(req.query)
+      query: reqQuery(req)
     })); // redirect to archive.html with same query
   });
 // noinspection JSUnresolvedFunction
