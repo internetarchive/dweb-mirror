@@ -1,6 +1,6 @@
-#API for dweb-mirror v0.1.0
+#API for dweb-mirror v0.2.0
 
-This document covers the API for v0.1.0 of dweb-mirror which will be the first semi-stable one. 
+This document covers the API for v0.2.0 of dweb-mirror which is semi-stable now.
 
 #### Outline of APIs
 
@@ -8,9 +8,9 @@ This document covers the API for v0.1.0 of dweb-mirror which will be the first s
 * dweb-archivecontroller - base level classes which are extended by this package:
   ArchiveItem; ArchiveMember; ArchiveFile.
 * A set of classes that provide higher level support esp:
-  CrawlManager; HashStore; MirrorFS;
-* A set of applications that use the APIs above, but which are themselves forkable:
-  internetarchive; collectionpreseed.js
+  CrawlManager; ConfigController HashStore; MirrorFS;
+* An applications that uses the APIs above, but which is itself forkable:
+  internetarchive.
 
 #### Expected API changes
 
@@ -27,7 +27,7 @@ Both files follow the same format, and the settings in your home directory overr
 Note these files are definitely going to change as new features added, 
 we will attempt to keep backward compatibility, i.e. to add parameters but not rearrange or delete, but no promises!
 
-If in doubt, check the file itself which should be self-documenting
+Check configDefaults.yaml which has comments on each line
 ```
 directories: [ path* ] # List of places to look for the Cache directory - expands ~/xx and ./xx and * etc
 archiveui: # Anything relating to display of the Archive UI
@@ -55,9 +55,10 @@ Metadata is stored in specially named files.
 |<IDENTIFIER>.member.json|ArchiveMember|As retrieved in a search
 |<IDENTIFIER>.members.json|List of members - this file is a normal ArchiveFile in fav-* collections|
 |<IDENTIFIER>.members_cached.json|ArchiveMember.*|All the search results for this item retrieved so far
+|<IDENTIFIER>.members_titleSorter_cached.json|ArchiveMember.*|Search results based on a  `titleSorter` sort
+|<IDENTIFIER>.playlist.json|ArchiveItem.playlist|The playlist for the item
+|<IDENTIFIER>.bookreader.json|ArchiveItem.bookreader|The info that the bookreader API returns
 |__ia_thumb.jpg|Image file ~10kbytes|
-
-TODO-SORT In future the different sorts will have their own caches
 
 TODO-THUMBNAILS The archive pattern for thumbnails is about to change (Jan2019) and will be reflected here.
 
@@ -69,8 +70,11 @@ relFilePath     path to file or item inside a cache <IDENTIFIER>/<FILENAME>
 noCache         ignore anything in the cache - forces refetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
 noStore         dont store results in cache
 skipFetchFile   as an argument causes file fetching to be supressed (used for testing only)
+skipNet         dont try and use the net for anything
 wantStream      Return results as a stream, just like received from the upstream.
+wantSize        Return the size as a byte-count.
 copyDirectory   Specify alternate directory to store results in rather than config.directories[0]
+darkOk          True if a dark item is a valid response (if false, and item is dark will throw an error)
 cb(err, res)    Unless otherwise documented callbacks return an error, (subclass of Error) or null, 
                 and optional return data.  
                 Some functions also support an absent cb as returning a Promise, otherwise cb is required 
@@ -82,13 +86,13 @@ cb(err, res)    Unless otherwise documented callbacks return an error, (subclass
 See [dweb-archivecontroller/API.md](https://github.com/internetarchive/dweb-archivecontroller/blob/master/API.md) for docs before dweb-mirror extensions, 
 only changes made in dweb-mirror appear here.
 
-## ArchiveFile
+## ArchiveFile / ArchiveFilePatched.js
 
-##### cacheAndOrStream({skipFetchFile, skipNet, wantStream, start, end, copyDirectory}, cb)
+##### cacheAndOrStream({skipFetchFile, skipNet, wantStream, noCache, start, end, copyDirectory}, cb)
 
 Return a stream for an ArchiveFile, checking the cache first, and caching the file if not already cached.
 
-See MirrorFS.cacheAndOrStream for arguments.
+See Common arguments above, and MirrorFS.cacheAndOrStream
 
 ##### isDownloaded({copyDirectory}, cb) 
 
@@ -112,7 +116,7 @@ Save `.bookreader` to `IDENTIFIER.bookreader.json`.
 If `.bookreader` is undefined it will attempt to retrieve first.
 
 
-##### read({}, cb)
+##### read({copyDirectory}, cb)
 
 Read metadata, playlist, reviews, files and extra from corresponding files - see `Files on disk`
 ```
@@ -132,7 +136,7 @@ API returns `{ data: { data, brOptions, lendingInfo, possibly metadata } }`
 `cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}}` (the bookreader API format)
 
 
-##### fetch_bookreader = function(opts={}, cb) {
+##### fetch_bookreader = function({noCache, noStore, copyDirectory, page, darkOk}, cb) {
 Fetch the bookreader data for this item if it hasn't already been. 
 A more flexible version than dweb-archive.ArchiveItem.
 Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
@@ -153,7 +157,7 @@ Strategy:
 Result is `ai.bookreader` set to `{ brOptions, data, lendingInfo}`
 
 
-#### fetch_page ({wantStream, copyDirectory, reqUrl, zip, file, scale rotate, page}, cb)
+#### fetch_page ({reqUrl, zip, file, scale rotate, page, wantStream, wantSize, copyDirectory, noCache, skipNet, copyDirectory }, cb)
 
 Fetch a page from the item, caching it
 ```
@@ -170,26 +174,19 @@ cb(err, data || stream) returns either data, or if wantStream then a stream
 
 For file location is see `MirrorFS.checkWhereValidFileRotatedScaled`
 
-##### fetch_metadata({noCache, noStore, copyDirectory, skipNet ....}, cb)
+##### fetch_metadata({noCache, noStore, copyDirectory, skipNet, darkOk, copyDirectory}, cb)
 
-Fetch the metadata for this item if it hasn't already been.
+Fetch the metadata for this item if it hasn't already been, cache locally.
 
 A more flexible version than dweb-archive.ArchiveItem.fetch_metadata,
 which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
 ```
-Alternatives:
-    noCache:            skip cache on reading, but write to it
-    noStore:            skip cache on writing, but read from it
-    skipNet             dont load from net (only cache)
-    if cached:          return from cache
-    if !cached:         Load from net, save to cache
-
-Other opts are passed to dweb-archivecontroller.ArchiveItem.fetch_metadata
+Opts are also passed to dweb-archivecontroller.ArchiveItem.fetch_metadata
 cb(err, this)       (optional - returns promise if undefined)
 Errors              TransportError (404)
 ```
 
-###### fetch_query (opts={}, cb)
+###### fetch_query ({wantFullResp, skipNet, noCache, noStore, copyDirectory}, cb)
 
 Fetch the next page of the query for this item.
 
@@ -197,7 +194,7 @@ A more flexible version than dweb-archive.ArchiveItem.fetch_query
 which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_query.
 
 ```
-opts { noCache, noStore, ...}  means don't check the cache, noStore means dont store to cache, behaves like the unpatched ArchiveItem.fetch_query
+wantFullResp    True if want the result wrapped up with outer json for putting in an HTTP Response (see dweb-archivecontroller)
 ```
 Strategy is:
 * Read <IDENTIFIER>_members_cached.json if it exists into .membersSearch
@@ -206,7 +203,7 @@ Strategy is:
 * Write the result back to `<IDENTIFIER>_members_cached.json`
 * Write each member to its own `<IDENTIFIER>_member.json`
 
-##### saveThumbnail({skipFetchFile=false, copyDirectory=undefined, wantStream=false} = {}, cb)
+##### saveThumbnail({skipFetchFile, noCache, copyDirectory, wantStream} = {}, cb)
 
 Save a thumbnail to the cache,
 ```
@@ -218,39 +215,71 @@ cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or
 Save the related items to the cache
 cb(err, stream || [{...}*])
 
-##### relatedItems({wantStream, wantMembers, copyDirectory}, cb)
+##### relatedItems({wantStream, wantMembers, copyDirectory}, cb(err))
 Extend ArchiveItem.relatedItems, saves related items to the cache and returns either members or a stream
 ```
+wantMembers   If true, then return as an array of ArchiveMember
 cb(err, obj)  Callback on completion with related items object or stream
 ```
 
-##### addCrawlInfo({config, copyDirectory}, cb)
+##### addCrawlInfoRelated(rels, {config, copyDirectory})
+Add .crawlInfo and .downloaded fields to _source for each result in rels (which is as comes back from Related API)
+```
+rels   { hits: { hits: [{ _id, _source {  }]}}
+cb(err)
+```
+##### addDownloadedInfoFiles({copyDirectory}, cb(err, this))
+Add .downloaded flag on each file in .files and summary (see summarizeFiles()) on item
 
-Extract crawl information from config, and apply to item.
+##### addDownloadedInfoPages({copyDirectory}, cb(err))
+If its a bookreader item, 
+add a summary of pages downloaded as { downloaded: { pages_size, pages_count, pages_details} }
+
+##### addDownloadedInfoToMembers({copyDirectory}, cb)
+Add downloaded info including downloaded.details to all members in parallel.
+
+##### summarizeFiles(cb)
+Add summary of downloaded info 
+```
+{ downloaded: {files_all_size, files_all_count, files_size, files_count, files_details}}`
+```
+
+##### summarizeMembers(cb)
+Add summary of downloaded info { downloaded: {members_size, members_details_count} 
+
+##### addDownloadedInfoMembers({copyDirectory}, cb)
+Add info about downloaded members to the members, and using summarizeMembers
+
+##### addCrawlInfoMembers({config, copyDirectory}, cb)
+Add Crawl Info to all members via ArchiveMember.addCrawlInfo
+
+##### addCrawlInfo({config, copyDirectory}, cb)
+Add Crawl Info using all the other crawl and downloaded info, using the config
 
 ```
 config  MirrorConfig object
 
-Result: item.crawl is set to result of MirrorConfig.crawlInfo
+Result: item.crawl and .downloaded is set to result
 ```
+##### exportFiles()
+Export a data structure of files suitable for stringify, moves downloaded flag down one level.
 
 ## ArchiveMember
 
 
-##### static read({identifier = undefined}, cb)
+##### static read({identifier, copyDirectory}, cb)
 Read member info for an item
 ```
 identifier: Where to look - can be a real identifier or pseudo-one for a saved search
 cb(err, data structure from file)
 ```
-##### read({}, cb)
+##### read({copyDirectory}, cb)
 Read member info for an item from the cache.
 ```
 cb(err, data structure from file)
 ```
 
-
-##### addCrawlInfo({config, copyDirectory}, cb)
+##### addCrawlInfo({config}, cb)
 ```
 config  MirrorConfig object
 this.crawl = result of config.crawlInfo
@@ -259,45 +288,17 @@ this.crawl = result of config.crawlInfo
 ##### static addCrawlInfo([ArchiveMember*], {config, copyDirectory}, cb) 
 
 Apply addCrawlInfo to each member
-
-##### addCrawlInfoRelated([rels], {config}, cb) 
-
-Set .crawl field of each object in array returned by RelatedInfo API
-
-```
-rels    { hits: { hits: [ _source: { same fields as ArchiveMember } ] } }
-cb(err)
-```
-##### addDownloadedInfoFiles({copyDirectory}, cb(err, this))
-Add .downloaded info on all files, and summary on Item
-Side effect of fetch_metadata if not already done so.
-
-##### addDownloadedInfoToMembers({copyDirectory}, cb(err))
-Add downloaded info to all members in parallel
-
-##### summarizeMembers(cb(err))
-Build .downloaded.members_size and members_details_count fields to summarize 
-
-##### addDownloadedInfoMembers({copyDirectory}, cb(err))
-Add downloaded Info ToMembers, summarize, and add .downloaded.members_all_count
-
-##### addCrawlInfoMembers({copyDirectory}, cb(err))
-Add crawl info to each member (in parallel)
-
  
-##### save({copyDirectory, ...others?...} = {}, cb) //TODO-API
+##### save({copyDirectory,} = {}, cb)
 
 Save a member (fields from the `savedkeys` list) as a `<IDENTIFIER>_member.json` file
 ```
 cb(err, this)
 ```
 
-##### saveThumbnail({skipFetchFile=false, copyDirectory=undefined, wantStream=false} = {}, cb)
+##### saveThumbnail({skipFetchFile, noCache, copyDirectory, wantStream} = {}, cb)
 Save a thumbnail to the cache, note must be called after fetch_metadata
 ```
-wantStream      true if want stream instead of ArchiveItem returned
-skipFetchFile   true if should skip net retrieval - used for debugging
-copyDirectory   define alternative to default directory
 resolve or cb(err, res)  this on completion or stream on opening
 ```
 

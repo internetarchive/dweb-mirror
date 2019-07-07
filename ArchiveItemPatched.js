@@ -565,7 +565,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
 
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=false, wantStream=false, copyDirectory=undefined } = {}, cb) {  //TODO-API
+ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=false, wantStream=false, copyDirectory=undefined } = {}, cb) {
     /*
     Save a thumbnail to the cache, note must be called after fetch_metadata
     wantStream      true if want stream instead of ArchiveItem returned
@@ -772,13 +772,14 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
 ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined}, cb) {
   // For texts, Add .downloaded info on all pages, and summary on Item
   // Note ArchiveItem might not yet have bookreader field loaded when this is called.
+  // cb(err)
   this.fetch_metadata({skipNet: true, copyDirectory}, (err, ai) => {
     if (err || !ai || (ai.metadata.mediatype !== "texts") || (this.subtype() !== "bookreader")) {
-      cb(null, undefined); // Not a book - dont consider when checking if downloaded
+      cb(null); // Not a book - dont consider when checking if downloaded
     } else {
       this.fetch_bookreader({copyDirectory, skipNet: true}, (err, ai) => {
         if (err || !ai.bookreader) {
-          cb(null, false); // No book info, presume not downloaded
+          cb(null); // No book info, presume not downloaded
         } else {
           if ((typeof this.downloaded !== "object") || (this.downloaded === null)) this.downloaded = {}; // Could be undefined (legacy boolean or null as called for each member
           waterfall([

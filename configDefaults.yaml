@@ -1,5 +1,6 @@
 --- #Default configuration for dweb-mirror
 # Note in YAML, indentation is significant, and you can't have multiple spaces after the ":"
+
 # Cache directory - where you want to store files, this directory must already exist
 # List of places to look for the Cache directory - will check all of them, and they don't need to exist
 # Paths can include unix conventions like ~ * . .. etc
@@ -10,10 +11,15 @@ directories:
   - /media/pi/*/archiveorg # At least on Internet-in-a-Box USB volumes are put here
   - /.data/archiveorg # This is where Rachel3+ puts its data
   - /library/archiveorg # This is where IIAB wants content
-archiveui: # Where to find the ArchiveUI relative to the directory this file and the code resides in
+
+# Where to find the ArchiveUI relative to the directory this file and the code resides in
+archiveui:
   directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh TODO figure out how to read this yaml in install.sh
     - ../dweb-archive/dist # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
     - node_modules/@internetarchive/dweb-archive/dist # Or a repo cloned during 'npm install'
+
+# How to connect to the net, for deweb-mirror HTTP directly to the gateway is usually the best way
+# especially for low CPU/low bandwidth environments.
 connect:
   transports: # This is the list of transports that the server or crawler will use to fetch files
     - 'HTTP'
@@ -29,6 +35,7 @@ connect:
     - 'WEBTORRENT'
     - 'HTTP'
     - 'IPFS'
+
 # The apps group include configuration only used by one application
 apps:
   # internetarchive --server uses these
@@ -56,21 +63,18 @@ apps:
       skipFetchFile: false # Set to true to ignore actually fetching files, most often used for debugging
       # Default crawls if either search &| related are unspecified but crawling an item with level=detail||full
       defaultDetailsSearch:
-        sort: '-downloads'
-        rows: 40
-        level: tile
+        rows: 40            # Collect the first 40 items
+        sort: '-downloads'  # Based on the most popular
+        level: tile         # With enough information to show a tile
       defaultDetailsRelated:
-        sort: '-downloads'
-        rows: 6
-        level: tile
-      startOnChange: true
-    # copyDirectory: /Volumes/Transcend/test2 # Testing only
+        sort: '-downloads'  # And choose related based on downloads
+        rows: 6             # 6 related items
+        level: tile         # sufficiently to show a tile
+      startOnChange: true # True if should start crawling any item that changes its level of crawing
+    # copyDirectory: /Volumes/Transcend/test2 # Overrides where to store data, normally this is a command-line parameter if used.
 #============== Dont edit anything from here on down ============================
 # Information about specific URLs for services at archive.org, - should not need changing
 archiveorg:
-  #OBS: metadata: 'https://dweb.me/arc/archive.org/metadata'
-  #OBS: servicesImg: 'https://archive.org/services/img'
-  #OBS: related: 'https://be-api.us.archive.org/mds/v1/get_related/all'
   mds: 'https://be-api.us.archive.org/mds'
 # Generic upstream server, should be able to parse urls like /arc or /contenthash - should not need changing
 upstream: 'https://dweb.me'

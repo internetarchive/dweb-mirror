@@ -15,7 +15,7 @@ const MirrorFS = require('./MirrorFS');
 
 // noinspection JSUnresolvedVariable
 ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, noCache=false,
-                                                    copyDirectory=undefined, start=0, end=undefined} = {}, cb) { //TODO-API
+                                                    copyDirectory=undefined, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
     skipNet if set will stop it trying the net, and just return info about the current file

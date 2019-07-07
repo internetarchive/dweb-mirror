@@ -409,7 +409,7 @@ function mirrorHttp(config, cb) {
     });
     app.get('/admin/crawl/resume/:crawlid', (req, res) => {
       CrawlManager.crawls[req.params["crawlid"]].resume();
-        res.json(CrawlManager.crawls[req.params["crawlid"]].status());
+      res.json(CrawlManager.crawls[req.params["crawlid"]].status());
     });
     app.get('/admin/crawl/empty/:crawlid', (req, res) => {
       CrawlManager.crawls[req.params["crawlid"]].empty();
