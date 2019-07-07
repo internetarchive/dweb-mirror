@@ -6845,6 +6845,11 @@ netmask@^1.0.6:
   resolved "https://registry.yarnpkg.com/netmask/-/netmask-1.0.6.tgz#20297e89d86f6f6400f250d9f4f6b4c1945fcd35"
   integrity sha1-ICl+idhvb2QA8lDZ9Pa0wZRfzTU=
 
+network-address@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/network-address/-/network-address-1.1.2.tgz#4aa7bfd43f03f0b81c9702b13d6a858ddb326f3e"
+  integrity sha1-Sqe/1D8D8LgclwKxPWqFjdsybz4=
+
 next-event@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/next-event/-/next-event-1.0.0.tgz#e7778acde2e55802e0ad1879c39cf6f75eda61d8"
@@ -7993,7 +7998,7 @@ pull-write@^1.1.4:
     pull-cat "^1.1.11"
     pull-stream "^3.4.5"
 
-"pull-ws@github:hugomrdias/pull-ws#fix/bundle-size":
+pull-ws@hugomrdias/pull-ws#fix/bundle-size:
   version "3.3.1"
   resolved "https://codeload.github.com/hugomrdias/pull-ws/tar.gz/8e2ce0bb3b1cd6804828316e937fff8e0bef6225"
   dependencies:

@@ -25,7 +25,7 @@ const CrawlManager = require('./CrawlManager');
 const MirrorFS = require('./MirrorFS');
 const MirrorConfig = require('./MirrorConfig');
 const mirrorHttp = require('./mirrorHttp');
-
+const {registerMDNS, destroyMDNS} = require('./mdns-register');
 const optsInt = ["depth",  "maxFileSize", "concurrency", "limitTotalTasks"]; // Not part of getopts, just documenting what aren't string or boolean
 const optsArray = ["level", "transport", "rows", "directory"]; // Options that can be arrays
 const optsLowerCase = ["level"]; // Always want lowercase
@@ -36,8 +36,9 @@ const optsJson = ["search", "related"]; // Can be provided as JSON rather than i
 //const opts = getopts("--dummy --level details commute".split(" "),{ // Just for testing different options
 const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth", c: "crawl", s: "server", m: "maintenance",
-        "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks", "copyDirectory":"copydirectory"},
-    boolean: ["h","v", "skipFetchFile", "noCache", "dummy"],
+        "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks",
+        "copyDirectory":"copydirectory", "MDNS":"mdns"},
+    boolean: ["h","v", "skipFetchFile", "noCache", "dummy", "MDNS"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
     string: ["directory", "search", "related", "transport", "level", "debugidentifier"], // Not debugidentifier because undefined and "" are not the same.
     //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
@@ -63,20 +64,21 @@ usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] 
                 "metadata" and the full metadata, which will be useful once local search is implemented
                 "details"  and enough to paint a page, including for example a lower bandwidth video
                 "full"     and all the files in the item - beware, this can get very big.
-    r rows           : overrides any (simple) search string to crawl this number of items
-    d depth          : crawl collections found in this collection to a depth,
-                       (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
+    r rows          : overrides any (simple) search string to crawl this number of items
+    d depth         : crawl collections found in this collection to a depth,
+                      (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
     --copydirectory path : Store a copy of the crawl in this directory (often used for a removable drive)
     --directory path : override the directory set in the configuration for the root of the cache
-    --search json    : override default search string, strict json syntax only
-    --related json   : override default setting for crawling related items, strict json syntax only
+    --search json   : override default search string, strict json syntax only
+    --related json  : override default setting for crawling related items, strict json syntax only
     --debugidentifier identifier : identifier to do extra debugging on, only really valuable when using an IDE
-    --maxfilesize bytes : any file bigger than this will be ignored
-    --concurrency threads : how many files or searches to be happening concurrently - use 1 for debugging, otherwise 10 is about right
+    --maxfilesize bytes     : any file bigger than this will be ignored
+    --concurrency threads   : how many files or searches to be happening concurrently - use 1 for debugging, otherwise 10 is about right
     --limittotaltasks tasks : a maximum number of tasks to run, will be (approximately) the number of searches, plus the number of items crawled.
-    --transport TRANSPORT : The names of transport to use, by default its HTTP, but can currently add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
+    --transport TRANSPORT   : The names of transport to use, by default its HTTP, but can currently add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
     --skipfetchfile : Dont actually transfer the files (good for debugging)
-    --noCache     : Ignore current contents of cache and always refetch
+    --noCache       : Ignore current contents of cache and always refetch
+    --mdns          : Respond with MDNS on archive.local
     --dummy         : Just print the result of the options in the JSON format used for configuration
 
    identifier       : Zero or more identifiers to crawl (if none, then it will use the default query from the configuration)
@@ -252,6 +254,28 @@ function crawl(cb) {
 }
 let config;
 let server;
+
+function startServer(cb) {
+    mirrorHttp(config, (err, serv) => {
+        server = serv;
+        if (!err && opts.mdns) {
+            registerMDNS('archive');
+        }
+        cb(err);
+    });
+}
+function stopServer(cb) {
+    if (server) {
+        debug("Closing server");
+        server.close((err) => {
+            if (err)
+                debug("Failed to stop server: %s, but it might just because it was already started", err.message);
+            destroyMDNS();
+            cb(null); // Dont pass on failure, still want to stop transports
+        });
+        server = undefined; // Its obviously not running
+    }
+}
 waterfall([
     cb => MirrorConfig.new((err, res) => { config = res; cb(err); }), // Load config early, so can use in opts processing
     cb => cb(optsToConfig()), // Currently synchronous returning err||null
@@ -261,21 +285,13 @@ waterfall([
                 preferredStreamTransports: config.connect.preferredStreamTransports});
             cb(null); },
     cb => connect(cb),
-    // Start server before crawler as crawler takes time before returning
-    cb => { if (opts.server || opts.maintenance || opts.crawl) { mirrorHttp(config, (err, serv) => {server = serv; cb(err); }) } else { cb(null); }},
-    cb => { if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}}, // Must be after server start since needs for IPFS, should be before crawl
+    cb => { // Start server before crawler as crawler takes time before returning
+        if (opts.server || opts.maintenance || opts.crawl) { startServer(cb); } else { cb(null); }},
+    cb => { // Maintenance must be after server start since needs for IPFS, should be before crawl
+        if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}},
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
-    cb => {
-        if (!opts.server && server) {
-            debug("Closing server");
-            server.close((err) => {
-                if (err)
-                    debug("Failed to stop server: %s, but it might just because it was already started", err.message);
-                cb(null); // Dont pass on failure, still want to stop transports
-            });
-            server = undefined; // Its obviously not running
-        } else {
-            cb(null); } }, // Stop express server unless explicit -s option
+    cb => { // Stop express server unless explicit -s option
+        if (!opts.server) {stopServer(cb); } else { cb(null); } },
     cb => { // If we aren't leaving a server running, then stop the transports
         if (!opts.server) { DwebTransports.p_stop(t => debug("%s is stopped", t.name), cb); } else { cb(null); }}
 ],(err) => {
