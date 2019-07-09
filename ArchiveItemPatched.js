@@ -82,23 +82,22 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         cb(null, this);
     } else {
         const namepart = this._namepart();
-            // Note all these files should be in MirrorFS.isSpecialFile
-            each(
-                [
+        // Note all these files should be in MirrorFS.isSpecialFile
+        each(
+            [
                 ["meta", this.metadata],    // Maybe empty if isDark
-                    ["members", this.membersFav], // Only save Favorited members
-                    ["files", this.exportFiles()],
-                    ["extra", ObjectFromEntries(
-                      ArchiveItem.extraFields.map(k => [k, this[k]])
-                        .filter(kv=>!!kv[1]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
-                    ["reviews", this.reviews],
-                    ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
-                ],
-                (i, cbInner) => { // [ part, obj ]
-                    _save1file(i[0], i[1], namepart, {copyDirectory}, cbInner);
-                },
-                (err)=>{if (err) { cb(err) } else { cb(null, this);}});
-        }
+                ["members", this.membersFav], // Only save Favorited members
+                ["files", this.exportFiles()],
+                ["extra", ObjectFromEntries(
+                  ArchiveItem.extraFields.map(k => [k, this[k]])
+                    .filter(kv=>!!kv[1]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
+                ["reviews", this.reviews],
+                ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
+            ],
+            (i, cbInner) => { // [ part, obj ]
+                _save1file(i[0], i[1], namepart, {copyDirectory}, cbInner);
+            },
+            (err)=>{if (err) { cb(err) } else { cb(null, this);}});
     }
 
 };
@@ -320,12 +319,12 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
             if (page) { // This is the cover , its not scaled or rotated
                 MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory }, cbw);
             } else { // Looking for page by number with scale and rotation
-                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, skipNet, copyDirectory, // Find which valid scale/rotate we have,
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, skipNet, copyDirectory, skipFetchFile, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
                     (err, relFilePath2) => { // undefined if not found
                         // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
                         //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
-                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, copyDirectory, relFilePath: relFilePath2 || relFilePath }, cbw);
+                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, skipFetchFile, copyDirectory, relFilePath: relFilePath2 || relFilePath }, cbw);
                     }
                 )
             } }
