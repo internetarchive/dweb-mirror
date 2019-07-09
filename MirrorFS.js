@@ -145,6 +145,7 @@ class MirrorFS {
     static writeFile({copyDirectory=undefined, relFilePath}, data, cb) { //TODO-API copyDirectory and {}
         // Like fs.writeFile but will mkdir the directory before writing the file
         //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; this.directories[0] (which comes from config.directories)
+        // See https://github.com/internetarchive/dweb-mirror/issues/193
         const filepath = path.join(copyDirectory || this.directories[0], relFilePath);
         const dirpath = path.dirname(filepath);
         this._mkdir(dirpath, (err) => {

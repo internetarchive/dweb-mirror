@@ -24,11 +24,21 @@ class ConfigController {
 
     */
     constructor(...objs) {
+        /*
+        Create a new config structure from one or more config objects.
+        The fields in later arguments (at the root, or nested levels) over-write the previous ones.
+        See config file for structure of config
+        */
         this.configOpts = objs; // For info query
         this.setOpts(...objs);
     }
 
     static initializeUserConfigFile(userConfigFile, defaultUserConfig,  cb) {
+        /*
+        userConfigFile  Path (can be relative) to user config file, that may not exist
+        defaultUserConfig   Initial configuration to set the file to if it does not exist
+        cb(err, { config } )
+         */
         const f = this.resolve(userConfigFile);
         this.readYaml(f, (err, res) => {
             if (err) {
@@ -46,9 +56,14 @@ class ConfigController {
         cb(new Error("ConfigManager must be subclassed to provider initializeUserConfig"));
     }
     static new(filenames, cb) {
-        /* build a new ConfigController from a set of options loaded from YAML files,
-            filename: filename of file, may use ., .., ~ etc, parameters in later override those in earlier.
+        /*
+        Create a new config by reading YAML from filenames in order, (later overriding earlier)
+        Requires MirrorConfig to implement initializeUserConfig the results of which override that in the filenames
+
+        filenames   optional ordered array of paths to possible config files (they may be missing), ~/ ./ * etc are expanded (I'm not sure about ../)
+        cb(err, config) Called with an instance of MirrorConfig
         */
+
         asyncMap(this.resolves(filenames),
             (filename, cb2) => {
                 this.readYaml(filename, (err, res) => cb2(null, res)); // Ignore err, and res should be {} if error
@@ -69,10 +84,12 @@ class ConfigController {
     }
 
     static resolve(v) { // Handle ~ or . or .. in a path
+        //Return a resolved filename, expanding ./ ~/ and possibly ../
         // noinspection JSUnresolvedVariable
         return (v.startsWith("~/") ? path.resolve(os.homedir(), v.slice(2)) : path.resolve(process.cwd(), v)); }
 
     static resolves(vv) {
+        //Return an array of resolved filenames, this can also expand `*` etc
         return [].concat(...  // flatten result
             vv.map(v => this.resolve(v))    // Handle ~ or . or ..
                 .map(p => glob.sync(p)));           // And expand * etc (to an array of arrays)
@@ -85,11 +102,20 @@ class ConfigController {
     }
 
     setOpts(...opts) {
+        /*
+        Set some fields of configuration from passed object,
+        it expands paths such as ~/foo and ./foo where appropriate.
+        Note this currently overwrites anything at the path, but may be modified to use ObjectDeeperassign in future.
+         */
         ObjectDeeperAssign(this, ...opts);
         // This is subclassed in MirrorConfig to handle specific derivations
     }
 
     static readYamlSync(filename) {
+        /*
+        Read an return YAML from filename
+        Throws errors on failure to read, or failure to parse.
+         */
         try {
             return yaml.safeLoad(fs.readFileSync(this.resolve(filename), 'utf8'));
         } catch(err) {
@@ -98,6 +124,10 @@ class ConfigController {
         }
     }
     static readYaml(filename, cb) {
+        /*
+        Read YAML from filename and return via cb(err, res),
+        or return error if unable to read or parse.
+        */
         fs.readFile(filename, 'utf8', (err, yamlstr) => {
             if (err) {
                 debug("Unable to read %s: %s", filename, err.message);
@@ -115,6 +145,7 @@ class ConfigController {
     }
 
     userConfig() {
+        //Return the last configuration file
         return this.configOpts[this.configOpts.length-1]; // Last configOpts is the "user" one that gets written
     }
     setAndwriteUser(obj, cb) {
@@ -126,10 +157,11 @@ class ConfigController {
 
 
     writeUserFile(filename, cb) {
-        // Write to user's config file
+        //Write user configuration to filename
         ConfigController.writeYaml(ConfigController.resolve(filename), this.userConfig(), cb);
     }
     setAndWriteUserFile(filename, obj, cb) {
+        //Set local configuration in ConfigManager and write to user file
         // obj to replace userconfig
         // filename to store yaml ( ~ ./* ../* etc accepted)
         this.userconfig = obj;
@@ -140,6 +172,7 @@ class ConfigController {
     }
 
     static writeYaml(filename, obj, cb) {
+        //Write yaml version of an object to a file
         fs.writeFile(filename, yaml.safeDump(obj), {encoding: 'utf8'}, (err) => {
             if (err) { debug("Unable to write yaml to %s: %s", filename, err.message); }
             cb(err);

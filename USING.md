@@ -28,6 +28,7 @@ The address to access will depend on your configuration.
   * if connected to WiFi “Internet in a Box", try [http://box.lan:4244]
   * if connected via a router then [http://box.local:4244] may work
 * On Rachel …TODO
+* If your server is running with `--mdns` then [http://archive.local:4244] will work.
 * If running on your own machine (a laptop for example) then [http://localhost:4244] should work
 * Otherwise ask your system admin for the address of the machine its running on, usually it will be on `:4244`
 
@@ -105,6 +106,15 @@ See the note above, usually you won’t want to leave it at yellow (all) as this
 There is a Reload button which will force the server to try archive.org, 
 this is useful if you think the item has changed, or for debugging.
 
+If you want to Save this item to a specific disk, for example to put it on a USB-drive then click the Save button.  
+This button brings up a dialogue with a list of the available destinations. 
+These should include any inserted drive with "archiveorg" as a directory at its top level. 
+The content will be copied to that drive, which can then be removed and inserted into a different server.
+
+Note: The server currently only checks for these at startup. 
+[issue#195](https://github.com/internetarchive/dweb-mirror/issues/195) will check any time.
+
+
 ## Collection and Search pages - multiple items
 
 If you click on a Collection, then we’ll display a grid of tiles for all the items that have been placed in the collection. 
@@ -113,6 +123,9 @@ If you click on the crawl button till its Green then it will check this collecti
 download the tiles for the first page or so, and can be configured to get some of the items as well 
 
 [issue#140](https://github.com/internetarchive/dweb-mirror/issues/140) allow UI to configure. 
+
+Save is not yet enabled for collections or searches.
+[issue#187][https://github.com/internetarchive/dweb-mirror/issues/187]
 
 ## Accessing Internet Archive resources
 

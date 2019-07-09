@@ -51,7 +51,7 @@ Metadata is stored in specially named files.
 |<IDENTIFIER>.meta.json|ArchiveItem.metadata|
 |<IDENTIFIER>.reviews.json|ArchiveItem.reviews|On disk is format returned by API
 |<IDENTIFIER>.files.json|ArchiveItem.files|
-|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, is_dark, dir, server}|
+|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, isDark, dir, server}|
 |<IDENTIFIER>.member.json|ArchiveMember|As retrieved in a search
 |<IDENTIFIER>.members.json|List of members - this file is a normal ArchiveFile in fav-* collections|
 |<IDENTIFIER>.members_cached.json|ArchiveMember.*|All the search results for this item retrieved so far
@@ -120,7 +120,7 @@ If `.bookreader` is undefined it will attempt to retrieve first.
 
 Read metadata, playlist, reviews, files and extra from corresponding files - see `Files on disk`
 ```
-cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, server})  data structure suitable for "item" field of ArchiveItem
+cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, isDark, dir, server})  data structure suitable for "item" field of ArchiveItem
 ```
 
 ##### read_bookreader({copyDirectory}}, cb)
@@ -355,6 +355,7 @@ A generic, reusable config controller, and one specific to dweb-mirror.
 
 ##### properties
 ```
+configopts  [ obj* ]  The options submitted - gefore merging
 ```
 
 ##### parameters of all methods
@@ -377,6 +378,7 @@ userConfigFile  Path (can be relative) to user config file, that may not exist
 defaultUserConfig   Initial configuration to set the file to if it does not exist
 cb(err, { config } )
 ```
+
 
 ##### new(filenames, cb)
 
@@ -479,76 +481,138 @@ Check if member being crawled and return info suitable for adding into ArchiveMe
 A set of related classes for managing crawling
 
 ### configuration
-The crawl is initialized from a data-structure, or indirectly from JSON syntax is:
+The crawl is initialized from a data-structure, or indirectly from YAML. Syntax of object is
 ```
-config:     [ configtask ]
-configtask: { identifier, level, query, search, related}
-  identifier: Archive identifier OR array of them OR `` for Home
-  level:      any of _levels (e.g. "tile") How deep to fetch an item
-  query:      Alternative to identifier, specify a query
-  search:     searchopts  Apply to each search result (or member of a collection)
-  related:    searchopts  Apply to each of the related items
-    searchopts: { sort, rows, level, search, related } specify a search, and what to apply to each result.
-      sort:       Sort order for search e.g. "-downloads"
-      rows:       How many results to fetch
+[ { 
+    identifier:     Archive identifier OR array of them OR `` for Home
+    level:          any of "tile" "metadata" "details" "all"
+    query:          Alternative to identifier, specify a query
+    search: {       How to search on this item (if its a query or mediatype=collection)
+        sort:       Sort order e.g. "-downloaded" or "titleSorter"
+        rows:       Integer - number of rows to read
+        level:      At what level ("tile" is sufficent to paint the query results)
+        search:     This recurses, and applies a search to do on each search result
+        related: {  How many, and at how much detail to explore related items.
+            rows, level, search, related }  As for the search field. 
 ```
 #### Configuration file example
 ```
-  { identifier: "foo", level: "metadata" }
-  { identifier: "prelinger", level: "details", search: [      // Fetch details for prelinger
-        { sort: "-downloads", rows: 100, level: "details" }   // Query first 100 items and get their details
-        { sort: "-downloads", rows: 200, level: "tile" } ] }  // and next 200 items and get their thumbnails only
-  ]
+apps:
+  crawl:
+    tasks:
+      # Get 40 search results for Prelinger, first 10 at details (sufficient to display), then 30 at tile 
+      # and get the tiles for the 6 most related items 
+      - identifier: "prelinger"
+        level: "details"
+        search:
+          - sort: "-downloads"
+            rows: 10
+            level: "tile"
+        
+          - sort: "-downloads"
+            rows: 30
+            level: "tile"
+        related:
+          - rows: 6
+            level: "tile"
 ```
 
 ### class CrawlManager
-Currently (may change) one instance only - that has parameterisation for crawls.
+Manages crawls, each crawl (a group of tasks going to one device) is a CrawlManager instance. 
 
 ##### Attributes
+of the CrawlManager class
 ```
-CrawlManager.crawls Array of CrawlManagers for each crawl run so far since startup (TODO will start culling), each of which has following attributes:
-
-_levels         ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
-_uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops (identifier also has pseudo-identifiers like _SEARCH_123abc
-_uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per file, used for checking uniqueness and avoiding loops
-errors          [{task, error}] Array of errors encountered to report on at the end.
-completed       Count of tasks completed (for reporting)
-pushedCount     Count of tasks pushed onto the queue, usd for checking against limitTotalTasks
+_levels: ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
+crawls: [CRAWLMANAGER]  Array of CrawlManagers for each crawl run so far since startup (TODO will start culling),
+```
+Each instance of CrawlManager has the following attributes:
+```
 _taskQ          (async queue) of tasks to run (from async package)
-defaultDetailsSearch    Default search to perform as part of "details" or "full" (usually sufficient to paint tiles)
-defaultDetailsRelated   Default crawl on related items when doing "details" or "full" (usually sufficient to paint tiles)
+_uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops 
+                (identifier also has pseudo-identifiers like _SEARCH_123abc
+_uniqFiles      { identifier: [ task* ] } Dictionary of tasks carried out per file
+callbackDrainOnce (bool) True if should only call drain callback first time queue empties out.
+completed       Count of tasks completed (for reporting)
+concurrency     (int) Sets the number of tasks that can be processed at a time
 copyDirectory   If set, the crawl will make a full copy here, for example on a USB drive
 debugidentifier Will be set to a global variable to help conditional debugging
-noCache         If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
-skipFetchFile   If true will just comment on file, not actually fetch it (including thumbnails)
-maxFileSize     (int) If set, constrains maximum size of any one file
-concurrency     (int) Sets the number of tasks that can be processed at a time
+defaultDetailsSearch    Default search to perform as part of "details" or "full" (usually sufficient to paint tiles)
+defaultDetailsRelated   Default crawl on related items when doing "details" or "full" (usually sufficient to paint tiles)
+errors          [{task, error}] Array of errors encountered to report on at the end.
+initialItemTaskList: [TASK] Tasks to run each time crawl runs
 limitTotalTasks (int) If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
+maxFileSize     (int) If set, constrains maximum size of any one file
+name            (string) Name of the crawl - for display purposes
+noCache         If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
+pushedCount     Count of tasks pushed onto the queue, used for checking against limitTotalTasks
+skipFetchFile   If true will just comment on file, not actually fetch it (including thumbnails)
+
 ```
-#### new CrawlManager({copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency=1, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated} = {})
+#### new CrawlManager(
+{initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, 
+ concurrency=1, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name})
 
 See attributes for meaning of arguments.
 
 Create and initialize a CrawlManager instance.
 
-#### push(task)
+#### _clearState
+Clear out any state before running/re-running
 
+#### _push(crawlable)
+```
+crawlable    subclass of Crawlable (CrawlItem, crawlFile, crawlPage)
+```
 Add a task to _taskQ provided performing some checks first (esp limitTotalTasks)
+
+#### pushTask( { identifier, .... })
+Create a new subclass of Crawlable and _push it
 
 #### setopts(opts={}) {
 
-Set any of the attributes, normally noCache, skipFetchFile, maxFileSize, concurrency, limitTotalTasks
+Set any of the attributes, doing sme minimal preprocesssing first
 
-#### static startCrawl(initialItemTaskList, {skipFetchFile=false, noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined}={}) {
+#### static startCrawl(initialItemTaskList, 
+{copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency=1, limitTotalTasks, 
+defaultDetailsSearch, callbackDrainOnce, defaultDetailsRelated, name}
+                                                    
 ```
-initialItemTaskList config  // Configuration to push to the task list - see config
-see arguments for other parameters
+see Crawl Manager Attributes above
 ```
 
 #### drained()
 
-Called when final task processed, to report on results.
+Called when final task processed, to report on results and if set call the drainedCb
 
+#### restart() 
+Start crawl from beginning
+
+#### pause
+Pause crawl (note restart wont start it going again)
+
+#### resume
+Unpause a crawl
+
+#### empty
+Clear out a taskQ on a crawl
+
+#### status
+Report the status of a crawl as some JSON:
+
+#### static status
+Report an array of status, one per CrawlManager
+
+#### suspendAndReconsider({identifier, delayTillReconsider, config})
+Handle a status change, by removing any queued tasks, debouncing (waiting in case user clicks again) and then running whatever final task chosen
+Note that config should be a live pointer, that can be accessed when the task is queued. 
+
+#### static findOrCreateCrawlManager({config, copyDirectory})
+Find a crawlmanager to use for a copyDirectory, create one if required 
+
+#### static add({identifier, config, copyDirectory})
+Called to do a one-time crawl of an item 
+        
 ### class Crawlable
 Synonymous with "task", parent class for different kinds of tasks.
 
@@ -570,15 +634,41 @@ returns array from concatenating debugname to parent array.
 inherited from Crawlable: debugname, parent
 ```
 file    ArchiveFile
+relfilepath     IDENTIFIER/FILENAME
+filename    Path (within item, i.e. may contain /)
+identifier  Identifier of item
+archiveitem ArchiveItem
 ```
-#### process(cb)
+#### process(crawlmanager, cb)
 ```
 cb(err) Called when item processed - errors should be reported when encountered and then at the end of the crawl.
 ```
 Process a ArchiveFile, retrieve it if not already cached, depends on state of skipFetchFile & maxFileSize
 
-#### isUniq() {
+#### isUniq(crawlmanager) {
 True if have not already tried this file on this crawl.
+
+### class CrawlPage extends Crawlable
+#### Attributes
+inherited from Crawlable: debugname, parent
+```
+requires: parent + archiveitem + identifier + (page || scale+rotate+zip+file)
+identifier  Identifier of item
+archiveitem ArchiveItem
+scale   int usually 2 (larger = smaller image)
+rotate  int usually 0
+zip     name of directory
+file    file inside zip
+parent  [str*] see Crawlable
+```
+#### process(crawlmanager, cb)
+```
+cb(err) Called when item processed - errors should be reported when encountered and then at the end of the crawl.
+```
+Process a Page of an ArchiveItem, retrieve it if not already cached, depends on state of skipFetchFile & maxFileSize
+
+#### isUniq(crawlmanager)
+True if have not already tried this page on this crawl.
 
 ### class CrawlItem extends Crawlable
 #### Attributes
@@ -586,15 +676,16 @@ True if have not already tried this file on this crawl.
 identifier  Archive Identifier
 identifier, level, query, search, related:  see config
 member      Pointer to ArchiveMember if known
+crawlmanager Crawmanager of this task
 ```
 #### static fromSearchMember(member, taskparms, parent, crawlmanager)
 
 Create a new CrawlItem and queue it, handles different kinds of members, including saved searches
 
-#### isUniq()
+#### isUniq(crawlmanager)
 True if the item has not been crawled this time at a greater or equal depth.
 
-#### process(cb)
+#### process(crawlmanager, cb)
 
 Process a task to crawl an item, complexity depends on its `.level` but can include fetch_metadata, fetch_query, saveThumbnail, crawling some or all of .files and relatedItems.
 

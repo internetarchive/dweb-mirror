@@ -11,12 +11,13 @@ class MirrorConfig extends ConfigController {
         super(...objs);
     }
 
-    // Initialize user config if reqd
     static initializeUserConfig(cb) {
+        //Return user configuration, initializing if required.
         this.initializeUserConfigFile(this.userConfigFile, this.defaultUserConfig, cb);
     }
 
     static new(filenames, cb) {
+        //filenames   Optional list of filenames for configation otherwies uses defaultConfigFiles
         if (typeof filenames === "function") { cb = filenames; filenames = undefined}
         if (!(filenames && filenames.length)) { filenames = this.defaultConfigFiles; } // Doesnt include userConfigFile
         super.new(filenames, cb);
@@ -31,14 +32,17 @@ class MirrorConfig extends ConfigController {
     }
 
     setAndWriteUser(obj, cb) {
+        //Set the configuration in the ConfigManager, and write to user file
         this.setAndWriteUserFile(MirrorConfig.userConfigFile, obj, cb);
     }
 
     writeUser(cb) {
+        //Write user configuration to file
         this.writeUserFile(MirrorConfig.userConfigFile, cb);
     }
 
     deleteUserTask(identifier) {
+        //Remove task for identifier (handles multi-identifier tasks correctly)
         let task = this.findTask(identifier);
         if (task) {
             if (Array.isArray(task.identifier) && (task.identifier.length > 1)) {
@@ -49,6 +53,7 @@ class MirrorConfig extends ConfigController {
         }
     }
     writeUserTaskLevel(identifier, level, cb) {
+        //Update, or create a new task for an identifier (handles multi-identifier tasks correctly)
         if (level === "none") {
             this.deleteUserTask(identifier);
         } else {
@@ -71,6 +76,7 @@ class MirrorConfig extends ConfigController {
         this.writeUser(cb)  // And write back current state
     }
     findTask(identifier) {
+        //Find and return task form config
         return this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
     }
     crawlInfo(identifier, mediatype=undefined) {
@@ -82,7 +88,7 @@ class MirrorConfig extends ConfigController {
             task = {}
         } else {
                 const isDetailsOrMore = CrawlManager._levels.indexOf(task.level) >= CrawlManager._levels.indexOf("details");
-                const isSearch = mediatype === "collection"; //TODO-UXLOCAL need to catch searches
+                const isSearch = mediatype === "collection"; //TODO-UXLOCAL need to catch searches (which dont use regular identifiers)
                 task.search = task.search || (isDetailsOrMore && isSearch && this.apps.crawl.opts.defaultDetailsSearch);
         }
         return task;

@@ -301,11 +301,7 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
         rotate    0 for normal, unsure what other values are
         zip       Name of file holding the image
         file      file within zip
-        noCache   Dont look in cache
-        wantStream  Want results streamed (typically false if crawling)
-        wantSize  Just want the size in bytes (downloaded)
-        skipNet   Dont check on the net
-        copyDirectory Where to cache it
+        noCache, wantStream, wantSize, skipNet, skipFetchFile, copyDirectory see common arguments
         reqUrl    string as in brOptions.data ... uri from /BookReader.. (path and query, but not scale/rotate)
         cb(err, data || stream || size) returns either data, or if wantStream then a stream
      */

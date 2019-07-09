@@ -39,8 +39,6 @@ const HashStore = require('./HashStore');
 //TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
 //See collectionpreseed.js for example using this to do a nested crawl to force server to preseed.
 
-//TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
-
 class CrawlManager {
 
     constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false,
@@ -162,7 +160,6 @@ class CrawlManager {
             },
             opts: ObjectFromEntries(CrawlManager.optsallowed.map(k => [k, this[k]])),
             initialItemTaskList: this.initialItemTaskList,
-            //config: config.apps.crawl, //TODO this wont work - config is not global
             errors: this.errors.map(err => { return {date: err.date, task: err.task, error: { name: err.error.name, message: err.error.message}}}), // [ { task, error } ]
         }
     }
@@ -236,7 +233,7 @@ class CrawlFile extends Crawlable {
         super(name, parent);
         Object.assign(this, opts);  // Handle opts in process as may be async
     }
-    process(crawlmanager, cb) { //TODO-API
+    process(crawlmanager, cb) {
         const copyDirectory = crawlmanager.copyDirectory
         if (!this.file) {
             if (this.relfilepath) {
@@ -303,7 +300,7 @@ class CrawlPage extends Crawlable {
         super(name, parent);
         Object.assign(this, opts);  // Handle opts in process as may be async
     }
-    process(crawlmanager, cb) { //TODO-API
+    process(crawlmanager, cb) {
         console.assert(this.archiveitem);
         if (this.isUniq(crawlmanager)) {
             // if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
@@ -311,7 +308,7 @@ class CrawlPage extends Crawlable {
             const skipFetchFile = crawlmanager.skipFetchFile
             this.archiveitem.fetch_page({
                 copyDirectory: crawlmanager.copyDirectory,
-                wantStream: false, //TODO implement
+                wantStream: false,
                 noCache: false,
                 reqUrl: this.reqUrl,
                 zip: this.zip,
@@ -319,7 +316,7 @@ class CrawlPage extends Crawlable {
                 scale: this.scale,
                 rotate: this.rotate,
                 page: this.page,
-                skipFetchFile, //TODO implement
+                skipFetchFile,
             }, cb);
         } else {
             cb();
@@ -337,7 +334,7 @@ class CrawlPage extends Crawlable {
 }
 
 class CrawlItem extends Crawlable {
-    constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined, crawlmanager}={}, parent) { //TODO-API crawlmanager
+    constructor({identifier = undefined, query = undefined, level = undefined, member = undefined, related=undefined, search = undefined, crawlmanager}={}, parent) {
         if ("identifier" === "/") {
             identifier = "home"; } // Obsolete home identifier was "/" may not be used anywhere
         if ("identifier" === "" && !query) { identifier = "home"; } // Obsolete home identifier was "/"
@@ -420,7 +417,7 @@ class CrawlItem extends Crawlable {
     process(crawlmanager, cb) {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({identifier: this.identifier, query: this.query});
-        if (this.isUniq(crawlmanager)) { //TODO-API
+        if (this.isUniq(crawlmanager)) {
             const skipFetchFile = crawlmanager.skipFetchFile;
             const noCache = crawlmanager.noCache;
             const copyDirectory = crawlmanager.copyDirectory;
