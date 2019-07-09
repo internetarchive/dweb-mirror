@@ -469,7 +469,7 @@ function mirrorHttp(config, cb) {
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/metadata/:identifier', function (req, res, next) {
         new ArchiveItem({identifier: req.params.identifier})
-            .fetch_metadata(req.opts, (err, ai) => {
+            .fetch_metadata(Object.assign({darkOk: true},req.opts), (err, ai) => {
                 if (err) {
                     res.status(404).send(err.message); // Its neither local, nor from server
                 } else {

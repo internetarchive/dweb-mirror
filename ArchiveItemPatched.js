@@ -25,6 +25,10 @@ const MirrorFS = require('./MirrorFS');
  * noStore:            Like HTTP Cache-Control: no-store, don't store the result
  * noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
  * skipNet             dont load from net (only cache)
+ * wantStream  Want results streamed (typically false if crawling)
+ * wantSize  Just want the size in bytes (downloaded)
+ * skipFetchFile Dont actually download the page
+ * copyDirectory Where to cache it
  */
 
 // noinspection JSUnresolvedVariable
@@ -66,7 +70,7 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         .members -> <IDENTIFIER>.members.json
         .reviews -> <IDENTIFIER>.reviews.json
         .files -> <IDENTIFIER>.files.json
-        {collection_titles, collection_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
+        {collection_titles, collection_sort_order, dir, files_count, isDark, server} -> <IDENTIFIER>.extra.json
         and .member_cached.json is saved from ArchiveMember not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
@@ -77,30 +81,11 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         debug("Search so not saving");
         cb(null, this);
     } else {
-        const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
-
-        if (!(this.metadata || this.is_dark)) {
-            // noinspection JSUnusedLocalSymbols
-            this.fetch_metadata({copyDirectory}, (err, data) => {
-                if (err) {
-                    console.error(`Cant save because could not fetch metadata for %s: %s`, this.itemid, err.message);
-                    cb(err);
-                } else {
-                    f.call(this); // Need the call because it loses track of "this"
-                }
-            });
-        } else {
-            f.call(this);
-        }
-
-        function f() {
-            // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
-            // noinspection JSPotentiallyInvalidUsageOfThis
+        const namepart = this._namepart();
             // Note all these files should be in MirrorFS.isSpecialFile
-            // noinspection JSPotentiallyInvalidUsageOfThis
             each(
                 [
-                    ["meta", this.metadata],    // Maybe empty if is_dark
+                ["meta", this.metadata],    // Maybe empty if isDark
                     ["members", this.membersFav], // Only save Favorited members
                     ["files", this.exportFiles()],
                     ["extra", ObjectFromEntries(
@@ -130,7 +115,7 @@ ArchiveItem.prototype.saveBookReader = function({copyDirectory=undefined}={}, cb
     } else {
         const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
 
-        if (!(this.bookreader || this.is_dark)) {
+        if (!(this.bookreader || this.isDark)) {
             // noinspection JSUnusedLocalSymbols
             this.fetch_bookreader({copyDirectory}, (err, ai) => {
                 if (err) {
@@ -177,7 +162,7 @@ function _parse_common(namepart, part, {copyDirectory=undefined}, cb) {
 ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
-        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure fields of ArchiveItem
+        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, isDark, server})  data structure fields of ArchiveItem
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
@@ -400,7 +385,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         }
     }
     function tryReadOrNet(cb) { // Try and Read and if not, then get from net, obeying options cb(err, doSave)
-        if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
+        if (this.itemid && !(this.metadata || this.isDark)) { // Check haven't already loaded or fetched metadata (isDark wont have a .metadata)
             tryRead.call(this, (err) => {
                 if (err) { // noCache, or not cached
                     tryNet.call(this, (err) => {
@@ -422,12 +407,12 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         }
     }
     function f(cb) {
-        if (this.itemid && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
+        if (this.itemid && !(this.metadata || this.isDark)) { // If have not already fetched (isDark means no .metadata field)
             waterfall([
                 tryReadOrNet.bind(this), // passes doStore to cb
                 trySave.bind(this),
             ], (err) => {
-                cb(err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+                cb(err ? err : (this.isDark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
             });
         } else {
             cb(null, this);
@@ -868,7 +853,7 @@ ArchiveItem.prototype.summarizeFiles = function(cb) {
   this.downloaded.files_all_count = this.files.length;
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;
-  this.downloaded.files_details = this.minimumForUI().every(af => af.downloaded);
+  this.downloaded.files_details = (!this.isDark) && this.minimumForUI().every(af => af.downloaded);
   cb(null);
 }
 
