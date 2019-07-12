@@ -12,6 +12,7 @@
     <p> Browse resources from the Internet Archive on RACHEL. The Internet Archive provides free public access to
         collections of digitized materials, including websites, software applications/games, music, movies/videos,
         moving images, and millions of public-domain books.
+        When connected to the internet these resources can be browsed and a local copy kept for use offline.
     </p>
 
 </div>

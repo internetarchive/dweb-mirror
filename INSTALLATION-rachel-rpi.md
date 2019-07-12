@@ -28,10 +28,23 @@ BUT moving soon.
 * ssh to 10.10.10.10
 * Login as `pi` with password `rachel`
 
-
----
-
-curl https://drive.google.com/open?id=1wz8Z7Y_xLilTdgK47flXcWg4oEAKCkeV
-unzip file downladed
-cd into zip 
-./install.sh 
+There is an installer, but its not in Rachel yet, or at a stable location, 
+so cut and paste the following
+it may be best to do this a line at a time to check each step completes.
+```
+sudo su
+curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+apt-get update && apt-get install -y nodejs npm yarn git libsecret-1-dev && npm i -g npm
+mkdir -p "/.data/archiveorg" && chown ${USER} /.data/archiveorg
+cd /usr/local
+yarn add node-pre-gyp cmake
+yarn add @internetarchive/dweb-mirror @internetarchive/dweb-archive
+yarn install
+cd /usr/local/node_modules/@internetarchive/dweb-mirror
+mv rachel/files/internetarchive.service /etc/systemd/system
+systemctl enable internetarchive.service
+sudo systemctl start internetarchive.service
+mv rachel/en-internet_archive /var/www/modules/
+chown -R www-data:www-data /var/www/modules/en-internet_archive
+```
