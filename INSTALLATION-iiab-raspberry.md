@@ -17,6 +17,8 @@ Internet in a Box's site is short on the initial details, especially if your RPi
 So this is what I did. (Edits welcome, if your experience differed)
 
 * Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop 1GB
+  * Any of the distributions should work - I test on the Desktop version
+  * We've seen on Rachel, problems with `Buster Lite` that required `apt update && apt get -y libsecret-1-dev`
 * On a Mac:
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
   * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
@@ -35,9 +37,6 @@ So this is what I did. (Edits welcome, if your experience differed)
 * You might want to ... Menu/Preferences/Config / Set display to highest resolution
 
 ## Install Internet In A Box
-
-I'm following (but editing) steps in [http://d.iiab.io/install.txt] 
-with attention to [http://wiki.laptop.org/go/IIAB/FAQ]
 
 Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, 
 and some bugs in the IIAB installer
@@ -64,7 +63,7 @@ and then run `sudo iiab` to continue the installation.
 * It will prompt to reset password from default `iiab-admin/g0admin`
 * In theory it enables SSH, but sometimes after the OS upgrade to enable it I've had to:
   * login from an attached keyboard, 
-  * Preferences > Services > SSH > enable
+  * Preferences > Raspberry Congif > Services > SSH > enable
 
 #### Check it worked 
 
