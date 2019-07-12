@@ -46,8 +46,11 @@ yarn add @internetarchive/dweb-mirror @internetarchive/dweb-archive
 echo "Installer: yarn install to be sure"
 yarn install
 
+echo "Installer: Switching directories into dweb-mirror"
+cd /usr/local/node_modules/@internetarchive/dweb-mirror
+
 echo "Installer: Installing service"
-mv files/internetarchive.service /etc/systemd/system
+mv rachel/files/internetarchive.service /etc/systemd/system
 
 echo "Installer: Setting server to start at boot"
 systemctl enable internetarchive.service
@@ -56,7 +59,7 @@ echo "Installer: Starting server"
 sudo systemctl start internetarchive.service
 
 echo "Installer: Copying module"
-mv en-internet_archive /var/www/modules/
+mv rachel/en-internet_archive /var/www/modules/
 
 echo "Installer: Setting Ownership"
 chown -R www-data:www-data /var/www/modules/en-internet_archive
