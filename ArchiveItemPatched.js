@@ -70,7 +70,7 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         .members -> <IDENTIFIER>.members.json
         .reviews -> <IDENTIFIER>.reviews.json
         .files -> <IDENTIFIER>.files.json
-        {collection_titles, collection_sort_order, dir, files_count, isDark, server} -> <IDENTIFIER>.extra.json
+        {collection_titles, collection_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
         and .member_cached.json is saved from ArchiveMember not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
@@ -85,7 +85,7 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         // Note all these files should be in MirrorFS.isSpecialFile
         each(
             [
-                ["meta", this.metadata],    // Maybe empty if isDark
+                ["meta", this.metadata],    // Maybe empty if is_dark
                 ["members", this.membersFav], // Only save Favorited members
                 ["files", this.exportFiles()],
                 ["extra", ObjectFromEntries(
@@ -114,7 +114,7 @@ ArchiveItem.prototype.saveBookReader = function({copyDirectory=undefined}={}, cb
     } else {
         const namepart = this._namepart(); // Its also in this.item.metadata.identifier but only if done a fetch_metadata
 
-        if (!(this.bookreader || this.isDark)) {
+        if (!(this.bookreader || this.is_dark)) {
             // noinspection JSUnusedLocalSymbols
             this.fetch_bookreader({copyDirectory}, (err, ai) => {
                 if (err) {
@@ -161,7 +161,7 @@ function _parse_common(namepart, part, {copyDirectory=undefined}, cb) {
 ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
     /*
         Read metadata, reviews, files and extra from corresponding files
-        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, isDark, server})  data structure fields of ArchiveItem
+        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure fields of ArchiveItem
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
@@ -374,13 +374,13 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         if (opts.skipNet) {
             cb(new Error("skipNet set"));
         } else {
-            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, unusedAI) => { // Process Fjords and load .metadata and .files etc - allow isDark just throw before caller
+            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, unusedAI) => { // Process Fjords and load .metadata and .files etc - allow is_dark just throw before caller
                 cb(err); // Maybe or maybe not err
             });
         }
     }
     function tryReadOrNet(cb) { // Try and Read and if not, then get from net, obeying options cb(err, doSave)
-        if (this.itemid && !(this.metadata || this.isDark)) { // Check haven't already loaded or fetched metadata (isDark wont have a .metadata)
+        if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
             tryRead.call(this, (err) => {
                 if (err) { // noCache, or not cached
                     tryNet.call(this, (err) => {
@@ -402,12 +402,12 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         }
     }
     function f(cb) {
-        if (this.itemid && !(this.metadata || this.isDark)) { // If have not already fetched (isDark means no .metadata field)
+        if (this.itemid && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
             waterfall([
                 tryReadOrNet.bind(this), // passes doStore to cb
                 trySave.bind(this),
             ], (err) => {
-                cb(err ? err : (this.isDark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+                cb(err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
             });
         } else {
             cb(null, this);
@@ -848,7 +848,7 @@ ArchiveItem.prototype.summarizeFiles = function(cb) {
   this.downloaded.files_all_count = this.files.length;
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;
-  this.downloaded.files_details = (!this.isDark) && this.minimumForUI().every(af => af.downloaded);
+  this.downloaded.files_details = (!this.is_dark) && this.minimumForUI().every(af => af.downloaded);
   cb(null);
 }
 

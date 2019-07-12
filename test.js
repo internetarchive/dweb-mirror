@@ -37,7 +37,7 @@ const CrawlManager = require('./CrawlManager');
 testCrawlEdgeCases = [
     { identifier: "ThePowerOfNightmares", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}},
     { identifier: "@brenton", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}}, // unidentified user
-    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}}, // Contains SavedSearch, isDark, @brenton
+    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}}, // Contains SavedSearch, is_dark, @brenton
 
 ]
 testCrawl = [
@@ -50,10 +50,10 @@ testCrawl = [
     { query: "Byron Bay", search: {rows: 10, level: "tile"}} // Note uses a bare query; doesnt crawl its thumbnail, and uses abbreviated search
 ];
 testBrewster = [
-    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, isDark, @brenton
+    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, is_dark, @brenton
 ]
 testCrawlOne = [
-    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, isDark, @brenton
+    { identifier: "fav-brewster", level: "details", search: {rows: 100, sort: "-downloads", level: "details"}} // Contains SavedSearch, is_dark, @brenton
 
 ]
 testcrawlpreseed = [ //skipFetchFile, noCache, mediatype: collection

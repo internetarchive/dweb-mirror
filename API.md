@@ -51,7 +51,7 @@ Metadata is stored in specially named files.
 |<IDENTIFIER>.meta.json|ArchiveItem.metadata|
 |<IDENTIFIER>.reviews.json|ArchiveItem.reviews|On disk is format returned by API
 |<IDENTIFIER>.files.json|ArchiveItem.files|
-|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, isDark, dir, server}|
+|<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, is_dark, dir, server}|
 |<IDENTIFIER>.member.json|ArchiveMember|As retrieved in a search
 |<IDENTIFIER>.members.json|List of members - this file is a normal ArchiveFile in fav-* collections|
 |<IDENTIFIER>.members_cached.json|ArchiveMember.*|All the search results for this item retrieved so far
@@ -120,7 +120,7 @@ If `.bookreader` is undefined it will attempt to retrieve first.
 
 Read metadata, playlist, reviews, files and extra from corresponding files - see `Files on disk`
 ```
-cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, isDark, dir, server})  data structure suitable for "item" field of ArchiveItem
+cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, server})  data structure suitable for "item" field of ArchiveItem
 ```
 
 ##### read_bookreader({copyDirectory}}, cb)
@@ -688,6 +688,7 @@ True if the item has not been crawled this time at a greater or equal depth.
 #### process(crawlmanager, cb)
 
 Process a task to crawl an item, complexity depends on its `.level` but can include fetch_metadata, fetch_query, saveThumbnail, crawling some or all of .files and relatedItems.
+
 
 
 
