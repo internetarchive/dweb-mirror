@@ -292,7 +292,8 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, noCache=false, reqUrl=undefined,
                                               zip=undefined, file=undefined, scale=undefined, rotate=undefined,
-                                              page=undefined, skipNet=false, copyDirectory=undefined }={}, cb) { //TODO-API noCache
+                                              page=undefined, skipNet=false, skipFetchFile=undefined,
+                                              copyDirectory=undefined }={}, cb) { //TODO-API noCache
     /* Fetch a page from the item, caching it
 
         page      usually "cover_t.jpg" to get the page
