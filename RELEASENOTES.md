@@ -36,6 +36,7 @@ This release integrates IPFS integration, so any files in the crawled cache are 
 
 See [#11](https://github.com/internetarchive/dweb-mirror/issues/11) for current state.
 
+* 0.2.38: is_dark improvements; first install; docs; rachel
 * 0.2.37: yarn upgrade; sort in searches; write-to-usb; carousel; cleanup URLs; MDNS; 
 * 0.2.36: Turn off IPFS install by default, dist.ipfs.io servers are too slow and unreliable. See https://github.com/ipfs/ipfs-update/issues/105
 * 0.2.35: download count improvements, and copyDirectory refactor
