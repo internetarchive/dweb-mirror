@@ -36,13 +36,13 @@ class ConfigController {
     static initializeUserConfigFile(userConfigFile, defaultUserConfig,  cb) {
         /*
         userConfigFile  Path (can be relative) to user config file, that may not exist
-        defaultUserConfig   Initial configuration to set the file to if it does not exist
+        defaultUserConfig   Initial configuration (as object) to set the file to if it does not exist
         cb(err, { config } )
          */
         const f = this.resolve(userConfigFile);
-        this.readYaml(f, (err, res) => {
+        this.readYaml(f, {silentReadFailure: true}, (err, res) => {
             if (err) {
-                this.writeYaml(f, defaultUserConfig,(err) => {
+                this.writeYaml(f, defaultUserConfig, (err) => {
                     if (err) debug("Unable to initialize User config file %s", f);
                     cb(err, defaultUserConfig);
                 });
@@ -66,7 +66,7 @@ class ConfigController {
 
         asyncMap(this.resolves(filenames),
             (filename, cb2) => {
-                this.readYaml(filename, (err, res) => cb2(null, res)); // Ignore err, and res should be {} if error
+                this.readYaml(filename, {silentReadFailure: true}, (err, res) => cb2(null, res)); // Ignore err, and res should be {} if error
             },
             (err, configobjs) => { // [ {...}* ]
                 if (err) { cb(err, null); } else {
@@ -123,14 +123,17 @@ class ConfigController {
             return {};    // Caller is free to ignore err and treat {} as an empty set of config params
         }
     }
-    static readYaml(filename, cb) {
+    static readYaml(filename, {silentReadFailure=false}={}, cb) {
         /*
         Read YAML from filename and return via cb(err, res),
         or return error if unable to read or parse.
+        silent: if true then dont report error on failure to read
         */
         fs.readFile(filename, 'utf8', (err, yamlstr) => {
             if (err) {
-                debug("Unable to read %s: %s", filename, err.message);
+                if (!silentReadFailure) {
+                    debug("Unable to read %s: %s", filename, err.message);
+                }
                 cb (err, {});
             } else {
                 try {

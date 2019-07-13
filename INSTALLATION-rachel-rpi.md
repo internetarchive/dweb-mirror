@@ -48,3 +48,8 @@ sudo systemctl start internetarchive.service
 mv rachel/en-internet_archive /var/www/modules/
 chown -R www-data:www-data /var/www/modules/en-internet_archive
 ```
+
+At this point, 
+you should be able to access the server at http://rachel.local:4244;
+or via the main Rachel interface at http://rachel.local and click on Internet Archive.
+ 

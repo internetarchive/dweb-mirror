@@ -514,7 +514,7 @@ class CrawlItem extends Crawlable {
                     // If its a search or collection then do the query, and push members onto queue
                     if (this.search && (this.query || (this.item && this.item.metadata && (this.item.metadata.mediatype === "collection")))) {
                         const ai = this.item;
-                        if (typeof ai.page === "undefined") ai.page = 0;
+                        if (typeof ai.page === "undefined") ai.page = 1;
                         const search = Array.isArray(this.search) ? this.search : [this.search];
                         ai.rows = search.reduce((acc, queryPage) => acc + queryPage.rows, 0); // Single query all rows
                         ai.sort = search[0].sort;
@@ -536,7 +536,11 @@ class CrawlItem extends Crawlable {
                     }
                 },
                 //(cb) => { debug("XXX Finished processing item %s", this.identifier); cb(); }
-            ], cb);
+            ], (err, res) => {
+                if (err) {
+                    debug("Crawling item %s failed %O", this.identifier, err); }
+                cb(err, res); // Pulled out on line by itself to make attaching breakpoint easier.
+            });
         } else {
             cb();
         }

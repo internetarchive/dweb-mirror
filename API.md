@@ -414,10 +414,11 @@ Read an return YAML from filename
 
 Throws errors on failure to read, or failure to parse.
 
-##### static readYaml(filename, cb)
+##### static readYaml(filename, {silentReadFailure}, cb)
 
 Read YAML from filename and return via cb(err, res), 
 or return error if unable to read or parse.
+silentReadFailure means dont report error if cant read, as will report and handle higher up.
 
 ##### userConfig() 
 Return the last configuration file
