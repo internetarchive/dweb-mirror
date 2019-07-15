@@ -935,10 +935,5 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
   });
 };
 
-// noinspection JSUnresolvedVariable
-ArchiveItem.prototype.exportFiles = function() {  // Note overridden in dweb-mirror.ArchiveItemPatched
-  // Note we are storing as AF.downloaded.metadata as only store that, but reading back in AF.constructor converted to AF.downloade
-  return this.files.map(f => Object.assign({downloaded: f.downloaded}, f.metadata));
-};
 
 exports = module.exports = ArchiveItem;
