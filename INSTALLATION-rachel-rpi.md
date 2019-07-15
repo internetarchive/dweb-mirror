@@ -53,3 +53,40 @@ At this point,
 you should be able to access the server at http://rachel.local:4244;
 or via the main Rachel interface at http://rachel.local and click on Internet Archive.
  
+### Disk mounting
+USB drives (both real drives and USB sticks) dont mount in this version. 
+To get ExFat (Most USB) and NTFS (Windows) to mount ... 
+
+Add some code needed
+```
+apt-get install -y usbmount ntfs-3g exfat-fuse` which didn't help.
+```
+Check the gid of pi. 
+```
+id -g pi # Get GID
+id -u pi # Get UID
+```
+
+Then edit /etc/usbmount/usbmount.conf to add ntfs and fuseblk so the line looks like:
+```
+FILESYSTEMS="vfat ext2 ext3 ext4 hfsplus ntfs exfat fuseblk"
+```
+And if both gid and uid `1000` then change the gid and uid in the FS_MOUNTOPTIONS as below.
+```
+FS_MOUNTOPTIONS="-fstype=ntfs-3g,nls=utf8,umask=007,gid=1000
+-fstype=fuseblk,nls=utf8,umask=007,gid=1000 -fstype=vfat,gid=1000,uid=1000,umask=007"
+```
+
+Trying to work out how to figure out the filetype of typical USB drives and 
+what added code is needed to make them work. TODO
+
+Here is help with:
+[NTFS](https://raspberrypi.stackexchange.com/questions/41959/automount-various-usb-stick-file-systems-on-jessie-lite)
+
+
+### Troubleshooting
+
+Logs are in /var/log/daemon.log. 
+`grep` unfortunately doesnt seem to work on the logs which it thinks are binary, 
+so how to extract the useful information is currently unclear to me. TODO
+
