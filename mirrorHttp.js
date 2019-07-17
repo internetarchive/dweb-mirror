@@ -65,7 +65,6 @@ function mirrorHttp(config, cb) {
 //app.get('*/', (req, res, next) => { req.url = req.params[0]; next(); } // Strip trailing '/'
     app.use((req, res, next) => {
         // Pre Munging - applies to all queries
-        debug("STARTING: %s", req.url);
         /* Turn the range headers on a req into an options parameter can use in streams */
         req.opts = {};
         const range = req.range(Infinity);
@@ -76,6 +75,10 @@ function mirrorHttp(config, cb) {
         // Detect if want server to skip cache
         req.opts.noCache = req.headers["cache-control"] && ["no-cache", "max-age=0"].includes(req.headers["cache-control"]);
         req.opts.copyDirectory = req.query.copyDirectory; // Usually undefined
+        debug("STARTING: %s %s %s %s", req.url,
+          (typeof req.opts.start !== "undefined") ? `bytes ${req.opts.start}-${req.opts.end}` : "",
+          (req.opts.noCache ? "NOCACHE" : ""),
+          (req.opts.copyDirectory ? req.opts.copyDirectory : "" ));
         next();
     });
   function reqQuery(req, ...more) {
@@ -513,7 +516,7 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 // noinspection JSUnresolvedFunction
     app.get('/archive/bookreader/BookReader/*', function (req, res, next) { //TODO-BOOK this is not generic for all platforms use same technique as for config.archiveui.directory
-        _sendFileFromDir(req, res, next, "/usr/local/node_modules/@internetarchive/bookreader/BookReader");
+        _sendFileFromDir(req, res, next, config.archiveui.directory + "/bookreader/BookReader");
     });
     app.get('/archive/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         _sendFileFromDir(req, res, next, config.archiveui.directory);
