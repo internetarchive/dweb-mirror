@@ -244,6 +244,7 @@ class MirrorFS {
     }
     static checkWhereValidFile(relFilePath, {existingFilePath=undefined, noCache=false, digest=undefined,
         format=undefined, algorithm=undefined, copyDirectory=undefined}, cb) { //TODO-API
+        //TODO follow this up the stack and start passing size to it where possible.
         /*
         digest      Digest of file to find
         format      hex or multihash - how hash formatted
@@ -256,7 +257,6 @@ class MirrorFS {
         If relFilePath && !digest it just checks the cache directories
         If digest && !relFilePath it will try and locate file in hashstores
         if relPath && digest the hash will be recalculated and checked.
-
         cb(err, filepath)
          */
         if (noCache && !digest) {
@@ -281,15 +281,25 @@ class MirrorFS {
                     // noinspection JSUnresolvedVariable
                     fs.access(path.join(cacheDirectory, relFilePath), fs.constants.R_OK, cb4);
                 },
-                (cb5) => { // if digest, then test its correct
+                (cb5) => { // Check its not zero-size
+                    const existingFilePath = path.join(cacheDirectory, relFilePath);
+                    fs.stat(existingFilePath, (err, stats) => {
+                        if (!err && (stats.size === 0)) {
+                          err = new Error(`Zero length file at ${existingFilePath} ignoring`);
+                          debug("ERROR %s",err.message);
+                        }
+                        cb5(err);
+                    });
+                },
+                (cb6) => { // if digest, then test its correct
                     if (!digest) {
-                        cb5();
+                        cb6();
                     } else {
                         const filepath = path.join(cacheDirectory, relFilePath);
                         this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
                             if (err) debug("Error from streamhash for %s: %s", filepath, err.message); // log as error lost in waterfall
                             if (actual !== digest) { debug("multihash %s %s %s doesnt match file %s which is %s", format, algorithm, digest, filepath, actual); err=true} // Just test boolean anyway
-                            cb5(err);
+                            cb6(err);
                         });
                     }
                 }
@@ -394,6 +404,12 @@ class MirrorFS {
                 callbackEmptyOrData(existingFilePath);
             }
         }
+        function _cleanupOnFail(filepathTemp, mess, cb) {
+            fs.unlink(filepathTemp, (err) => {
+                if (err) { debug("ERROR: Can't delete %s", filepathTemp); } // Shouldnt happen
+                if (!wantStream) cb(err || new Error(mess)); // Cant send err if not wantStream as already done it
+            })
+        }
         function _notcached() {
             /*
             Four possibilities - wantstream &&|| partialrange
@@ -436,11 +452,9 @@ class MirrorFS {
                                         // noinspection EqualityComparisonWithCoercionJS
                                         if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== "undefined") && (hexhash !== sha1))) { // Intentionally != as metadata is a string
                                             // noinspection JSUnresolvedVariable
-                                            debug("File %s size=%d sha1=%s doesnt match expected %s %s, deleting", debugname, writable.bytesWritten, hexhash, expectsize, sha1);
-                                            fs.unlink(filepathTemp, (err) => {
-                                                if (err) { console.error(`Can't delete ${filepathTemp}`); } // Shouldnt happen
-                                                if (!wantStream) cb(err); // Cant send err if not wantStream as already done it
-                                            })
+                                            const message = `File ${debugname} size=${writable.bytesWritten} sha1=${hexhash} doesnt match expected ${expectsize} ${sha1}, deleting`;
+                                            debug("ERROR %s", message);
+                                            _cleanupOnFail(filepathTemp, message, cb);
                                         } else {
                                             fs.rename(filepathTemp, newFilePath, (err) => {
                                                 if (err) {
@@ -461,7 +475,11 @@ class MirrorFS {
                                             })
                                         }
                                     });
-                                    s.on('error', (err) => debug("Failed to read %o from net err=%s", urls, err.message));
+                                    s.on('error', (err) => {
+                                        const message = `Failed to read ${urls} from net err=${err.message} wanStream=${wantStream}`;
+                                        debug("ERROR %s", message);
+                                        _cleanupOnFail(filepathTemp, message, cb);
+                                    })
                                     try {
                                         s.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                                         if (wantStream) cb(null, s);

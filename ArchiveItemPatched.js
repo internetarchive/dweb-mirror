@@ -140,7 +140,11 @@ function _parse_common(namepart, part, {copyDirectory=undefined}, cb) {
     const relFilePath = path.join(namepart, `${namepart}_${part}.json` );
     MirrorFS.readFile(relFilePath, {copyDirectory}, (err, jsonstring) => {
         if (err) {
-            cb(err);    // Not logging as not really an err for there to be no file, as will read
+          cb(err);    // Not logging as not really an err for there to be no file, as will read
+        } else if (jsonstring.length === 0) { // Zero length files shouldnt occur, but seem to especially if crawler exits prematurely. ignore them.
+          const err = new Error(`File %{relFilePath} is empty so ignoring it`);
+          debug("ERROR %s", err.message);
+          cb(err);
         } else {
             let o;
             try {
@@ -473,11 +477,9 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
               cb2();
           })}
         },
-      (cb2) => { // Expand the members if necessary and possible locally, errors are ignored
+      (cb2) => { // Expand the membersSearch if necessary and possible locally, errors are ignored
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...
-        // or for identifier=fav-* when members loaded with unexpanded
-
         map(this.membersSearch,
           (ams,cb3) => {
             if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
@@ -491,7 +493,6 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
         // unexpanded members typically come from either:
         // a direct req from client to server for identifier:...
         // or for identifier=fav-* when members loaded with unexpanded
-
         map(this.membersFav,
           (ams,cb3) => {
             if ((ams instanceof ArchiveMember && ams.isExpanded()) || noCache) { // Expanded or unexpanded or not using cache
@@ -677,7 +678,9 @@ ArchiveItem.prototype.relatedItems = function({ wantStream=false, wantMembers=fa
                     } else {
                         cb(null, rels);
                     }
-                } catch (err) { cb(err); } // Catch bad JSON
+                } catch (err) {
+                  debug("ERROR: Bad json in %s",relFilePath)
+                  cb(err); } // Catch bad JSON
             } else {
                 cb(err, res); // Could be err or stream
             }
