@@ -2,6 +2,7 @@ const prettierBytes = require('prettier-bytes');
 const queue = require('async/queue');
 const waterfall = require('async/waterfall');
 const each = require('async/each');
+const asyncUntil = require('async/until');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
 const {ObjectFilter, ObjectFromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
@@ -47,11 +48,19 @@ class CrawlManager {
         this.clearState();
         this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
         this._taskQ = queue((task, cb) => {
-            task.process(this, (err)=> {
+          asyncUntil(
+            //TODO maybe push this to dweb-transports as waitConnected:true argument to statuses
+            () => DwebTransports.statuses({connected: true}).length,
+            cb2 => setTimeout(cb2, Math.floor(1000+4000*Math.random())),
+            (unusedErr) => {
+              task.process(this, (err) => {
                 this.completed++;
-                if (err) this.errors.push({task: task, error: err, date: (new Date(Date.now()).toISOString())});
-                cb(err);
-            }); //Task should be an instance of a class with a process method
+                if (err)
+                  this.errors.push({task: task, error: err, date: (new Date(Date.now()).toISOString())});
+                //cb(err); // I'm seeign the crawler freeze and seems to be after an error so trying without passing error back up.
+                cb();
+              }); //Task should be an instance of a class with a process method
+            });
         }, this.concurrency);
         this._taskQ.drain = () => this.drained.call(this);
         if (typeof CrawlManager.crawls === "undefined") CrawlManager.crawls = [];
@@ -73,7 +82,7 @@ class CrawlManager {
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
                 this._taskQ.push(task);
         } else {
-            debug("Skipping %s as reached maximum of %d tasks", task.debugname, this.limitTotalTasks)
+            this.errors.push({task: task, error: new Error(`Skipping ${task.debugname} as reached maximum of ${this.limitTotalTasks} tasks`), date: (new Date(Date.now()).toISOString())});
         }
     }
     pushTask(task) {
@@ -262,6 +271,7 @@ class CrawlFile extends Crawlable {
                         end: undefined,
                     }, cb);
                 } else {
+                    this.errors.push({task: task, error: new Error(`Skipping ${this.file.metadata.name} via ${this.parent.join('/')} size ${prettierBytes(parseInt(this.file.metadata.size))} > ${prettierBytes(crawlmanager.maxFileSize)}`), date: (new Date(Date.now()).toISOString())});
                     debug('Skipping "%s" File via %o, size %s > %s', this.file.metadata.name, this.parent, prettierBytes(parseInt(this.file.metadata.size)), prettierBytes(crawlmanager.maxFileSize));
                     cb();
                 }
@@ -429,8 +439,8 @@ class CrawlItem extends Crawlable {
                         cb2(null, this.item);
                     }
                 },
-                (ai, cb2a) => {
-                    if (ai && ai.metadata && (ai.metadata.mediatype === "texts")) {
+                (ai, cb2a) => { // Get bookreader metadata if its a book
+                    if (ai && ai.metadata && (ai.metadata.mediatype === "texts") && (ai.subtype() === "bookreader")) {
                         ai.fetch_bookreader({copyDirectory}, cb2a);
                     } else {
                         cb2a(null, this.item)
@@ -457,8 +467,8 @@ class CrawlItem extends Crawlable {
                     }
                     cb4(null);
                 },
-                (cb4a) => {
-                    if (this.item && this.item.metadata && this.item.metadata.mediatype === "texts") {
+                (cb4a) => { // If its a mediatype=bookreader subtype=bookreader get the pages
+                    if (this.item && this.item.metadata && (this.item.metadata.mediatype === "texts") && (this.item.subtype() === "bookreader")) {
                         const asParent = this.asParent();
                         if (['details', 'all'].includes(this.level)) { // Details
                             crawlmanager._push(new CrawlPage({
@@ -522,6 +532,7 @@ class CrawlItem extends Crawlable {
                             let start = 0;
                             search.forEach(queryPage => {
                                 if (queryPage.sort && (queryPage.sort !== this.item.sort)) {
+                                    this.errors.push({task: task, error: new Error(`ERROR in configuration - Sorry, can't (yet) mix sort types in ${this.debugname} ignoring {queryPage.sort}`), date: (new Date(Date.now()).toISOString())});
                                     debug("ERROR in configuration - Sorry, can't (yet) mix sort types in %s ignoring %s", this.debugname, queryPage.sort)
                                 }
                                 searchMembers.slice(start, start + queryPage.rows).forEach(sm =>
@@ -538,7 +549,9 @@ class CrawlItem extends Crawlable {
                 //(cb) => { debug("XXX Finished processing item %s", this.identifier); cb(); }
             ], (err, res) => {
                 if (err) {
-                    debug("Crawling item %s failed %O", this.identifier, err); }
+                    //Error is pushed in caller of .process()
+                    //this.errors.push({task: task, error: err, date: (new Date(Date.now()).toISOString())});
+                    debug("Crawling item %s failed %o", this.identifier, err); }
                 cb(err, res); // Pulled out on line by itself to make attaching breakpoint easier.
             });
         } else {
