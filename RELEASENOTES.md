@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.40: Crawl error handling, zero length files, bookreader location, texts subtypes, crawl when offline
 * 0.2.39: USB mounting; exportfiles fix; Rachel intallation notes
 * 0.2.38: is_dark improvements; first install; docs; rachel
 * 0.2.37: yarn upgrade; sort in searches; write-to-usb; carousel; cleanup URLs; MDNS; 
