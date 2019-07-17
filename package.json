@@ -12,7 +12,7 @@
     "@internetarchive/dweb-archive": "^0.1.48",
     "@internetarchive/dweb-archivecontroller": "^0.1.48",
     "@internetarchive/dweb-objects": "^0.1.21",
-    "@internetarchive/dweb-transports": "^0.1.36",
+    "@internetarchive/dweb-transports": "^0.1.59",
     "@stratumn/canonicaljson": "^1.0.2",
     "async": "^2.6.2",
     "child_process": "^1.0.2",
@@ -49,5 +49,5 @@
     "install": "./install.sh",
     "update": "./install.sh"
   },
-  "version": "0.2.40"
+  "version": "0.2.41"
 }
