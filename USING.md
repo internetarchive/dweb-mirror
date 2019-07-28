@@ -2,7 +2,7 @@
 
 ## Summary
 
-*Note: This aspect of the system is currently (June 2019) in rapid evolution, 
+*Note: This aspect of the system is currently (July 2019) in rapid evolution, 
 updating your system is likely to improve it: see [./INSTALLATION.md]*
 
 This file is intended to compliment the [README](./README.md) and [INSTALLATION](INSTALLATION.md) documents. 
@@ -25,11 +25,11 @@ and managing a collection of material on the archive that others can download au
 
 The address to access will depend on your configuration.
 * On Internet In a Box
-  * if connected to WiFi “Internet in a Box", try [http://box.lan:4244]
-  * if connected via a router then [http://box.local:4244] may work
-* On Rachel …TODO
-* If your server is running with `--mdns` then [http://archive.local:4244] will work.
-* If running on your own machine (a laptop for example) then [http://localhost:4244] should work
+  * if connected to WiFi “Internet in a Box", try http://box.lan:4244
+  * if connected via a router then http://box.local:4244 may work
+* On Rachel then http://rachel.local:4244 often works
+* If your server is running with `--mdns` then http://archive.local:4244 will work.
+* If running on your own machine (a laptop for example) then http://localhost:4244 should work
 * Otherwise ask your system admin for the address of the machine its running on, usually it will be on `:4244`
 
 ## Using the page
@@ -41,16 +41,15 @@ If you have used the Internet Archive then the interface will be familiar,
 but there are a few differences to support offline use. 
 
 At the top you'll see the Internet Archive's usual interface, a few of these buttons will (for now) only work 
-while online. 
-
-[issue#182](https://github.com/internetarchive/dweb-mirror/issues/182) Buttons that dont work when offline should be greyed out
+while online, and don't appear when offline.
 
 Below that is a row of information specific to the offline application.
     
 First are health indicators. 
 * If it shows "Mirror" in Red, it means we can't communicate with the mirror gateway, 
 this will only happen if the gateway goes offline part way through a process.
-* Normally you'll see an indicator for HTTP, which is Green when the gateway can talk to the Archive, and Red when you are offline.
+* Normally you'll see an indicator for HTTP, which is Green when the gateway can talk to the Archive, 
+  and Red when you are offline.
 * Next to that might be indicators for WebTorrent or IPFS if they have been enabled. 
 
 [issue#183](https://github.com/internetarchive/dweb-mirror/issues/183) These buttons should control whether IPFS/WebTorrent are enabled
@@ -59,8 +58,8 @@ this will only happen if the gateway goes offline part way through a process.
 
 * If the mirror is online to the Internet Archive (HTTP shows Green) then next comes a "Reload" button, 
 you can click this to force it to check with the Archive for an up to date list. 
-
-It is most useful on collections when someone else has added something, but your gateway might be remembering an old version.
+It is most useful on collections when someone else might have added something, 
+but your gateway might be remembering an old version.
 * Then there is a Settings button which brings up a page that includes status of any crawls.
 * Finally there is a Home button which will bring you back to this page. 
 
@@ -103,6 +102,8 @@ These items will also appear on your Local page.
 See the note above, usually you won’t want to leave it at yellow (all) as this will usually try
 (there are some size limits) to download all the files.
 
+[Issue 229](https://github.com/internetarchive/dweb-mirror/issues/229) re yellow/blue indicators.
+
 There is a Reload button which will force the server to try archive.org, 
 this is useful if you think the item has changed, or for debugging.
 
@@ -140,10 +141,12 @@ but can be selected for crawling as for any other item.
 If you click on the "Settings" button, it should bring up a page of settings to control Crawling.
 This page is still under development (as of June 2019). 
 
-On here you will see a list of crawls, (currently just one).
+On here you will see a list of crawls.
 You should get useful information about status, any errors etc. 
 Hitting `<<` will restart the crawl and `||` or `>' pause and resume,
-but note that any file already being downloaded will continue to do so.  
+but note that any file already being downloaded will continue to do so when you hit pause. 
+Hitting `||` `<<` `<` will stop the current crawl, reset and retry, which is a good way to try again if,
+for example, you lost connection to the server part way through.   
 
 ### Advanced crawling
 
@@ -162,6 +165,8 @@ cd /opt/iiab/internetarchive
 There are lots of options possible, try `./internetarchive —help` to get guidance.
 
 This functionality will be gradually added to the UI in future releases.
+In the meantime if you have something specific you want to do feel free to post it as a new issue on 
+[github](https://github.com/dweb-mirror/issues/new).
 
 ## Downloading content for a different box
 
@@ -169,9 +174,11 @@ You can copy one or more items that are downloaded to a new storage device (e.g.
 take that device to another Universal Library server, and plug it in.  
 All the content will appear as if it was downloaded there. 
 
-To put content onto a device, at the moment requires accessing the command line on the server.
+To put content onto a device, you can either:
+* put the `copydirectory` field in the yaml file described above, 
+* hit `Save` while on an item or search
+* or run a crawl at the command line 
 
-[issue#175](https://github.com/internetarchive/dweb-mirror/issues/175)
 ``` 
 # CD into your device e.g. on an IIAB it would be 
 cd /media/pi/foo
@@ -196,8 +203,8 @@ and just checks the content is up to date.
 
 ## Managing collections on Internet Archive
 
-You can create and manage your own collections on the Internet Archive site itself, 
-other people can then crawl those collections. 
+You can create and manage your own collections on the [Internet Archive site](http://www.archive.org).  
+Other people can then crawl those collections. 
 
 First get in touch with Mitra Ardron at mitra@archive.org , as processes may have changed since this is written.
 

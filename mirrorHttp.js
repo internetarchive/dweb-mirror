@@ -105,7 +105,7 @@ function mirrorHttp(config, cb) {
         const filepath = path.join(dir, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
         res.sendFile(filepath, function (err) {
             if (err) {
-                debug('No file in: %s', filepath);
+                debug('No file in: %s %s', filepath, err.message);
                 next(); // Drop through to next attempt - will probably fail
             } else {
                 debug("sent file %s", filepath);
@@ -390,7 +390,7 @@ function mirrorHttp(config, cb) {
     app.get('/admin/setconfig/:identifier/:level', function (req, res, next) {
         const identifier = req.params["identifier"];
         const delayTillReconsider = 3000; // ms time to wait for another key press before running crawl
-        const crawlid = 0; // Just care about 1 crawl for now TODO reconsider if add more crawls
+        const crawlid = 0; // Always setting on default crawl which will be '0'
         config.writeUserTaskLevel( identifier,  req.params["level"], err => {
             if (err) {
                 next(err);
@@ -485,7 +485,7 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
         // noinspection JSUnresolvedVariable
         proxyUpstream(req, res, next, {"Content-Type": "application/json"})
-    }); //TODO should be retrieving. patching into main metadata and saving
+    }); //TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction

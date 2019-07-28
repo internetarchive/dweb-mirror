@@ -80,7 +80,7 @@ class CrawlManager {
             Push a task onto the queue
          */
         if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
-                this._taskQ.push(task);
+                 this._taskQ.push(task);
         } else {
             this.errors.push({task: task, error: new Error(`Skipping ${task.debugname} as reached maximum of ${this.limitTotalTasks} tasks`), date: (new Date(Date.now()).toISOString())});
         }
@@ -271,7 +271,7 @@ class CrawlFile extends Crawlable {
                         end: undefined,
                     }, cb);
                 } else {
-                    this.errors.push({task: task, error: new Error(`Skipping ${this.file.metadata.name} via ${this.parent.join('/')} size ${prettierBytes(parseInt(this.file.metadata.size))} > ${prettierBytes(crawlmanager.maxFileSize)}`), date: (new Date(Date.now()).toISOString())});
+                    crawlmanager.errors.push({task: this, error: new Error(`Skipping ${this.file.metadata.name} via ${this.parent.join('/')} size ${prettierBytes(parseInt(this.file.metadata.size))} > ${prettierBytes(crawlmanager.maxFileSize)}`), date: (new Date(Date.now()).toISOString())});
                     debug('Skipping "%s" File via %o, size %s > %s', this.file.metadata.name, this.parent, prettierBytes(parseInt(this.file.metadata.size)), prettierBytes(crawlmanager.maxFileSize));
                     cb();
                 }
@@ -311,7 +311,7 @@ class CrawlPage extends Crawlable {
         Object.assign(this, opts);  // Handle opts in process as may be async
     }
     process(crawlmanager, cb) {
-        console.assert(this.archiveitem);
+        console.assert(this.archiveitem, "Crawl of page needs archiveitem");
         if (this.isUniq(crawlmanager)) {
             // if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
             debug('Processing "%s" %s x1/%s rotate=%s via %o', this.identifier, this.page || (this.zip + "/" + this.file), this.scale, this.rotate, this.parent); // Parent includes identifier
