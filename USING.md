@@ -111,9 +111,11 @@ This button brings up a dialogue with a list of the available destinations.
 These should include any inserted drive with "archiveorg" as a directory at its top level. 
 The content will be copied to that drive, which can then be removed and inserted into a different server.
 
-Note: The server currently only checks for these at startup. 
-[issue#195](https://github.com/internetarchive/dweb-mirror/issues/195) will check any time.
-
+The server checks whether these disks are present every 15 seconds, so to use a new USB disk:
+* Insert the USB 
+* Create a folder at its top level called `archiveorg`
+* Wait about 15 seconds
+* Hitting `Save` should now allow this USB disk to be selected. 
 
 ## Collection and Search pages - multiple items
 

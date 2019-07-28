@@ -1,4 +1,5 @@
 const debug = require('debug')('dweb-mirror:MirrorConfig');
+const forever = require('async/forever');
 const ConfigController = require('./ConfigController');
 const CrawlManager = require('./CrawlManager');
 const {ObjectDeeperAssign} = require('@internetarchive/dweb-archivecontroller/Util');
@@ -23,12 +24,32 @@ class MirrorConfig extends ConfigController {
         super.new(filenames, cb);
     }
 
+    resolveDirectories() {
+        //TODO note this could be slow - it uses glob.sync - see TODO in ConfigController.resolves
+        // Handle ~/ ./ ../ and expand * or ?? etc
+        this.directories = ConfigController.resolves(
+          this.configOpts.filter(c => c.directories).pop().directories // Find last one to define directories
+        );
+    }
+
     setOpts(...opts) {
         // Extend base class to handle specific derivations of opts
         super.setOpts(...opts); // Just combined and store ops
-        this.directories = ConfigController.resolves(this.directories); // Handle ~/ ./ ../ and expand * or ?? etc
-        // noinspection JSUnresolvedVariable
+        this.resolveDirectories(); // Handle ~/ ./ ../ and expand * or ?? etc
         this.archiveui.directory = ConfigController.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
+        this.setupPeriodically(); // Periodically - rescan Directories;
+    }
+
+    setupPeriodically() {
+        // Re-resolve the directories options to see if its changed
+        if (this.rescanDirectories) {
+            forever((next) =>
+              setTimeout(() => {
+                  this.resolveDirectories();
+                  next();
+              }, this.rescanDirectories * 1000)
+            )
+        }
     }
 
     setAndWriteUser(obj, cb) {
