@@ -16,7 +16,7 @@ let mdns;
 function registerMDNS(name) {
   name = name.replace('.local', '')
   debug("MDNS registering %s.local", name);
-  if (typeof mdns === "undefined") {
+  if (typeof mdns === "undefined") { // Setup if haven't already done so
     mdns = multicastdns(); }
 
   mdns.on('error', function () {

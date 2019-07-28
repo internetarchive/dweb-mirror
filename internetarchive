@@ -37,8 +37,8 @@ const optsJson = ["search", "related"]; // Can be provided as JSON rather than i
 const opts = getopts(process.argv.slice(2),{
     alias: { l: "level", r: "rows", h: "help", v: "verbose", d: "depth", c: "crawl", s: "server", m: "maintenance",
         "skipFetchFile":"skipfetchfile", "maxFileSize":"maxfilesize", "limitTotalTasks":"limittotaltasks",
-        "copyDirectory":"copydirectory", "MDNS":"mdns"},
-    boolean: ["h","v", "skipFetchFile", "noCache", "dummy", "MDNS"],
+        "copyDirectory":"copydirectory", "MDNS":"mdns", "NOMDNS": "nomdns"},
+    boolean: ["h","v", "skipFetchFile", "noCache", "dummy", "NOMDNS"],
     //string: ["directory", "search", "related", "depth", "debugidentifier", "maxFileSize", "concurrency", "limitTotalTasks", "transport"],
     string: ["directory", "search", "related", "transport", "level", "debugidentifier"], // Not debugidentifier because undefined and "" are not the same.
     //default: {transport: "HTTP"}, // Getting defaults from yaml via MirrorConfig
@@ -78,7 +78,8 @@ usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] 
     --transport TRANSPORT   : The names of transport to use, by default its HTTP, but can currently add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
     --skipfetchfile : Dont actually transfer the files (good for debugging)
     --noCache       : Ignore current contents of cache and always refetch
-    --mdns          : Respond with MDNS on archive.local
+    --mdns DOMAIN   : Respond with MDNS to DOMAIN.local (by default MDNS responds on archive.local)
+    --nomdns        : Do not respond with MDNS on archive.local
     --dummy         : Just print the result of the options in the JSON format used for configuration
 
    identifier       : Zero or more identifiers to crawl (if none, then it will use the default query from the configuration)
@@ -174,6 +175,8 @@ function optsToConfig() {
     if (opts.verbose || opts.dummy) {
         debug( "Config:"); debug(yaml.safeDump(ObjectFilter(config, (key, unusedValue) => key !== "configOpts")));
     }
+    if (opts.mdns) { config.setOpts({mdns: opts.mdns})}
+    if (opts.nomdns) { config.setOpts({mdns: undefined})}
     return null;
 }
 function _tasks() {
@@ -258,8 +261,8 @@ let server;
 function startServer(cb) {
     mirrorHttp(config, (err, serv) => {
         server = serv;
-        if (!err && opts.mdns) {
-            registerMDNS('archive');
+        if (!err && config.mdns) {
+            registerMDNS(config.mdns);
         }
         cb(err);
     });

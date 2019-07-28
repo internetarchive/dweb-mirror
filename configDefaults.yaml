@@ -36,7 +36,7 @@ connect:
     - 'WEBTORRENT'
     - 'HTTP'
     - 'IPFS'
-
+mdns: "archive" # By default respond to archive.local via MDNS
 # The apps group include configuration only used by one application
 apps:
   # internetarchive --server uses these
