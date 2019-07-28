@@ -88,7 +88,7 @@ class ConfigController {
         // noinspection JSUnresolvedVariable
         return (v.startsWith("~/") ? path.resolve(os.homedir(), v.slice(2)) : path.resolve(process.cwd(), v)); }
 
-    static resolves(vv) {
+    static resolves(vv) { //TODO make async and pass a cb
         //Return an array of resolved filenames, this can also expand `*` etc
         return [].concat(...  // flatten result
             vv.map(v => this.resolve(v))    // Handle ~ or . or ..

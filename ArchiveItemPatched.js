@@ -444,8 +444,11 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     //TODO-CACHE-AGING
     // noinspection JSUnresolvedVariable
     const namepart = this._namepart();  // Can be undefined for example for list of members unconnected to an item
-    const defaultSort = (!this.sort || (this.sort === ((this.metadata && this.metadata.collection_sort_order) || "-downloads"))); // Check if its non-default sort
-    const part = "members_" +   (defaultSort ? "cached" : (this.sort.join("_")+"_cached"));
+    //TODO - this is wrong, this.sort can sometimes be an array
+    const sortString = (this.sort.length === 0) ? undefined : !Array.isArray(this.sort) ? this.sort : this.sort.join("_");
+    const defaultSort = (!sortString  // Unspecified
+      || (sortString === ((this.metadata && this.metadata.collection_sort_order) || "-downloads"))); // Check if its non-default sort
+    const part = "members_" +   (defaultSort ? "cached" : (sortString+"_cached"));
     if (!Array.isArray(this.membersFav)) this.membersFav = [];
     //TODO-SEARCHORDER check what happens when switch tabs, at this point membersSearch should be empty
     if (!Array.isArray(this.membersSearch)) this.membersSearch = [];
@@ -852,7 +855,8 @@ ArchiveItem.prototype.summarizeFiles = function(cb) {
   this.downloaded.files_all_count = this.files.length;
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;
-  this.downloaded.files_details = (!this.is_dark) && this.minimumForUI().every(af => af.downloaded);
+  // files_details is false for is_dark; searches have no files so true; otherwise looks at minimumForUI
+  this.downloaded.files_details = (!this.is_dark) && (!this.files.length || this.minimumForUI().every(af => af.downloaded));
   cb(null);
 }
 
