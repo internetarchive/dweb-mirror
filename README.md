@@ -205,7 +205,7 @@ There are two logs of relevance, the browser and the server.
 JavaScript Console or something similar.
 
 **Server**: 
-On IIAB from a Terminal window. 
+On IIAB or on Rachel/RPI from a Terminal window. 
 ```
 journalctl -u internetarchive
 ```

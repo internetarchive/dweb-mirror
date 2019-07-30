@@ -63,7 +63,7 @@ and then run `sudo iiab` to continue the installation.
 * It will prompt to reset password from default `iiab-admin/g0admin`
 * In theory it enables SSH, but sometimes after the OS upgrade to enable it I've had to:
   * login from an attached keyboard, 
-  * Preferences > Raspberry Congif > Services > SSH > enable
+  * Preferences > Raspberry Config > Services > SSH > enable
 
 #### Check it worked 
 

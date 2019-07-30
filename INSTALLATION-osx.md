@@ -1,4 +1,4 @@
-# Installation instructions for dweb-mirror on IIAB on Raspberry Pi 3
+# Installation instructions for dweb-mirror on IIAB on Mac OSX
 
 See [README.md] for more info
 

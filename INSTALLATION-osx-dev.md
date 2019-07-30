@@ -4,8 +4,6 @@ See [README.md] for more info
 
 ## Installation
  
-At the moment this is one set for developing, or use, later I'll split it when its more stable.
-
 ### 1. Prelim - getting your machine ready.
 
 You will need git, node, npm, yarn, which may or may not be already installed.
