@@ -1,17 +1,19 @@
-# Installation instructions for dweb-mirror on ....
+# Installation instructions for dweb-mirror on Orange Pi Zero with Armbian Buster
 
-This is a working copy used to create or update the more platform specific installation documents, 
-and covers a lot of platforms.
+This set of installation instructions are for dweb-mirror running on a Orange Pi Zero.
 
-If you are using any of the following scenarios then the following stripped down documents 
-will be much easier to follow. 
+IMPORTANT - THESE ARE PARTIAL INSTRUCTIONS - I"M STILL WORKING THROUGH THEM CONVERTING THE RASPBERRY PI ONESs
+
+If that's not what you are using then one of the following documents might be much easier to follow. 
 
  * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
  * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md)
  * Raspberry Pi without IIAB [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
+ * Orange Pi without IIAB [INSTALLATION-orangepizero.md](./INSTALLATION-orangepizero.md)
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
+ * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
 If anything here doesn't work please email mitra@archive.org 
@@ -19,37 +21,26 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 
 ## See also
 * [README.md](./README.md) for more general information
-
-### IIAB
-* [issue #111](https://github.com/internetarchive/dweb-mirror/issues/111) for meta task for anything IIAB.
-
-### RACHEL
-* TODO need pointer to task on rachel and on dweb-mirror
-
-### Raspberry Pi without IIAB or Rachel
-* [https://github.com/internetarchive/dweb-mirror/issues/110] for meta task for anything Raspberry related.
+* [dweb-mirror issue#224](https://github.com/internetarchive/dweb-mirror/issues/224) 
+  for any questions or problems with OrangePi
 
 ## 1. Getting your machine ready.
 
 This is important, as the installation instructions dont work without some preliminary upgrades,
 especially for some of the smaller platforms.
 
-### 1A: IIAB only: Initial setup - getting Raspbian
+Orange Pi's run best with Armbian - from https://www.armbian.com/download/
+These instructions were tested on the Orange Pi Zero, with the Debian variety which is currently "Buster".
+but the process probably works with other variants of the Orange-Pi. 
 
-If your Raspberry Pi comes with Raspbian you are in luck, skip this, 
-otherwise if it comes with NOOBS (as most do now) you'll need to replace it with Raspbian.
-
-Internet in a Box's site is short on the initial details, especially if your RPi comes with NOOBS as mine did. 
-So this is what I did. (Edits welcome, if your experience differed)
-
-* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop 1GB
-  * Any of the distributions should work - I test on the Desktop version
-  * We've seen on Rachel, problems with `Buster Lite` that required `apt update && apt get -y libsecret-1-dev`
-* On a Mac:
-  * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
-  * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
-* On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
-* Inserted into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
+* Downloaded the image to your laptop (~250Mb)
+* Select a fresh SD card as the destination (the larger the card, the more content it can hold)
+* Program the SD card with this image
+  * On a Mac:
+    * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
+    * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding the zip)    
+  * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher to write to an SD. (TODO)
+* Inserted into the board's SD holder, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
 * Powered up
 * It prompted me for some getting started things, 
