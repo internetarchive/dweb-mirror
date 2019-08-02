@@ -12,6 +12,7 @@ will be much easier to follow.
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
+ * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
 If anything here doesn't work please email mitra@archive.org 
@@ -31,7 +32,7 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 
 ## 1. Getting your machine ready.
 
-This is important, as the installation instructions dont work without some preliminary upgrades,
+This is important, as the installation instructions does not work without some preliminary upgrades,
 especially for some of the smaller platforms.
 
 ### 1A: IIAB only: Initial setup - getting Raspbian
@@ -77,22 +78,37 @@ If you just want dweb-mirror running on a NOOBS based RPi (and don't want Intern
 While it is unlikely that the process below is particularly fussy about a roughly normally configured RPi, 
 the following notes might aid in a speedy setup on a new RPi.
 
-We started with a standard preconfigured NOOBS MicroSD card that came with the box we got. 
+### Installing NOOBS
 
-After the reboot during the process:
-* Change WiFi to connect
-* Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below.
-* Menu/Preferences/Config
-  * Interfaces:SSH:Enabled
-  * Set display to highest resolution that works for your display
-  * Set Localization if not done during install
-  * Reboots (as part of saving these changes)
+On the RPI3 we started with a standard preconfigured NOOBS MicroSD card that came with the Canakit box we got
+and that gives an easy way to install Raspbian (we use the desktop version).
+ 
+The RPI4 from Canakit strangely was missing NOOBS, and the Raspberry Pi site is strangely missing NOOBS images,
+* Download the zip of NOOBS from https://www.raspberrypi.org/downloads/noobs/ and unzip it
+* On a Mac format open "Disk Utilities" and Erase the SD card with format "FAT".
+* Copy the NOOBS files to the SD card.
+* Plug the card into the RPI4, along with a power supply 
+  * (beware, its very picky about USB-C supplies, if the supply works the LED will turn on)
+* It should boot - we tested with the full Raspbian, but have previously used Raspbian desktop successfully.
+* Follow the menus to Select country, language, WiFi etc,
+  * in particular make sure to change the password as RPIs with default passwords are frequently hacked.
 
+* Menu / Preferences
+  * Config
+    * Interfaces:SSH:Enabled
+    * Set Localization if not done during install
+* Screen Configuration / Configure / Screens / HDMI-1
+    * Set display to highest resolution that works for your display
+* Reboots (as part of saving these changes)
+  
 In a terminal window, or via SSH to it. 
 ```
-sudo apt-get update
-# This next step now seems to happen during normal install, otherwise can be slow
-sudo apt full-upgrade -y 
+sudo apt-get update && sudo apt full-upgrade -y 
+```
+* We've seen on some platforms (Rachel), problems with `Buster Lite` that required, `libsecret-1-dev`
+its a good idea to check its there and install if necessary.
+```
+sudo apt update && sudo apt-get install -y libsecret-1-dev
 ```
 
 ### 1F: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
@@ -110,13 +126,13 @@ but many platforms ship with seriously out-of-date versions and we only test on 
 so I recommend updating before installing.
 
 #### GIT
-Type `git --version` in a Terminal window, if git is installed you'll get the help message,
+Type `git --version` in a Terminal window, you want git v2.0.0 or better, 
 
 ##### ON MAC OSX 
 if Git isnt installed then it should prompt you to install Xtools command line tools, accept ...
 
 ##### ON OTHER LINUX MACHINES
-* If is not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+If is not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
 
 #### NODE
 Try `node --version`, it should report v10 or better, but it was v4.8.2 on Rachel3+ 
@@ -138,6 +154,7 @@ node -v # Confirm it upgraded to 10.x
 
 #### NPM 
 Node will always come with some version of NPM, 
+but its often old (including on current (July2019) Raspbian.
 to upgrade to the latest `sudo npm install npm@latest -g`
 
 #### YARN
@@ -149,9 +166,7 @@ if you did this by mistake then `sudo apt-get remove cmdtest` before trying agai
   * Otherwise: https://yarnpkg.com/en/docs/install should auto-detect and make suggestions. 
   * But, the easiest way is often, at a terminal window: 
 
-Either (Works on OSX)
-
-TODO - check if these are equivalent
+Either (tested on OSX & RPI/NOOBS)
 ```
       curl -o- -L https://yarnpkg.com/install.sh | bash
 ```
@@ -165,8 +180,10 @@ or (Works on RPI/NOOBS)
 #### node-pre-gyp and cmake
 The following yarn install might or might not be needed but seems to speed 
 up compiles and updates.
+
+Note that sometimes `sudo yarn` will work and sometimes `yarn`, depending on oddness about the installation process.
 ```
-sudo yarn add node-pre-gyp cmake
+yarn add node-pre-gyp cmake
 ```
 ##### ON MAC OSX
 If you get an error `wget: No such file or directory` 
@@ -338,7 +355,7 @@ and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for i
    
 Note that directories specified in the config file can be written using shell or unix conventions such as "~/" or "../".
 
-### 4. Test browsing
+### 4. Test crawling and browsing
 
 First start the server.
 * For Developers: From a command line:
@@ -350,10 +367,22 @@ cd ~/git/dweb-mirror && ./internetarchive --server &
 cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc &
 ```
 * starts the HTTP server
+* It should start crawling, and get just a minimal set of icons for the home page.
 * the startup is a little slow but you'll see some debugging when its live.
 * If it reports `ERROR: Directory for the cache is not defined or doesnt exist`
   * then it means you didn't create a directory for it to use as a cache
   * the server wants you to do this, so that it doesn't fill a disk somewhere you don't want it to happen
+* If you see a message like `Requeued fetch of https://dweb.me/info failed` then it means it cannot see 
+  the archive's servers (on `dweb.me`) so it won't be able to crawl or cache initial material until you 
+  connect to the WiFi or Ethernet. 
+
+Without any other arguments, `crawl` will read a set of files into into the first (already existing) directory
+configured in `~/dweb-mirror.config.yaml` 
+or if there are none there, it will look in its installation directory for `configDefaults.yaml`.
+
+Look in that directory, and there should be sub-directories appearing for each item, with metadata and/or thumbnails.
+
+You can safely delete any of the crawled material and it will be re-fetched if needed.
 
 * Try going to `http://localhost:4244` 
 * Or from another machine: `http://archive.local:4244` or `http://<IP of your machine>:4244`
@@ -368,28 +397,6 @@ Expect to see errors in the Browser log for
 Expect, on slower machines/networks, to see no images the first time, 
 refresh after a little while and most should appear. 
 
-### 5. Test crawling
-
-Start the crawler.
-
-For Developers:
-```
-cd ~/git/dweb-mirror
-./internetarchive --crawl
-```
-
-For anyone else:
-```
-cd ~/node_modules/@internetarchive/dweb-mirror
-./internetarchive --crawl
-```
-Without any other arguments, `crawl` will read a set of files into into the first (already existing) directory
-configured in `~/dweb-mirror.config.yaml` 
-or if there are none there, it will look in its installation directory for `configDefaults.yaml`.
-
-Look in that directory, and there should be sub-directories appearing for each item, with metadata and/or thumbnails.
-
-You can safely delete any of the crawled material and it will be re-fetched if needed.
 
 ### 6. IPFS (optional)
 Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
@@ -437,19 +444,44 @@ Autostarting varies from platform to platform.
 See the note in [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md) for Rachel specific notes.
 
 On many platforms you'll need to setup a service, 
-there is a template to work from at [./internetarchive.service]. 
+there is a template to work from at [~/node_modules/@internetarchive/dweb-mirror/internetarchive.service]. 
 It needs the location of your installation.
-TODO check where this goes on Raspberry Pi/NOOBS
-TODO alternative start process on Mac.
+Edit the WorkingDirectory and User lines to say
+```
+User=pi
+WorkingDirectory=/home/pi/node_modules/@internetarchive/dweb-mirror
+```
+And copy to somewhere it will get used
+```
+sudo su
+cp /home/pi/node_modules/@internetarchive/dweb-mirror/internetarchive.service /lib/systemd/system
+cd /etc/systemd/system
+ln -s  /lib/systemd/system/internetarchive.service .
+systemctl daemon-reload
+```
+Check its running
+```
+service internetarchive status
+journalctl -u internetarchive
+```
+Note that it might complain about wrtc not being present, which is to be expected on a RPI
 
 ### All platforms
 Restart your machine and check that http://localhost:4244 still works.
+```
+sudo shutdown -r
+```
+When it comes back up
+```
+service internetarchive status
+```
 
 ## 8. Updating
 
 TODO Docs on Updating dweb-mirror for Developers and integrate ansible updating for IIAB
 
 ### For anyone except developers or IIAB
+The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
 ```
 cd ~/node_modules/@internetarchive   # or wherever you started the process in 3a above.
 yarn upgrade    # Upgrade all packages
