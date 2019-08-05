@@ -43,9 +43,8 @@ otherwise if it comes with NOOBS (as most do now) you'll need to replace it with
 Internet in a Box's site is short on the initial details, especially if your RPi comes with NOOBS as mine did. 
 So this is what I did. (Edits welcome, if your experience differed)
 
-* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop 1GB
+* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop (~1GB)
   * Any of the distributions should work - I test on the Desktop version
-  * We've seen on Rachel, problems with `Buster Lite` that required `apt update && apt get -y libsecret-1-dev`
 * On a Mac:
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
   * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
@@ -58,10 +57,14 @@ So this is what I did. (Edits welcome, if your experience differed)
 * Selected your country, language, keyboard - it shouldnt matter which.
 * Changed password since RPis get hacked on default password
 * Connected to WiFi (not necessary if you have Ethernet connected)
-* It automatically Updated OS - this is big - take a break :-)
-    * Note that this process failed for me with failures of size and sha, but a restart, after the prompts for password etc, 
-    got me to a partially completed download so I did not have to start from scratch
+* It automatically Updated OS - this can take a long time - take a break :-)
+    * Note that this process failed for me with failures of size and sha, or with timeouts, 
+      but a restart, after the prompts for password etc, 
+      got me to a partially completed download so I did not have to start from scratch
 * You might want to ... Menu/Preferences/Config / Set display to highest resolution
+
+* if you chose the 'Buster Lite' I'd recommend opening a terminal window and trying `apt update && apt get -y libsecret-1-dev`, 
+as we saw problems related to Raspbian Lite on Rachel
 
 ### 1C: World-Possible/Rachel on Rachel 3+
 See [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md]), installation instructions are not complete
@@ -297,6 +300,8 @@ otherwise to those automatically brought in by `yarn install`
 Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, 
 and some bugs in the IIAB installer
 
+Open a terminal window. 
+
 Run `sudo curl d.iiab.io/install.txt | sudo bash` to install it.
  
 To enable it either
@@ -313,7 +318,7 @@ internetarchive_enabled: True
 and then run `sudo iiab` to continue the installation.
 
 * Update of OS was quick as it probably duplicated the step in the auto-setup above
-* expect it to fail, and keep running `sudo iiab` to get it to complete.    
+* expect the isntall to fail, and keep running `sudo iiab` to get it to complete.       
 * It will prompt to reset password from default `iiab-admin/g0admin`
 * In theory it enables SSH, but sometimes after the OS upgrade to enable it I've had to:
   * login from an attached keyboard, 
