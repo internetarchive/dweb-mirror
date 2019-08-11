@@ -362,16 +362,21 @@ Note that directories specified in the config file can be written using shell or
 
 ### 4. Test crawling and browsing
 
-First start the server.
-* For Developers: From a command line:
+#### Crawling
+Crawling will happen automatically, but you can also test it manually.
+
+From a command line:
+
+On IIAB 
 ```
-cd ~/git/dweb-mirror && ./internetarchive --server &
+cd /opt/iiab/internetarchive//node_modules/@internetarchive/dweb-mirror && sudo ./internetarchive -sc
 ```
-* For Anyone else: From a command line:
+On any other platform
 ```
 cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc &
 ```
 * starts the HTTP server
+* It might take 10-15 seconds to start, be patient
 * It should start crawling, and get just a minimal set of icons for the home page.
 * the startup is a little slow but you'll see some debugging when its live.
 * If it reports `ERROR: Directory for the cache is not defined or doesnt exist`
@@ -389,12 +394,23 @@ Look in that directory, and there should be sub-directories appearing for each i
 
 You can safely delete any of the crawled material and it will be re-fetched if needed.
 
-* Try going to `http://localhost:4244` 
+#### Browsing
+* In a browser try going to `http://localhost:4244` 
 * Or from another machine: `http://archive.local:4244` or `http://<IP of your machine>:4244`
 * open http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244
 to see the test crawl.
-If you don’t get a Archive UI then look at the server log (in console) 
-to see for any “FAILING” log lines which indicate a problem
+
+If you don’t get a Archive UI then look at the server log 
+```
+service internetarchive status
+```
+Will get the status and most recent lines
+```
+journalctl -u internetarchive -f
+```
+will watch the log, `Ctrl-C` will end this.
+
+Look for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
@@ -403,7 +419,7 @@ Expect, on slower machines/networks, to see no images the first time,
 refresh after a little while and most should appear. 
 
 
-### 6. IPFS (optional)
+### 6. IPFS (optional and not recommended on small machines)
 Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
 but it might need editing if you have an odd combinations.
 
@@ -483,8 +499,16 @@ service internetarchive status
 
 ## 8. Updating
 
-TODO Docs on Updating dweb-mirror for Developers and integrate ansible updating for IIAB
-
+### On IIAB 
+Updating is a three step process due to some (current) weaknesses in each step 
+```
+sudo su
+cd /opt/iiab
+git pull
+./runrole internetarchive
+cd /opt/iiab/internetarchive
+sudo yarn update
+```
 ### For anyone except developers or IIAB
 The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
 ```
