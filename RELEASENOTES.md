@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.43: yarn upgrade, and some Installation instructions
 * 0.2.42: Fix sort handling; Look for disk changes; MDNS on by default; Update dependencies; Installation docs upgrade
 * 0.2.40: Crawl error handling, zero length files, bookreader location, texts subtypes, crawl when offline
 * 0.2.39: USB mounting; exportfiles fix; Rachel intallation notes
