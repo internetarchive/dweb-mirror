@@ -407,7 +407,7 @@ class MirrorFS {
         function _cleanupOnFail(filepathTemp, mess, cb) {
             fs.unlink(filepathTemp, (err) => {
                 if (err) { debug("ERROR: Can't delete %s", filepathTemp); } // Shouldnt happen
-                if (!wantStream) cb(err || new Error(mess)); // Cant send err if not wantStream as already done it
+                if (!wantStream) cb(err || new Error(mess)); // Cant send err if wantStream as already done it
             })
         }
         function _notcached() {

@@ -51,5 +51,5 @@ lnfirst . ../../../bookreader/BookReader \
 popd
 popd
 #ls -al ${ARCHIVEUI}
-# Disabled by default - it can be really slow and unreliable see issue # TODO
+# Disabled by default - it can be really slow and unreliable see issue
 #./install_ipfs.sh   # IPFS install in a separate script as its prone to failure
