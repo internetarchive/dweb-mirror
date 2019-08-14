@@ -21,7 +21,7 @@
     "getopts": "^2.2.5",
     "glob": "^7.1.4",
     "js-yaml": "^3.13.1",
-    "level": "^4.0.0",
+    "level": "^5.0.1",
     "libsodium-wrappers": "^0.7.5",
     "morgan": "^1.9.1",
     "multicast-dns": "^7.2.0",
