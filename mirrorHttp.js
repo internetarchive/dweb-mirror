@@ -25,6 +25,8 @@ TODO-GATEWAY - special case for both metadata and download when already on dweb.
     Document in README.md and USING.md
  */
 
+//TODO-URI add compatability with archive.org standard urls scan this file first, should be a git issue but
+
 process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:* dweb-archivecontroller:*";
 //process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
@@ -540,6 +542,7 @@ function mirrorHttp(config, cb) {
             })));
     app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
+  app.get('/includes/*', (req, res) => { res.redirect("/archive" + req.originalUrl); }); // Matches archive.org and dweb.me
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'ipfs:' + req.url)); // Will go to next if IPFS transport not running
   //app.get('/ipfs/*', proxyUpstream); //TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'https://ipfs.io' + req.url)); // Will go to next if IPFS transport not running

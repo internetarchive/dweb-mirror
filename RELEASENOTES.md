@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.45: Handle /includes so dont have to edit less for font directories
 * 0.2.44: level to v5 (for compatability with node v12)
 * 0.2.43: yarn upgrade, and some Installation instructions
 * 0.2.42: Fix sort handling; Look for disk changes; MDNS on by default; Update dependencies; Installation docs upgrade
