@@ -46,51 +46,11 @@ If you want to install on OSX for development read on, otherwise check ./INSTALL
 
 #### dweb-mirror for development
 
-Copy the script install_dev.sh`
+Copy the installation script at https://github.com/internetarchive/dweb-mirror/blob/master/install_dev.sh
 
-##### 2b1 Install any other dweb repos you plan on developing on
+Running this will install all the repos that are part of the dweb-mirror system and link them together. 
 
-Before installing dweb-mirror for development install any other repos you'll be developing on,
-so that the install process can find them instead of using versions from npm.
-
-If you don't plan on developing on dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports you can skip this step.
-
-For example to develop on dweb-archive if you install GIT packages in `~/git` which is what I do ...
-
-From a command line:
-
-```
-cd ~/git        # Wherever you want to put dweb-mirror, its not fussy, 
-                # I tend to use ~/git and you might see that assumption in some examples.
-git clone “https://github.com/internetarchive/dweb-archive”
-cd dweb-archive
-yarn install    # Expect this to take a while and generate error messages. 
-cd ..           # Back to ~/git
-```
-Repeat for any of dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports if you plan on developing on them.
-
-Please check current versions of INSTALLATION.md in those packages, as they may have changed.
-
-You can come back and do this again later, 
-but will need to rerun `cd ~/git/dweb-mirror; yarn install` so that it recognizes the dev versions.
-
-##### 2b2 Install dweb-mirror from GIT
-
-From a command line:
-
-```
-cd ~/git` #  Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
-git clone "https://github.com/internetarchive/dweb-mirror"
-cd dweb-mirror
-yarn install # Expect this to take a while and generate error messages. 
-yarn install # Second time will help understand if error messages are significant
-cd ..  # Back to ~/git
-```
-(Note: `yarn install` will run the script install.sh which can be safely run multiple times.)
-
-It will add links to Javascript webpack-ed bundles into the dist directory, 
-from the git cloned repos such as dweb-archive etc if you chose to install them above, 
-otherwise to those automatically brought in by `yarn install`
+You can edit the location, but we are going to assume it is in "git" in your home directory.
 
 ### 3. Edit configuration
 
@@ -188,12 +148,49 @@ sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
 
 Restart your machine and check that http://localhost:4244 still works.
 
+### Making changes
+You can make changes in the UI in dweb-archive, iaux/packages/ia-components, bookreader 
+or dweb-archive-controller then:
+```
+cd dweb-archive ; webpack --mode development -w &
+```
+This will watch for changes so that any edits you make are immediately reflected on either of the servers and testable with a browser page reload
+
+If you make change to dweb-transports:
+```
+cd dweb-transports ; webpack --mode development -w &
+```
+If you make changes to dweb-objects (which is unlikely, there isn't much there any more:
+```
+  cd dweb-objects ; webpack --mode development -w &
+```
+
+If you make changes to dweb-mirror, then ctrl-C out of the server and restart it.
+```
+cd dweb-mirror ; ./internetarchive -sc &
+```
+
+
+### Running without dweb-mirror  e.g. to develop in dweb-transports
+
+To run without dweb-mirror, 
+```
+cd ~/git/dweb-archive/dist
+http-server
+```
+This will run a local server that can be accessed at 
+```
+http://localhost:8080/archive.html 
+```
+The code will be run from your local server, but will access content at dweb.me
+
 ## FUTURE: Updating dweb-mirror for a developer
 
 ```
-cd ~/git/dweb-mirror
-git pull
-yarn upgrade
-# Note there is an intentional feature/bug, in npm and possibly in yarn in that it that doesnt automatically run an "update" script. 
-yarn run update 
+cd ~
+git/dweb-mirror/install_dev.sh
 ```
+Should update all the packages from the GIT repo's and re-install, 
+and is fairly quick if nothing much has changed.
+
+

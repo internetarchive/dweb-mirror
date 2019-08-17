@@ -16,7 +16,7 @@ set -e # Break on error
 #set -x # Lets see whats happening
 
 # Define a parent directory they will sit under
-PARENTDIRECTORY=internetarchive
+PARENTDIRECTORY=git
 REPOS="dweb-transports dweb-objects dweb-archivecontroller bookreader dweb-archive dweb-mirror iaux"
 # Note that dweb-transport and dweb-gatewahy are not installed they are only useful when running as a gateway server at the archive.
 
