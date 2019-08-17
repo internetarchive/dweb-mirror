@@ -46,6 +46,8 @@ If you want to install on OSX for development read on, otherwise check ./INSTALL
 
 #### dweb-mirror for development
 
+Copy the script install_dev.sh`
+
 ##### 2b1 Install any other dweb repos you plan on developing on
 
 Before installing dweb-mirror for development install any other repos you'll be developing on,
@@ -114,7 +116,7 @@ Note that directories specified in the config file can be written using shell or
 
 * From a command line:
 ```
-cd ~/git/dweb-mirror && ./internetarchive --server --mdns &
+cd ~/git/dweb-mirror && ./internetarchive --server &
 ```
 * starts the HTTP server
 * the startup is a little slow but you'll see some debugging when its live.
