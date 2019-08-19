@@ -49,5 +49,5 @@
     "install": "./install.sh",
     "update": "./install.sh"
   },
-  "version": "0.2.45"
+  "version": "0.2.46"
 }
