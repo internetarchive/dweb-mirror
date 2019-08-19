@@ -153,9 +153,9 @@ function optsToConfig() {
         );
     }
 
-    // Map - if specified: config.connect.transport = opts.transport
+    // Map - if specified: config.connect.transports (plural) = opts.transport (singular but array)
     if (opts.transport.length) {
-        config.setOpts({apps: {crawl: {connect: {transport: opts.transport}}}}) // Code cares about case
+        config.setOpts({apps: {crawl: {connect: {transports: opts.transport}}}}) // Code cares about case
     }
     // Map - if specified: directories = opts.directory
     if (opts.directory.length) {
