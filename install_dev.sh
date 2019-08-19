@@ -7,9 +7,9 @@ cat <<EOT
 
   This script can be run multiple times without problems.
 
-  Its not yet complete ...
-  #TODO Look through https://github.com/internetarchive/dweb-archive/issues/131#issuecomment-518203623
-  #TODO Check INSTALLATION-osx-dev.md
+  The easiest way to run is
+
+  curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_dev.sh | bash
 
 EOT
 set -e # Break on error

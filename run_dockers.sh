@@ -1,4 +1,5 @@
 #!/bin/bash
+#NOTE THIS MAY BE SERIOUSLY OUT OF DATE
 set -x
 export ipfs_staging=/Users/mitra/temp/ipfsstaging
 export ipfs_data=/Users/mitra/temp/ipfsdata

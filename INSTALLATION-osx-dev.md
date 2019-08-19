@@ -46,11 +46,14 @@ If you want to install on OSX for development read on, otherwise check ./INSTALL
 
 #### dweb-mirror for development
 
-Copy the installation script at https://github.com/internetarchive/dweb-mirror/blob/master/install_dev.sh
+The easiest one line way is to run the installation script 
+```
+curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_dev.sh | bash
+```
+by defaults it will install in the git subdirectory of wherever you are running this
+you could alternatively download that script and edit the location where you want to install. 
 
-Running this will install all the repos that are part of the dweb-mirror system and link them together. 
-
-You can edit the location, but we are going to assume it is in "git" in your home directory.
+Either way, it will install all the repos that are part of the dweb-mirror system and link them together. 
 
 ### 3. Edit configuration
 
