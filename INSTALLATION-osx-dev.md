@@ -136,6 +136,7 @@ should update it.
 
 ### 7. Auto-starting
 
+TODO - this doesnt appear to work, needs investigation
 
 If you want the server to start automatically when the mac boots. 
 Run the following commands in a terminal window

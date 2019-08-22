@@ -128,7 +128,6 @@ ArchiveItem.prototype.saveBookReader = function({copyDirectory=undefined}={}, cb
             f.call(this);
         }
         function f() {
-            // MirrorFS._mkdir(dirpath, (err) => { // Not mkdir because MirrorFS.writeFile will
             // noinspection JSPotentiallyInvalidUsageOfThis
             // Note all these files should be in MirrorFS.isSpecialFile
             _save1file("bookreader", this.bookreader, namepart, {copyDirectory}, (err) => { if (err) {cb(err) } else {cb(null, this) }})
@@ -564,7 +563,6 @@ ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=fa
     if (!namepart || Object.keys(specialidentifiers).includes(namepart)) { // Skip thumbnail if no itemid, or special with no thumbnail
         cb(null, wantStream ? undefined : this);
     } else {
-        //MirrorFS._mkdir(dirpath, (err) => { // No longer making since a) comes after .save and b) mirrorFS.cacheAndOrStream does so
         //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
         const self = this; // this not available inside recursable or probably in writable('on)
         const thumbnailFiles = this.files.filter(af =>

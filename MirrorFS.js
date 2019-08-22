@@ -34,21 +34,42 @@ class MirrorFS {
       hashstores: { directory: hashstore }  esp sha1.filestore
 
     Common parameters to functions
-        algorithm:  Hash algorithm to be used, defaults to 'sha1' and only tested on that
-        cacheDirectory: Same as directory
-        debugname:  Name to use in debug statements to help see which file/item it refers to.
-        directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
-        filepath:   Absolute path to file, normally must be in "directory"
-        format:     Format of result, defaults to 'hex', alternative is 'multihash58'
-        noCache:    skip cache on reading, but store results
-        noStore:    use cache on reading, but do not store results
-        skipNet:    if set then do not try and fetch from the net
-        wantStream  The caller wants a stream as the result (the alternative is an object with the results)
-        start       The first byte or result to return (default to start of file/result)
-        end         The last byte or result to return (default to end of file/result)
+    algorithm:  Hash algorithm to be used, defaults to 'sha1' and only tested on that
+    cacheDirectory: Same as directory
+    debugname:  Name to use in debug statements to help see which file/item it refers to.
+    digest      Digest (hash) of file to find
+    directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
+    directories: Array of directories to check for caches
+    expectsize: If defined, the result must match this size or will be rejected (it comes from metadata)
+    file:       Name of file
+    filepath:   Absolute path to file, normally must be in "directory"
+    format:     Format of result or submitted digest, defaults to 'hex', alternative is 'multihash58'
+    httpServer: Server to use for http (for seeding)
+    noCache:    If true will skip reading cache, but will write back to it and not trash it if unable to read file
+    preferredStreamTransports:  Array of transport names to use in order of preference for streaming
+    relFileDir  Path to directory, typically IDENTIFIER
+    relFilePath A path relative to any of the directories, typically IDENTIFIER/FILENAME
+    scale       Factor to scale down an image
+    sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
+    rotate      Factor to rotate an image
+    skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
+    noCache:    if set then do not check cache for results
+    noStore:    if set then do not store in the cache
+    skipNet:    if set then do not try and fetch from the net
+    url:        Single url (or in most cases array of urls) to retrieve
+    wantBuff:   True if want a buffer of data (not stream)
+    wantStream  The caller wants a stream as the result (the alternative is an object with the results)
+    start       The first byte or result to return (default to start of file/result)
+    end         The last byte or result to return (default to end of file/result)
      */
 
-    static init({directories, httpServer, preferredStreamTransports=[] }) { // Not a constructor, all methods are static
+    static init({directories, httpServer, preferredStreamTransports=[] }) {
+        /**
+         * Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find or get things
+         * httpServer:  start of URL of server to get files from typically http://dweb.me
+         * See top of this file for other parameters
+         */
+        // Not a constructor, all methods are static
         this.directories = directories;
         this.httpServer = httpServer;
         this.preferredStreamTransports = preferredStreamTransports; // Order in which to select possible stream transports
@@ -84,8 +105,9 @@ class MirrorFS {
         })
     }
 
-    static rmdir(path, cb) {
+    static _rmdir(path, cb) {
         //var path = '/path/to/the/dir';
+        // Remove a directory using the system function because can do so recursively
         exec('rm -r ' + path, function (err, stdout, stderr) {
             if (err) {
                 debug ("failed to rm -r %s", path);
@@ -246,7 +268,6 @@ class MirrorFS {
         format=undefined, algorithm=undefined, copyDirectory=undefined}, cb) { //TODO-API
         //TODO follow this up the stack and start passing size to it where possible.
         /*
-        digest      Digest of file to find
         format      hex or multihash - how hash formatted
         existingFilePath  Something else found the file already
         noCache     Dont check the cache (note digest overrides noCache, as will confirm file's sha1)

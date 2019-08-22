@@ -732,24 +732,13 @@ Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz
 
 ##### static init(directories, httpServer, preferredStreamTransports)
 
-Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find things
-and how to get things.
+Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find or get things
+httpServer:  start of URL of server to get files from typically http://dweb.me
 
 ##### setCopyDirectory(dir)
 
 Override copy directory for MirrorFS.
 Once set, operations will cause a copy from cache or net to this directory.
-
-##### _mkdir(path, cb) 
-
-Recursively create a directory, it is not an error if it exists already.
-```
-path    File path to directory
-cb(err) Callback with error if applicable. 
-```
-##### rmdir(path, cb)
-
-Recursively remove a directory (using `rm -r` at the OS level)
 
 #### static writeFile(relFilePath, data, cb)
 Like fs.writeFile but will mkdir the directory in copyDirectory or first configured before writing the file

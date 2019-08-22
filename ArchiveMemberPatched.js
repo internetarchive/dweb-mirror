@@ -61,7 +61,6 @@ ArchiveMember.prototype.save = function({copyDirectory=undefined} = {}, cb) {
         const savedkeys = gateway.url_default_fl;
         // noinspection JSUnusedLocalSymbols
         const jsonToSave = canonicaljson.stringify(ObjectFilter(this, (k, v) => savedkeys.includes(k)));
-        //MirrorFS._mkdir(dirpath, (err) => { //Not mkdir any more
         const relFilePath = path.join(namepart, namepart + "_member.json");
         MirrorFS.writeFile({ relFilePath, copyDirectory }, jsonToSave, (err) => {
             if (err) {

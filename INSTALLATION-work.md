@@ -11,6 +11,7 @@ will be much easier to follow.
  * Raspberry Pi without IIAB [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
+ * Armbian on OrangePi or similar [INSTALLATION-armbian.md](./INSTALLATION-armbian.md)
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
@@ -29,6 +30,9 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 
 ### Raspberry Pi without IIAB or Rachel
 * [https://github.com/internetarchive/dweb-mirror/issues/110] for meta task for anything Raspberry related.
+
+### Armbian on Orange Pi
+* https://github.com/internetarchive/dweb-mirror/issues/224
 
 ## 1. Getting your machine ready.
 
@@ -114,7 +118,66 @@ its a good idea to check its there and install if necessary.
 sudo apt update && sudo apt-get install -y libsecret-1-dev
 ```
 
-### 1F: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
+### 1F: Armbian e.g. on OrangePi
+I found https://lucsmall.com/2017/01/19/beginners-guide-to-the-orange-pi-zero/ to be a useful guide if you have problems.
+
+First download the OS from https://www.armbian.com/download/ ,
+Pick the exact model and choose the Debian (Buster) over the Ubuntu
+Blow this onto a SD card, e.g. on a Mac use [Etcher](https://www.balena.io/etcher/).
+
+Booting an Orange Pi Zero or similar is tricky as there is no display/keyboard and you need the IP address to connect.
+Insert the SD card then Ethernet and power. 
+Note Arbinan doesn't work with the common trick of `ping 192.0168.0.255` followed by `arp -a` to find new machines on your net.
+The best way appears to be to log into your router and look for "orangepi" or similar in the DHCP table. 
+Lets assume its 192.168.0.55
+
+`ssh root@1292.168.0.55`  and respond to password with the default `1234`
+
+Change your password immediately - it should prompt you.
+
+Update and configure :
+```
+sudo apt-get update
+sudo apt-get -y upgrade
+sudo dpkg-reconfigure tzdata
+```
+
+#### 1F-wifi: WiFi on Armbian
+Typically you'll either want to connect to your WiFi access point and be a server on it,
+OR have the Armbian act as a WiFi point itself.
+
+a) To setup for your wifi to access your Wifi access point.
+ sudo nano /etc/network/interfaces
+
+And add these lines to the end, using your SSID (aka wifi name) and password
+
+ auto wlan0
+ iface wlan0 inet dhcp
+ wpa-ssid <Your Access Point Name aka SSID>
+ wpa-psk <Your WPA Password>
+
+Then start it with
+
+ sudo ifup wlan0
+
+or b)
+
+* sudo armbian-config > network > hotspot >
+* At some point it asks to "select interface" I think this is the point to pick wlan0 though its unclear whether
+  this is the WiFi interface to use, or for backhaul?
+* TODO document process to change SSID
+* Note that once setup, it can take a minute or two for the WiFi access point to be visible.
+* Also note that it seems to pick unusual IP addresses, 172.24.1.1 was the gateway when I connected to it.
+
+* If anyone knows how to set this up from the command line a PR would be appreciated.
+* This doc might be helpful
+  https://docs.armbian.com/User-Guide_Advanced-Features/#how-to-set-wireless-access-point
+
+EOT
+
+
+
+### 1G: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
 
 We haven't tested yet on other machines, but some hints on how to port ... 
 
@@ -130,6 +193,7 @@ so I recommend updating before installing.
 
 #### GIT
 Type `git --version` in a Terminal window, you want git v2.0.0 or better, 
+after steps above it was good on Armbian (other machines to be listed as tested).
 
 ##### ON MAC OSX 
 if Git isnt installed then it should prompt you to install Xtools command line tools, accept ...
@@ -141,6 +205,7 @@ If is not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://w
 Try `node --version`, it should report v10 or better, but it was v4.8.2 on Rachel3+ 
 and v8 on Noobs and Raspbian in some cases, or missing in others.
  
+  * try `sudo apt-get -y nodejs` which works on many platforms
   * otherwise https://nodejs.org should auto-detect your machine, and prompt you to install, 
   * select the "recommended" version
 
@@ -156,7 +221,8 @@ node -v # Confirm it upgraded to 10.x
 ```
 
 #### NPM 
-Node will always come with some version of NPM, 
+Node will almost always come with some version of NPM, 
+if not (e.g. when installed with apt-get on Armbian), then `sudo apt-get -y npm` should get it. 
 but its often old (including on current (July2019) Raspbian.
 to upgrade to the latest `sudo npm install npm@latest -g`
 
@@ -186,7 +252,7 @@ up compiles and updates.
 
 Note that sometimes `sudo yarn` will work and sometimes `yarn`, depending on oddness about the installation process.
 ```
-yarn add node-pre-gyp cmake
+yarn global add node-pre-gyp cmake
 ```
 ##### ON MAC OSX
 If you get an error `wget: No such file or directory` 
@@ -216,7 +282,7 @@ on running the server there) or can be in `/.data`, `/library` or at the top
 level of any disk e.g.
 
 ```
-mkdir -p "~/archiveorg" && chown ${USER} ~/archiveorg
+mkdir -p "${HOME}/archiveorg" && chown ${USER} ~/archiveorg
 ```
 If its anywhere other than in `~`, `/.data`, or `/library` or at the top level of one of your disks, 
 then edit `~/dweb-mirror.config.yaml` after you've finished installing to add the lines such as:
@@ -249,49 +315,14 @@ Now skip to step 3
 
 ### 2B: Developers Only 
 
-### 2B.1: Install any other dweb repos you plan on developing on
-
-Before installing dweb-mirror for development install any other repos you'll be developing on,
-so that the install process can find them instead of using versions from npm.
-
-If you don't plan on developing on dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports you can skip this step.
-
-For example to develop on dweb-archive if you install GIT packages in `~/git` which is what I do ...
-
-From a command line:
-
+The easiest one line way is to run the installation script 
 ```
-cd ~/git        # Wherever you want to put dweb-mirror, its not fussy, 
-                # I tend to use ~/git and you might see that assumption in some examples.
-git clone “https://github.com/internetarchive/dweb-archive”
-cd dweb-archive
-yarn install    # Expect this to take a while and generate error messages. 
-cd ..           # Back to ~/git
+curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_dev.sh | bash
 ```
-Repeat for any of dweb-archive, dweb-archivecontroller, dweb-objects, or dweb-transports if you plan on developing on them.
+by defaults it will install in the git subdirectory of wherever you are running this
+you could alternatively download that script and edit the location where you want to install. 
 
-Please check current versions of INSTALLATION.md in those packages, as they may have changed.
-
-You can come back and do this again later, 
-but will need to rerun `cd ~/git/dweb-mirror; yarn install` so that it recognizes the dev versions.
-
-##### 2B.2 Install dweb-mirror from GIT
-
-From a command line:
-
-```
-cd ~/git` #  Wherever you want to put dweb-mirror, its not fussy, I tend to use ~/git and you might see that assumption in some examples.
-git clone "https://github.com/internetarchive/dweb-mirror"
-cd dweb-mirror
-yarn install # Expect this to take a while and generate error messages. 
-yarn install # Second time will help understand if error messages are significant
-cd ..  # Back to ~/git
-```
-(Note: `yarn install` will run the script install.sh which can be safely run multiple times.)
-
-It will add links to Javascript webpack-ed bundles into the dist directory, 
-from the git cloned repos such as dweb-archive etc if you chose to install them above, 
-otherwise to those automatically brought in by `yarn install`
+Either way, it will install all the repos that are part of the dweb-mirror system and link them together. 
 
 ## 2C IIAB ONLY: Install Internet In A Box
 
@@ -369,7 +400,7 @@ From a command line:
 
 On IIAB 
 ```
-cd /opt/iiab/internetarchive//node_modules/@internetarchive/dweb-mirror && sudo ./internetarchive -sc
+cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror && sudo ./internetarchive -sc
 ```
 On any other platform
 ```

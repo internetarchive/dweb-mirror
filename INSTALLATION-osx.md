@@ -58,7 +58,7 @@ on running the server there) or can be in `/.data`, `/library` or at the top
 level of any disk e.g.
 
 ```
-mkdir -p "~/archiveorg" && chown ${USER} ~/archiveorg
+mkdir -p "${HOME}/archiveorg" && chown ${USER} ~/archiveorg
 ```
 If its anywhere other than in `~`, `/.data`, or `/library` or at the top level of one of your disks, 
 then edit `~/dweb-mirror.config.yaml` after you've finished installing to add the lines such as:
@@ -170,6 +170,8 @@ cd ~/node_modules/@internetarchive/dweb-mirror && ./install_ipfs.sh
 should update it.
 
 ### 7. Auto-starting
+
+TODO - this doesnt appear to work, needs investigation
 
 If you want the server to start automatically when the mac boots. 
 Run the following commands in a terminal window

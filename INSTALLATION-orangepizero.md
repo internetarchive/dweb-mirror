@@ -187,7 +187,7 @@ on running the server there) or can be in `/.data`, `/library` or at the top
 level of any disk e.g.
 
 ```
-mkdir -p "~/archiveorg" && chown ${USER} ~/archiveorg
+mkdir -p "${HOME}/archiveorg" && chown ${USER} ~/archiveorg
 ```
 If its anywhere other than in `~`, `/.data`, or `/library` or at the top level of one of your disks, 
 then edit `~/dweb-mirror.config.yaml` after you've finished installing to add the lines such as:
@@ -408,33 +408,44 @@ In the future to update IPFS just run the same installation process above should
 
 ## 7. Auto-starting
 
-### MAC OSX 
-TODO these instructions dont work - help to correct them would be appreciated! 
-
-If you want the server to start automatically when the mac boots. 
-Run the following commands in a terminal window
-
-If you put the installation somewhere else, you'll need to edit `org.archive.mirror.plist` and 
-change the line `${HOME}/node_modules/@internetarchive/dweb-mirror/internetarchive` to wherever you have dweb-mirror
-to be the path to "internetarchive"
-```
-sudo cp ~/node_modules/@internetarchive/dweb-mirror/org.archive.mirror.plist /Library/LaunchAgents/org.archive.mirror.plist
-sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
-```
-Note that I've currently had problems with getting a Mac to start automatically. 
-
-### Other platforms
-Autostarting varies from platform to platform. 
-See the note in [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md) for Rachel specific notes.
-
 On many platforms you'll need to setup a service, 
-there is a template to work from at [./internetarchive.service]. 
+there is a template to work from at [~/node_modules/@internetarchive/dweb-mirror/internetarchive.service]. 
 It needs the location of your installation.
-TODO check where this goes on Raspberry Pi/NOOBS
-TODO alternative start process on Mac.
+Edit the WorkingDirectory and User lines to say
+```
+User=pi
+WorkingDirectory=/home/pi/node_modules/@internetarchive/dweb-mirror
+```
+And copy to somewhere it will get used
+```
+sudo su
+cp /home/pi/node_modules/@internetarchive/dweb-mirror/internetarchive.service /lib/systemd/system
+cd /etc/systemd/system/multi-user.target.wants
+ln -s  /lib/systemd/system/internetarchive.service .
+systemctl daemon-reload
+service internetarchive start
+```
+Check its running
+```
+service internetarchive status
+journalctl -u internetarchive -f
+```
+Note that it might complain about wrtc not being present, which is to be expected on a RPI
+You can ctrl-C out of this log.
 
-### All platforms
+the last line of the crwwl will usually be something like `Completed but server still running` 
+after which should be, approximately once a minute, a check of dweb.me/info
+
 Restart your machine and check that http://localhost:4244 still works.
+```
+sudo shutdown -r
+```
+When it comes back up
+```
+service internetarchive status
+```
+
+Check that http://localhost:4244 still works.
 
 ## 8. Updating
 
