@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.47: install_armbian.sh
 * 0.2.46: install_dev.sh
 * 0.2.45: Handle /includes so dont have to edit less for font directories
 * 0.2.44: level to v5 (for compatability with node v12)
