@@ -164,7 +164,9 @@ function optsToConfig() {
     // Check for errors
     // Its an error not to specify directory if none are defined in defaults
     if (!config.directories.length) {
-        return new Error("ERROR: Directory for the cache is not defined or doesnt exist");
+        debug("WARNING: Directory for the cache is not defined or doesnt exist - crawl will wait for disk to be available");
+        //Dont make this an error, crawl will wait and server SHOULD work without disk
+        // return new Error("ERROR: Directory for the cache is not defined or doesnt exist");
     }
     if (opts.search && (opts.rows || opts.depth)) {
         return new Error("ERROR: Cannot specify search with rows or depth arguments");
@@ -280,7 +282,9 @@ function stopServer(cb) {
     }
 }
 waterfall([
-    cb => MirrorConfig.new((err, res) => { config = res; cb(err); }), // Load config early, so can use in opts processing
+    cb => MirrorConfig.new(undefined,
+        (obj) => { if (typeof obj.directories !== "undefined") MirrorFS.setState({directories: obj.directories}) },
+        (err, res) => { config = res; cb(err); }), // Load config early, so can use in opts processing
     cb => cb(optsToConfig()), // Currently synchronous returning err||null
     cb => { MirrorFS.init({
                 directories: config.directories,

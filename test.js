@@ -25,7 +25,8 @@ const MirrorFS = require('./MirrorFS');
 
 const HashStore = require('./HashStore');
 //HashStore.test();
-MirrorConfig.new((err, config) => {
+MirrorConfig.new(undefined,
+  (obj) => { if (typeof obj.directories !== "undefined") MirrorFS.setState({directories: obj.directories}) },(err, config) => {
 
 // noinspection JSUnresolvedVariable
 MirrorFS.init({directories: config.directories, httpServer:"http://localhost:"+config.apps.http.port, preferredStreamTransports: config.connect.preferredStreamTransports});

@@ -812,11 +812,6 @@ True if its one of the files used by ArchiveItem, ArchiveFile, ArchiveMember tha
 
 # Applications
 
-## collectionpreseed.js
-A special case of crawl that causes the upstream server to pre-cache Tile images for most popular or top two levels of collections below `image`, `movies`, `texts`, `audio` 
-
-Usage: `$> cd /path/to/install/dweb-mirror && ./collectionpreseed.js`
-
 ## crawl
 General purpose crawler for the Archive. 
 `crawl -h` for up to date arguments. 

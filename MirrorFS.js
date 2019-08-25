@@ -78,6 +78,9 @@ class MirrorFS {
                 [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
     }
 
+    static setState({directories=undefined}) {
+        if (directories) this.directories = directories;
+    }
     static _mkdir(dirname, cb) {
         /* Recursively make a directory
         dirname: String representing file path

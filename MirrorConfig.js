@@ -17,35 +17,53 @@ class MirrorConfig extends ConfigController {
         this.initializeUserConfigFile(this.userConfigFile, this.defaultUserConfig, cb);
     }
 
-    static new(filenames, cb) {
+    static new(filenames, setState, cb) {
         //filenames   Optional list of filenames for configation otherwies uses defaultConfigFiles
+        //setState({directories})
         if (typeof filenames === "function") { cb = filenames; filenames = undefined}
         if (!(filenames && filenames.length)) { filenames = this.defaultConfigFiles; } // Doesnt include userConfigFile
-        super.new(filenames, cb);
+        super.new(filenames, (err, config) => {
+            if (!err) config.setupPeriodically(setState); // Periodically - rescan Directories;
+            cb(err, config);
+        });
     }
 
-    resolveDirectories() {
+    resolveDirectories(setState) {
         //TODO note this could be slow - it uses glob.sync - see TODO in ConfigController.resolves
         // Handle ~/ ./ ../ and expand * or ?? etc
-        this.directories = ConfigController.resolves(
+        //setState({directories}) optional
+        const newDirectories = ConfigController.resolves(
           this.configOpts.filter(c => c.directories).pop().directories // Find last one to define directories
         );
+        if (!Array.isArray(this.directories)) this.directories = []; // Handle start when its undefined
+        const adding = newDirectories.filter(d => !this.directories.includes(d))
+        const removing = this.directories.filter(d => !newDirectories.includes(d))
+        if (adding.length || removing.length) {
+            if (adding.length) debug("Adding directories %s", adding.join('; '));
+             if (removing.length) debug("Removing directories %s", removing.join('; '));
+            this.directories = newDirectories;
+            if (setState) setState({directories: this.directories});
+        }
     }
 
     setOpts(...opts) {
         // Extend base class to handle specific derivations of opts
+        const oldDirectories = this.directories; // Save old directories
         super.setOpts(...opts); // Just combined and store ops
+        // Note at this point this.directories will be set to all of them, which is not what we want.
+        // Remove first so that resolveDirectories will report what its actually using
+        this.directories = oldDirectories; // and restore as actually want only resolv
         this.resolveDirectories(); // Handle ~/ ./ ../ and expand * or ?? etc
         this.archiveui.directory = ConfigController.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
-        this.setupPeriodically(); // Periodically - rescan Directories;
     }
 
-    setupPeriodically() {
+    setupPeriodically(setState) {
         // Re-resolve the directories options to see if its changed
+        // if changed will update mfs
         if (this.rescanDirectories) {
             forever((next) =>
               setTimeout(() => {
-                  this.resolveDirectories();
+                  this.resolveDirectories(setState);
                   next();
               }, this.rescanDirectories * 1000)
             )

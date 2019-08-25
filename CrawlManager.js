@@ -38,7 +38,6 @@ const HashStore = require('./HashStore');
  */
 
 //TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
-//See collectionpreseed.js for example using this to do a nested crawl to force server to preseed.
 
 class CrawlManager {
 
@@ -48,9 +47,11 @@ class CrawlManager {
         this.clearState();
         this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
         this._taskQ = queue((task, cb) => {
+          // Tasks will loop from 1-5 secs if disconnected, the randomness is to spread tasks out.
           asyncUntil(
             //TODO maybe push this to dweb-transports as waitConnected:true argument to statuses
-            () => DwebTransports.statuses({connected: true}).length,
+            () =>
+              DwebTransports.statuses({connected: true}).length && (this.copyDirectory || MirrorFS.directories.length),
             cb2 => setTimeout(cb2, Math.floor(1000+4000*Math.random())),
             (unusedErr) => {
               task.process(this, (err) => {
@@ -121,6 +122,8 @@ class CrawlManager {
             ObjectFilter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (copyDirectory) {
             debug("Will use %s for the crawl and %o as a cache",copyDirectory, MirrorFS.directories);
+        } else if (!MirrorFS.directories.length) {
+            debug("WARNING: No cache directories available, crawl will wait");
         } else {
             debug("Will use %o as the cache for the crawl (storing in the first, unless item exists in another", MirrorFS.directories);
         }

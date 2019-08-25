@@ -556,7 +556,7 @@ function mirrorHttp(config, cb) {
     app.get('/favicon.ico', (req, res, next) => res.sendFile(config.archiveui.directory + "/favicon.ico", {
         maxAge: "86400000",
         immutable: true
-    }, (err) => err ? next(err) : debug('sent /favicon.ico')));
+    }, (err) => err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico'))); // Dont go to Error, favicons often aborted
 
     app.get('/images/*', function (req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
         _sendFileFromDir(req, res, next, config.archiveui.directory + "/images");
