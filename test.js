@@ -5,6 +5,8 @@ process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dw
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
 // Other IA repos
+//TODO-SPLIT include transports here if want to test or copy connect() code from 'internetarchive'
+//require('ipfs'); // Sets global Ipfs // This is No longer in DwebTransports
 // noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUnusedLocalSymbols

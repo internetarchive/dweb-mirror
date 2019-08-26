@@ -221,7 +221,14 @@ function _tasks() {
 function connect(cb) {
     const connectOpts = config.connect;
     //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
-    if (connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
+
+    //TODO-SPLIT do conditional requires here
+    if (connectOpts.transports.includes('IPFS')) {
+        // No longer packaged in dweb-transports, include specifically only if going to use it
+        require('ipfs'); // Sets global Ipfs
+    }
+
+    if (connectOpts.transports.includes('WEBTORRENT') && connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
         try {
             const wrtc = require('wrtc');
             if (wrtc) connectOpts.webtorrent.tracker = { wrtc };
