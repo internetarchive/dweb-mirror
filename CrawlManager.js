@@ -107,10 +107,7 @@ class CrawlManager {
     }
     setopts(opts={}) {
         Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
-        if (opts.copyDirectory) { // If Crawling to a directory
-            // Make sure MirrorFS has a hashstore there
-            MirrorFS.hashstores[opts.copyDirectory] = new HashStore({dir: opts.copyDirectory+"/.hashStore."}); // Note trailing "." is intentional"
-        }
+        //if (opts.copyDirectory) { } // If Crawling to a directory - no action reqd any more since MirrorFS now creates hashstore lazily
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
     static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, noCache=false,
