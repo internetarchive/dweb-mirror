@@ -39,12 +39,14 @@ class MirrorFS {
     debugname:  Name to use in debug statements to help see which file/item it refers to.
     digest      Digest (hash) of file to find
     directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
-    directories: Array of directories to check for caches
+    directories: Array of directories to check for caches - note this is a pointer into MirrorConfig's array, changing that will change here as well
     expectsize: If defined, the result must match this size or will be rejected (it comes from metadata)
+    existingFilePath:  Something else found the file already passed to save looking for it twice
     file:       Name of file
     filepath:   Absolute path to file, normally must be in "directory"
     format:     Format of result or submitted digest, defaults to 'hex', alternative is 'multihash58'
     httpServer: Server to use for http (for seeding)
+    ipfs:       IPFS hash if known
     noCache:    If true will skip reading cache, but will write back to it and not trash it if unable to read file
     preferredStreamTransports:  Array of transport names to use in order of preference for streaming
     relFileDir  Path to directory, typically IDENTIFIER
@@ -58,6 +60,7 @@ class MirrorFS {
     skipNet:    if set then do not try and fetch from the net
     url:        Single url (or in most cases array of urls) to retrieve
     wantBuff:   True if want a buffer of data (not stream)
+    wantSize:   Want the size of the data (cached or from net)
     wantStream  The caller wants a stream as the result (the alternative is an object with the results)
     start       The first byte or result to return (default to start of file/result)
     end         The last byte or result to return (default to end of file/result)
@@ -70,15 +73,15 @@ class MirrorFS {
          * See top of this file for other parameters
          */
         // Not a constructor, all methods are static
-        this.directories = directories;
+        this.directories = directories; //note this is a pointer into MirrorConfig's array, changing that will change here as well
         this.httpServer = httpServer;
         this.preferredStreamTransports = preferredStreamTransports; // Order in which to select possible stream transports
-        this.hashstores = ObjectFromEntries(               // Mapping
-            this.directories.map(d =>                         // of each config.directories
-                [d,new HashStore({dir: d+"/.hashStore."})]));   // to a hashstore, Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
+        this.hashstores = {}; // Empty - populated lazily by hashstore(dir)
     }
 
     static setState({directories=undefined}) {
+        //Indicate to MirrorFS that state has changed, specifically causes it to set its directories property.
+        //directories: [PATH]
         if (directories) this.directories = directories;
     }
     static _mkdir(dirname, cb) {
@@ -108,6 +111,15 @@ class MirrorFS {
         })
     }
 
+    static _hashstore(dir) {
+        /**
+         * returns: hashstore data structure, create if reqd, cache in .hashstores
+         */
+        if (typeof this.hashstores[dir] === "undefined") {
+            this.hashstores[dir] = new HashStore({dir: dir+"/.hashStore."}); // Note trailing period - will see files like <config.directory>/<config.hashstore><tablename>
+        }
+        return this.hashstores[dir];
+    }
     static _rmdir(path, cb) {
         //var path = '/path/to/the/dir';
         // Remove a directory using the system function because can do so recursively
@@ -167,7 +179,7 @@ class MirrorFS {
             else fs.readFile(existingFilePath, cb);
         });
     }
-    static writeFile({copyDirectory=undefined, relFilePath}, data, cb) { //TODO-API copyDirectory and {}
+    static writeFile({copyDirectory=undefined, relFilePath}, data, cb) {
         // Like fs.writeFile but will mkdir the directory before writing the file
         //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; this.directories[0] (which comes from config.directories)
         // See https://github.com/internetarchive/dweb-mirror/issues/193
@@ -188,15 +200,18 @@ class MirrorFS {
             }});
     }
 
-    static copyFile(sourcePath, destnPath, cb) {
+    static _copyFile(sourcePath, destnPath, cb) {
+        /*
+        Copy sourcePath to destnPath but create directory first if reqd
+         */
         this._mkdir(path.dirname(destnPath), (err) => {
             if (err) {
-                debug("ERROR: MirrorFS.copyFile: Cannot mkdir %s: %s",path.dirname(destnPath), err.message);
+                debug("ERROR: MirrorFS._copyFile: Cannot mkdir %s: %s",path.dirname(destnPath), err.message);
                 cb(err);
             } else {
                 fs.copyFile(sourcePath, destnPath, (err) => {
                     if (err) {
-                        debug("ERROR: MirrorFS.copyFile: Unable to copy %s to %s: %s", sourcePath, destnPath, err.message);
+                        debug("ERROR: MirrorFS._copyFile: Unable to copy %s to %s: %s", sourcePath, destnPath, err.message);
                         cb(err);
                     } else {
                         cb(null);
@@ -205,7 +220,7 @@ class MirrorFS {
             }
         });
     }
-    static _fileopenwrite({relFilePath, cacheDirectory}={}, cb) { //TODO-API
+    static _fileopenwrite({relFilePath, cacheDirectory}={}, cb) {
         /*
         directory top level directory of cache - must exist
         filepath path to file (rooted preferably)
@@ -251,8 +266,10 @@ class MirrorFS {
     }
 
     static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined,
-                                                 noCache=undefined, copyDirectory=undefined}, cb) { //TODO-API noCache
+                                                 noCache=undefined, copyDirectory=undefined}, cb) {
         /*
+            Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return its path if found.
+
             relFileDir: Item's dir
             file:       File within dir
             scale:      scale wanted at
@@ -268,15 +285,10 @@ class MirrorFS {
         )
     }
     static checkWhereValidFile(relFilePath, {existingFilePath=undefined, noCache=false, digest=undefined,
-        format=undefined, algorithm=undefined, copyDirectory=undefined}, cb) { //TODO-API
+        format=undefined, algorithm=undefined, copyDirectory=undefined}, cb) {
         //TODO follow this up the stack and start passing size to it where possible.
         /*
-        format      hex or multihash - how hash formatted
-        existingFilePath  Something else found the file already
-        noCache     Dont check the cache (note digest overrides noCache, as will confirm file's sha1)
-        algorithm   e.g. 'sha1'
-        relFilePath <Identifier>/<Filename>
-
+        See common parameters above
         Note - either relFilePath or digest/format/algorithm can be omitted,
         If relFilePath && !digest it just checks the cache directories
         If digest && !relFilePath it will try and locate file in hashstores
@@ -295,7 +307,7 @@ class MirrorFS {
                     if (relFilePath) {
                             cb3(null);
                     } else {
-                        this.hashstores[cacheDirectory].get(algorithm + ".relfilepath", digest, (err,res) => {
+                        this._hashstore(cacheDirectory).get(algorithm + ".relfilepath", digest, (err,res) => {
                             relFilePath = res; // poss undefined - saving over relFilePath parameter which is undefined
                             cb3(err || !relFilePath); // Shouldnt be error but fail this waterfall if didn't find hash in this cache.
                         });
@@ -340,7 +352,7 @@ class MirrorFS {
         }
     }
 
-    static cacheAndOrStream({ relFilePath=undefined, //TODO-API noCache, copyDirectory
+    static cacheAndOrStream({ relFilePath=undefined,
                                 existingFilePath=undefined,
                                 debugname="UNDEFINED", urls=undefined,
                                 expectsize=undefined, sha1=undefined, ipfs=undefined, skipFetchFile=false,
@@ -351,22 +363,9 @@ class MirrorFS {
                                 cb) {
         /*
         Complicated function to encapsulate in one place the logic around the cache.
+        See Common parameters above.
 
         Returns a stream from the cache, or the net if start/end unset cache it
-        relFilePath:    Path, relative to  cache, to a file.
-        existingFilePath:    If found, something else found where this file was
-        urls:           Single url or array to retrieve (optional, if not supplied it will only check locally)
-        debugname:      Name for this item to use in debugging typically ITEMID/FILENAME
-        expectsize:     If defined, the result must match this size or will be rejected (it comes from metadata)
-        sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
-        skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
-        ipfs:           IPFS hash if known
-        wantStream:     True if want an open stream to the contents, (set to false, when crawling)
-        wantBuff:       True if want a buffer of data (not stream)
-        wantSize:       Want the size of the data (cached or from net)
-        noCache:        Dont read local cache, but will still store and maybe use cache if cant get from net (overridden by sha1)
-        skipNet:        Dont check the net
-        start,end       First and last bytes wanted
         cb(err, s|undefined) if wantStream will call with a stream (see below)
 
         TypicalUsages:
@@ -395,7 +394,7 @@ class MirrorFS {
             if (copyDirectory && !existingFilePath.startsWith(copyDirectory)) {
                 // We have the right file, but in the wrong place
                 const copyFilePath = path.join(copyDirectory, relFilePath);
-                this.copyFile(existingFilePath, copyFilePath , (err) => {
+                this._copyFile(existingFilePath, copyFilePath , (err) => {
                     if (err) {
                         debug("ERROR: MirrorFS.cacheAndOrStream of %s failed %s", relFilePath, err.message);
                     } else {
@@ -485,7 +484,7 @@ class MirrorFS {
                                                     console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
                                                     if (!wantStream) cb(err); // If wantStream then already called cb
                                                 } else {
-                                                    this.hashstores[cacheDirectory].put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath, (err)=>{
+                                                    this._hashstore(cacheDirectory).put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath, (err)=>{
                                                         debug(`Closed ${debugname} size=${writable.bytesWritten} %s`,err ? err.message : "");
                                                         this.seed({relFilePath, directory: cacheDirectory}, (unusedErr, unusedRes) => { }); // Seed to IPFS, WebTorrent etc
                                                         //Ignore err & res, its ok to fail to seed and will be logged inside seed()
@@ -523,13 +522,13 @@ class MirrorFS {
 
     };
 
-    static readDirRecursive(basedir, relpath, cb) {
+    static _readDirRecursive(basedir, relpath, cb) {
         fs.readdir(path.join(basedir, relpath), (err, files) => {
             if (err) {  // Probably a directory
                 cb(null, [relpath])
             } else {
                 map( files.map(f => path.join(relpath, f)),
-                  (relpathfile, cb1) => this.readDirRecursive(basedir, relpathfile, cb1),
+                  (relpathfile, cb1) => this._readDirRecursive(basedir, relpathfile, cb1),
                   (err, res) => {  // res = [ [ ]* ]
                       if (err) {
                           cb(err);
@@ -551,7 +550,7 @@ class MirrorFS {
                 files=[];
             }
                 return ParallelStream.from(files.filter(f=>!f.startsWith(".")), {name: "stream of item directories", paralleloptions: {silentwait: true}}) // Can exclude other non hashables here
-                  .map((identifier, cb) => this.readDirRecursive(cacheDirectory, identifier, cb),  // Stream of arrays - it does it recursively
+                  .map((identifier, cb) => this._readDirRecursive(cacheDirectory, identifier, cb),  // Stream of arrays - it does it recursively
                         {name: "Read files dirs", async: true, paralleloptions: {limit:100, silentwait: true}})                                         //  [ /foo/mirrored/<item>/<file>* ]
                     // Stream of arrays of [IDENTIFIER/FILENAME or IDENTIFIER/SUBDIRNAME/FILENAME] to whatever depth required
                     .flatten({name: "Flatten arrays"})                                                  //  /foo/mirrored/<item>/<file>
@@ -565,6 +564,11 @@ class MirrorFS {
     //maybe redo to use async.each etc
     static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = false}, cb) {
         /*
+        Perform maintenance on the system.
+        Clear out old hashes and load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'.
+        Make sure all applicable files are in IPFS.
+        Delete any .part files (typically these come from a server crash while something is partially streamed in)
+
         Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
         Runs in parallel 100 at a time,
         It catches the following issues.
@@ -575,7 +579,7 @@ class MirrorFS {
         const errs = [ ];
         each( (cacheDirectories && cacheDirectories.length) ? cacheDirectories : this.directories,
             (cacheDirectory, cb1) => {
-                this.hashstores[cacheDirectory].destroy(tablename, (err, unusedRes)=> {
+                this._hashstore(cacheDirectory).destroy(tablename, (err, unusedRes)=> {
                     if (err) {
                         debug("Unable to destroy hashstore %s in %s", tablename,cacheDirectory);
                         cb1(err);
@@ -601,7 +605,7 @@ class MirrorFS {
                                         errs.push({cacheDirectory, relFilePath, err});
                                         cb2(err);
                                     } else {
-                                        this.hashstores[cacheDirectory].put(tablename, multiHash, relFilePath, (err, unusedRes) => {
+                                        this._hashstore(cacheDirectory).put(tablename, multiHash, relFilePath, (err, unusedRes) => {
                                             if (err) { debug("failed to put table:%s key:%s val:%s %s", tablename, multiHash, relFilePath, err.message); cb2(err); } else {
                                                 cb2(null, relFilePath)
                                             }

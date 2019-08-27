@@ -705,11 +705,13 @@ debugname:  Name to use in debug statements to help see which file/item it refer
 digest      Digest (hash) of file to find 
 directory:  Absolute path to directory where cache stored, may include symlinks, but not Mac Aliases
 directories: Array of directories to check for caches
+existingFilePath:  Something else found the file already passed to save looking for it twice
 expectsize: If defined, the result must match this size or will be rejected (it comes from metadata)
 file:       Name of file
 filepath:   Absolute path to file, normally must be in "directory"
 format:     Format of result or submitted digest, defaults to 'hex', alternative is 'multihash58'
 httpServer: Server to use for http (for seeding)
+ipfs:           IPFS hash if known
 noCache:    If true will skip reading cache, but will write back to it and not trash it if unable to read file
 preferredStreamTransports:  Array of transport names to use in order of preference for streaming
 relFileDir  Path to directory, typically IDENTIFIER
@@ -724,6 +726,7 @@ skipNet:    if set then do not try and fetch from the net
 url:        Single url (or in most cases array of urls) to retrieve
 wantBuff:   True if want a buffer of data (not stream)
 wantStream  The caller wants a stream as the result (the alternative is an object with the results)
+wantSize:       Want the size of the data (cached or from net)
 start       The first byte or result to return (default to start of file/result)
 end         The last byte or result to return (default to end of file/result)
 ```
@@ -735,17 +738,9 @@ Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz
 Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find or get things
 httpServer:  start of URL of server to get files from typically http://dweb.me
 
-##### setCopyDirectory(dir)
-
-Override copy directory for MirrorFS.
-Once set, operations will cause a copy from cache or net to this directory.
-
-#### static writeFile(relFilePath, data, cb)
-Like fs.writeFile but will mkdir the directory in copyDirectory or first configured before writing the file
-```
-data    Anything that fs.writeFile accepts
-cb(err)
-```
+##### static setState({directories})
+Indicate to MirrorFS that state has changed, specifically causes it to set its directories property.
+directories: [PATH]
 
 #### static quickhash(str, options={})
 Synchronous calculation of hash
@@ -758,16 +753,18 @@ options { algorithm, format }
 
 Look for a path in one of the directories, and return (via fs.readFile)
 
-##### writeFile(relFilePath, data, cb)
+##### static writeFile({copyDirectory, relFilePath}, data, cb)
+Like fs.writeFile but will mkdir the directory in copyDirectory or first configured directory before writing the file
+```
+data    Anything that fs.writeFile accepts
+cb(err)
+```
 
-Look for a path in one of the directories, create parent directory if required, 
-and write it (via fs.writeFile)
-
-##### checkWhereValidFileRotatedScaled({relFileDir, file, scale, rotate, copyDirectory}, cb)
+##### checkWhereValidFileRotatedScaled({relFileDir, file, scale, rotate, noCache, copyDirectory}, cb)
 
 Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return its path if found.
 
-#### static checkWhereValidFile(relFilePath, {digest, format, algorithm, copyDirectory}, cb)
+#### static checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest, format, algorithm, copyDirectory}, cb)
 Checks if file or digest exists in one of the cache Directories.
 ```
 Note - either relFilePath or digest/format/algorithm can be omitted, 
@@ -778,7 +775,7 @@ if relPath && digest the hash will be recalculated and checked.
 cb(err, filepath)
 ```
     
-##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, noCache, start, end, copyDirectory}, cb)
+##### static cacheAndOrStream({relFilePath, existingFilePath, debugname, urls, expectsize, sha1, ipfs, skipFetchFile, wantStream, wantBuff, wantSize, noCache, skipNet, start, end, copyDirectory}, cb)
 
 Complicated function to encapsulate in one place the logic around the cache.
 ```
@@ -794,7 +791,7 @@ cb behavior needs explanation !
 * In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
 
 
-##### static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = true}, cb)
+##### static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = false}, cb)
 Perform maintenance on the system. 
 Clear out old hashes and load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'.
 Make sure all applicable files are in IPFS. 
