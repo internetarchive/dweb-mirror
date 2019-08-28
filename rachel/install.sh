@@ -16,7 +16,7 @@ echo "Installer: Adding yarn sources"
 curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
-echo "Installer: Apt Update"
+echo "Installer: Second Apt Update required after add yarn sources"
 apt-get update
 
 echo "Installer: Installing yarn"
@@ -37,7 +37,7 @@ cd /usr/local
 echo "Installer: Installing Git"
 apt-get install -y git
 
-echo "Installer: Installing libsecret"
+echo "Installer: Installing libsecret-1-dev"
 apt-get install -y libsecret-1-dev
 
 echo "Installer: yarn install internet archive"
@@ -63,5 +63,26 @@ mv rachel/en-internet_archive /var/www/modules/
 
 echo "Installer: Setting Ownership"
 chown -R www-data:www-data /var/www/modules/en-internet_archive
+
+echo "Installer: Upgrading OS - unclear if also happens elsewhere in installation"
+sudo apt-get upgrade    # Make sure running latest version
+
+echo "Installing debhelper, exfat-fuse"
+sudo apt-get install git debhelper exfat-fuse
+
+echo "Installer: Cloning usbmount"
+cd /var/tmp
+git clone https://github.com/rbrito/usbmount.git
+
+echo "Installer: Building usbmount"
+cd usbmount
+sudo dpkg-buildpackage -us -uc -b
+
+echo "Installer: Installing usbmount"
+cd ..
+sudo apt install  ./usbmount_0.0.24_all.deb
+
+echo "Installer: Editing /etc/usbmount/usbmount.conf in place"
+sudo sed 's/FILESYSTEMS=.*/FILESYSTEMS="vfat ext2 ext3 ext4 ntfs-3g ntfs exfat hfsplus fuseblk"/' -i- /etc/usbmount/usbmount.conf
 
 echo "Installer: Installation complete"

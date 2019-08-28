@@ -11,43 +11,54 @@ moved between installations.
 When connected to the internet, the server works as a Proxy, i.e. it will store
 Internet Archive (IA) content the user views for later off-line viewing. 
 
-There are components to integrate the IA server with decentralized tools
+There are components (not yet fully integrated) to integrate the IA server with decentralized tools
 including IPFS, WebTorrent, GUN, WOLK, both for fetching content and for
 serving it back to the net or locally. 
 
 This is an ongoing project, continually adding support for new Internet Archive
 content types; new platforms; and new decentralized transports.
 
-## Using it
+## Contributing
 
-### Starting server
-(Not required on IIAB)
+We'd love to have you contribute, please email mitra@archive.org and I'll figure out how to help you get started. 
+(TODO setup a better channel for this !)
+
+## Installation
+Please see the separate INSTALLATION-xxx documents, these are a work in progress, but are generally tested for each 
+platform, and there is a generic INSTALLATION-work.md which should have everything and is great if you are trying to 
+install on a new platform.
+
+There is also an INSTALLATION-osx-dev.md for developers (a useful task would be for someone with a Linux machine 
+to make any edits to it if required)
+
+## Using it - starting the server.
+See the Installation docs but on most platforms general the server should start at reboot. 
+
+If not then if you've got it installed in your home directory then assuming its in the default location ...
+
 ```
-cd <wherever>/dweb-mirror && ./internetarchive --server &
+cd ~/node_modules/dweb-mirror && ./internetarchive --server &
 ```
+Or a slightly different location for the developers.
+
 The startup is a little slow but you'll see some debugging when its live
 
-On IIAB the server is started and restarted automatically.  
-It can be turned on or off at a terminal window with `service internetarchive
-start` or  `service internetarchive stop` 
+On platforms where it starts automatically (e.g. IIAB, Rachel), 
+it can be turned on or off at a terminal window with `service internetarchive start` or  `service internetarchive stop` 
 
 ### Browsing
 
 If you are working directly on the machine (e.g. its your Mac) then
 browse to [http://localhost:4244] which will open the UI in the browser and it should see the Archive UI.
 
-If you are remote from the machine, then browser to: `http://<IP of machine>:4244`
+If you are remote from the machine, then browser to: `http://<IP of machine>:4244`, 
+if mdns works on your platform then `http://archive:4244` should work.
 
 On IIAB The server can be accessed at [http://box:4244](http://box:4244) or
 [http://box.lan:4244](http://box.lan:4244) (try
 [http://box.local:4244](http://box.local:4244) via mDNS over a local network,
 if you don't have name resolution set up to reach your Internet-in-a-Box).
 
-_If future, we also hope to get [http://box/archive](http://box/archive) and
-[http://box.lan/archive](http://box.lan/archive) working (as of 2019-05-25 the
-error "Cannot GET /archive" appears — if you can help us fix
-[/etc/apache2/sites-available/internetarchive.conf](https://github.com/iiab/iiab/blob/master/roles/internetarchive/templates/internetarchive.conf)
-that would be incredible!)_
 
 If you don’t get an Archive UI then look at the server log (in browser console)
 to see for any “FAILING” log lines which indicate a problem. 
@@ -112,7 +123,7 @@ If you are worried about corruption, or after for example hand-editing or
 moving cached items around. 
 ```
 # Run everything as root
-sudo sh
+sudo su
 # cd into location for your installation
 cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror
 ./internetarchive -m
@@ -149,12 +160,6 @@ described above is clicked.
 
 As the project develops, this file will be editable via a UI. 
 
-## Installation
-Dweb-Mirror is installable on most Linux based systems. Specific installation instructions are available for: 
- [RACHEL 3+ from World Possible](INSTALLATION-rachel.md); [Internet In A Box on Raspberry Pi](INSTALLATION-iiab-raspberry.md); and [directly on Raspberry PI](INSTALLATION-raspberrypi.md). 
- 
-For anything else (including MacOSX), please follow [generic instructions](INSTALLATION.md) and please let us know how it went.
-
 ## Update
 
 Dweb-mirror is under rapid development, as is the JavaScript UI.  It's
@@ -164,13 +169,14 @@ From a Terminal window
 ```
 sudo sh # Run all commands as root
 cd /opt/iiab/internetarchive
+yarn install  # Makes sure you have at least the minimum packages
 yarn upgrade  # Currently this can take up to about 20 minutes to run, we hope to reduce that time
 ```
 
 ## Crawling
 
-The Crawler will be built into the UI fairly soon, for now it has to be run in
-a terminal window.
+The Crawler runs automatically at startup and when you add something to the crawl, 
+but it can also be run at a command line. 
 
 Its highly configurable either through the YAML file described above, or from
 the command line.
@@ -181,7 +187,7 @@ In a shell
 sudo sh
 
 # cd into location for your installation - which varies between platforms
-cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror || cd /usr/local/node_modules/@internetarchive/dweb-mirror
+cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror || cd /usr/local/node_modules/@internetarchive/dweb-mirror || cd ~/node_modules/@internetarchive/dweb-mirror
 
 # To get a full list of possible arguments
 ./internetarchive --help
