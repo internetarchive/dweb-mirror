@@ -39,21 +39,44 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 This is important, as the installation instructions does not work without some preliminary upgrades,
 especially for some of the smaller platforms.
 
-### 1A: IIAB only: Initial setup - getting Raspbian
+### Preparing Operating System
 
-If your Raspberry Pi comes with Raspbian you are in luck, skip this, 
-otherwise if it comes with NOOBS (as most do now) you'll need to replace it with Raspbian.
+If you are working a Raspberry Pi or similar machine booted from an SD card, 
+you'll need to download the operating system, and burn an SD
 
-Internet in a Box's site is short on the initial details, especially if your RPi comes with NOOBS as mine did. 
-So this is what I did. (Edits welcome, if your experience differed)
+#### Downloading Operating System on another machine
 
-* Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop (~1GB)
-  * Any of the distributions should work - I test on the Desktop version
-* On a Mac:
+* For IIAB on a PI. 
+  Any from [Raspbian](https://www.raspberrypi.org/downloads/raspbian/). 
+  We test on the desktop version.
+* For Rachel on a PI. 
+  The temporary [Raspbian Buster + Rachel](http://rachelfriends.org/downloads/public_ftp/rachelpi_64EN/rachelpi_2019/rachel-pi_kolibi_buster_unofficial.7z) image
+* RPI3 without IIAB or Rachel usually comes with NOOBS
+* RPI4 without IIAB or Rachel.
+  The current Canakit shipment doesn't have NOOBS so:
+  [NOOBS](https://www.raspberrypi.org/downloads/noobs/)
+* Armbian on OrangePi
+  From [Armbian](https://www.armbian.com/download/)
+  Pick the exact model and choose the Debian (Buster) over the Ubuntu
+
+#### Blow this to a SD
+
+* On a Mac for anything except NOOBS
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
   * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
+
+* For NOOBS
+  * Unzip it
+  * On a Mac format open "Disk Utilities" and Erase the SD card with format "FAT".
+  * Copy the NOOBS files to the SD card.
+
 * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
-* Inserted into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
+
+You can now boot your machine.
+
+### 1A: IIAB only: Initial setup - getting Raspbian
+
+* Inserted SD into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
 * Powered up
 * It prompted me for some getting started things, 
@@ -75,27 +98,22 @@ See [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md]), installation instruct
 so they haven't been incorporated here yet.
 
 ### 1D: World-Possible/Rachel on Raspberry Pi
-See [./INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md]), installation instructions are not complete
-so they haven't been incorporated here yet.
+* Insert the SD card and boot the RPI (RPI3 or RPI4 should work)
+* If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
+* Power up
+* Connect to the RACHEL-Pi Wifi - it should give you an address like 10.10.10.xxx
+* ssh to 10.10.10.10
+* Login as `pi` with password `rachel`
 
 ### 1E: Raspbian without IIAB or Rachel
 
-If you just want dweb-mirror running on a NOOBS based RPi (and don't want Internet In A Box) try this. 
+On RPI3's insert the NOOBS SD that usually comes with the PI, 
+and follow on-screen instructions to install Raspbian (we use the desktop version).
 
-While it is unlikely that the process below is particularly fussy about a roughly normally configured RPi, 
-the following notes might aid in a speedy setup on a new RPi.
-
-### Installing NOOBS
-
-On the RPI3 we started with a standard preconfigured NOOBS MicroSD card that came with the Canakit box we got
-and that gives an easy way to install Raspbian (we use the desktop version).
+On RPI4's the ones we've seen don't have a SD card and we used the NOOBS image prepared above.
  
-The RPI4 from Canakit strangely was missing NOOBS, and the Raspberry Pi site is strangely missing NOOBS images,
-* Download the zip of NOOBS from https://www.raspberrypi.org/downloads/noobs/ and unzip it
-* On a Mac format open "Disk Utilities" and Erase the SD card with format "FAT".
-* Copy the NOOBS files to the SD card.
 * Plug the card into the RPI4, along with a power supply 
-  * (beware, its very picky about USB-C supplies, if the supply works the LED will turn on)
+  * (beware, the RPI4 is very picky about USB-C supplies, if the supply works the LED will turn on)
 * It should boot - we tested with the full Raspbian, but have previously used Raspbian desktop successfully.
 * Follow the menus to Select country, language, WiFi etc,
   * in particular make sure to change the password as RPIs with default passwords are frequently hacked.
@@ -120,10 +138,6 @@ sudo apt update && sudo apt-get install -y libsecret-1-dev
 
 ### 1F: Armbian e.g. on OrangePi
 I found https://lucsmall.com/2017/01/19/beginners-guide-to-the-orange-pi-zero/ to be a useful guide if you have problems.
-
-First download the OS from https://www.armbian.com/download/ ,
-Pick the exact model and choose the Debian (Buster) over the Ubuntu
-Blow this onto a SD card, e.g. on a Mac use [Etcher](https://www.balena.io/etcher/).
 
 Booting an Orange Pi Zero or similar is tricky as there is no display/keyboard and you need the IP address to connect.
 Insert the SD card then Ethernet and power. 
@@ -173,10 +187,6 @@ or b)
 * This doc might be helpful
   https://docs.armbian.com/User-Guide_Advanced-Features/#how-to-set-wireless-access-point
 
-EOT
-
-
-
 ### 1G: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
 
 We haven't tested yet on other machines, but some hints on how to port ... 
@@ -192,8 +202,7 @@ but many platforms ship with seriously out-of-date versions and we only test on 
 so I recommend updating before installing.
 
 #### GIT
-Type `git --version` in a Terminal window, you want git v2.0.0 or better, 
-after steps above it was good on Armbian (other machines to be listed as tested).
+Type `git --version` in a Terminal window, you want git v2.0.0 or better.
 
 ##### ON MAC OSX 
 if Git isnt installed then it should prompt you to install Xtools command line tools, accept ...
@@ -267,11 +276,13 @@ but it works fine to continue without `node-pre-gyp` and `cmake`
 
 ### 2. Install dweb-mirror
 
-There are two alternatives, either as an "Appliance" which we recommend for most users,
+* 2A: dweb-mirror as a server on Rachel 3+ or RPI3 or RPI4
+* 2B: For developers only on OSX or Linux
+* 2C: Internet in a Box
+* 2D: Orange Pi / Armbian
+* 2E: Rachel on RPI
 
-Or if you want to develop the code then skip to 2B 
-
-#### dweb-mirror as a server / appliance (tested on Rachel 3+ and RPi3)
+#### 2A. dweb-mirror as a server (tested on Rachel 3+ and RPi3)
 
 We will install it as a standard node_module under your home directory.
 
@@ -371,6 +382,20 @@ And if you want to run as a local WiFi hotspot (recommended) then from the ssh p
 iiab-hotspot-on
 ```
 
+#### 2D Orange Pi
+The easiest way is to run the installation script
+```
+ curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_armbian.sh | bash
+```
+
+#### 2E Rachel on Pi
+The easiest way is to run the installation script
+```
+curl -o/tmp/install.sh -L https://unpkg.com/@internetarchive/dweb-mirror/rachel/install.sh
+chmod +x /tmp/install.sh
+sudo /tmp/install.sh
+```
+
 ### 3. Edit configuration
 
 If you are doing anything non-standard, then you'll need to create and edit 
@@ -426,11 +451,15 @@ Look in that directory, and there should be sub-directories appearing for each i
 You can safely delete any of the crawled material and it will be re-fetched if needed.
 
 #### Browsing
-* In a browser try going to `http://localhost:4244` 
-* Or from another machine: `http://archive.local:4244` or `http://<IP of your machine>:4244`
-* open http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244
-to see the test crawl.
 
+The address to go to is platform dependent.
+
+* On IIAB try: http://box.local:4244 or http://box.lan:4244 or via the main interface at http://box.local and click on Internet Archive
+* On Rachel: http://rachel.local:4244 or via the main interface at http://rachel.local and click Internet Archive
+* When on a browser on the same machine: http://localhost:4244
+* On any LAN that supports MDNS (Bonjour) http://archive.local:4244
+
+#### Troubleshooting
 If you don’t get a Archive UI then look at the server log 
 ```
 service internetarchive status
@@ -441,6 +470,11 @@ journalctl -u internetarchive -f
 ```
 will watch the log, `Ctrl-C` will end this.
 
+One some machines (e.g. Rachel on RPI) journalctl is missing, in which case ...
+```
+tail -f /var/log/daemon.log
+```
+
 Look for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
@@ -449,6 +483,11 @@ Expect to see errors in the Browser log for
 Expect, on slower machines/networks, to see no images the first time, 
 refresh after a little while and most should appear. 
 
+#### Disk storage
+Any of these platforms should be able to see a disk plugged into the USB port that 
+contains `archiveorg` at its top level. 
+This is tested on IIAB-on-RPI, Rachel-on-RPI and Mac OSX.
+On other RPI or Armbian it may need a variation of the techniques in install_rachel.sh
 
 ### 6. IPFS (optional and not recommended on small machines)
 Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
@@ -544,12 +583,14 @@ sudo yarn update
 The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
 ```
 cd ~/node_modules/@internetarchive   # or wherever you started the process in 3a above.
+yarn install
 yarn upgrade    # Upgrade all packages
 ```
 ### For Developers
 ```
 cd ~/git/dweb-mirror
 git pull
+yarn install
 yarn upgrade
 # Note there is an intentional feature/bug, in npm and possibly in yarn in that it that doesnt 
 # automatically run an "update" script. 
