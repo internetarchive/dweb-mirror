@@ -29,7 +29,9 @@ BUT moving soon.
 * Login as `pi` with password `rachel`
 
 * There is a script that automates installing internetarchive on rachel
-* curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/rachel/install.sh | sudo bash
+* curl -o/tmp/install.sh -L https://unpkg.com/@internetarchive/dweb-mirror/rachel/install.sh
+* chmod +x /tmp/install.sh
+* sudo /tmp/install.sh
 
 At this point, 
 you should be able to access the server at http://rachel.local:4244;
