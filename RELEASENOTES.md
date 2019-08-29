@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.48: config.directories fix; hashstores bug; Rachel install; error return from related
 * 0.2.47: install_armbian.sh
 * 0.2.46: install_dev.sh
 * 0.2.45: Handle /includes so dont have to edit less for font directories
