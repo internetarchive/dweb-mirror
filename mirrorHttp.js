@@ -123,7 +123,13 @@ function mirrorHttp(config, cb) {
                 (cb) => ai.fetch_metadata(req.opts, cb),
                 (ai, cb) => ai.relatedItems({copyDirectory: req.opts.copyDirectory, wantMembers: false, noCache: req.opts.noCache}, cb),
                 (res, cb) => ArchiveItem.addCrawlInfoRelated(res, {config, copyDirectory: req.opts.copyDirectory}, (err) => cb(err, res)),
-            ], (err, obj) => res.json(obj)
+            ], (err, obj) => {
+              if (err) {
+                next(err);
+//                res.status(404).send(err.message);
+              } else {
+                res.json(obj)
+            }}
         );
     }
 
