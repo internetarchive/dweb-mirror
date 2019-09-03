@@ -94,6 +94,14 @@ do
   fi
 done
 
+echo "=== Webpacking each repo to development version ==== "
+for i in dweb-archive dweb-transports
+do
+  pushd $i
+  webpack --mode development
+  popd
+done
+
 echo "==== installing http-server ====="
 yarn global add http-server
 
