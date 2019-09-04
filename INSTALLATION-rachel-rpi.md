@@ -29,14 +29,9 @@ Download the temporary image from
 
 #### Blow this to a SD
 
-* On a Mac for anything except NOOBS
+* On a Mac
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
   * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
-
-* For NOOBS
-  * Unzip it
-  * On a Mac format open "Disk Utilities" and Erase the SD card with format "FAT".
-  * Copy the NOOBS files to the SD card.
 
 * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
 
