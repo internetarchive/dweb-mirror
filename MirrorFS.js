@@ -180,24 +180,34 @@ class MirrorFS {
         });
     }
     static writeFile({copyDirectory=undefined, relFilePath}, data, cb) {
-        // Like fs.writeFile but will mkdir the directory before writing the file
-        //TODO-MULTI - location in order of preference: copyDirectory; place directory exists; this.directories[0] (which comes from config.directories)
+      /**
+       * like fs.writeFile but will mkdir the directory before writing the file
+       * checks where to put the file, first choice copyDirectory, 2nd somewhere the item is already stored, 3rd first of config.directories
+       */
         // See https://github.com/internetarchive/dweb-mirror/issues/193
-        const filepath = path.join(copyDirectory || this.directories[0], relFilePath);
-        const dirpath = path.dirname(filepath);
-        this._mkdir(dirpath, (err) => {
-            if (err) {
-                debug("ERROR: MirrorFS.writeFile: Cannot mkdir %s", dirpath, err.message);
-                cb(err);
-            } else {
-                fs.writeFile(filepath, data, (err) => {
-                    if (err) {
-                        debug("ERROR: MirrorFS.writeFile: Unable to write to %s: %s", filepath, err.message);
-                        cb(err);
-                    } else {
-                        cb(null);
-                    }});
-            }});
+      waterfall([
+        cb1 => {
+          if (copyDirectory) {
+            cb1(copyDirectory);
+          } else {
+            this.checkWhereValidFile(relFilePath.split('/')[0], {},
+              (err, res) =>
+                cb1(null, err
+                ? this.directories[0]  // Didn't find it, use first directory.
+                :  path.dirname(res))) ;  //Found a path, return directory its in
+          }
+        },
+        (dir, cb2) => {
+          const filepath = path.join(dir, relFilePath);
+          this._mkdir(path.dirname(filepath), (err) => cb2(err, filepath));
+        },
+        (filepath, cb3) => fs.writeFile(filepath, data, cb3)
+      ], err => {
+          if (err) {
+            debug("ERROR: MirrorFS.writeFile failed to write %s: %s", filepath, err.message);
+          }
+          cb(err); // May be null
+        });
     }
 
     static _copyFile(sourcePath, destnPath, cb) {
