@@ -17,7 +17,7 @@ set -e # Break on error
 
 # Define a parent directory they will sit under
 PARENTDIRECTORY=git
-REPOS="dweb-transports dweb-objects dweb-archivecontroller bookreader dweb-archive dweb-mirror iaux"
+REPOS="dweb-transports dweb-archivecontroller bookreader dweb-archive dweb-mirror iaux"
 # Note that dweb-transport and dweb-gatewahy are not installed they are only useful when running as a gateway server at the archive.
 
 echo "==== Checking for presence of yarn ========================="
@@ -135,10 +135,6 @@ This will watch for changes so that any edits you make are immediately reflected
 If you make change to dweb-transports:
 
   cd dweb-transports ; webpack --mode development -w &
-
-If you make changes to dweb-objects (which is unlikely, there isn't much there any more:
-
-  cd dweb-objects ; webpack --mode development -w &
 
 If you make changes to dweb-mirror, then ctrl-C out of the server and restart it.
 

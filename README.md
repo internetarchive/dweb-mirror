@@ -235,6 +235,6 @@ Dweb-Mirror lives on GitHub at:
 This project is part of the Internet Archive's larger Dweb project, see also:
 * [dweb-universal](https://github.com/internetarchive/dweb-universal) info about others distributing the web
 * [dweb-transport](https://github.com/internetarchive/dweb-transport) miscellaneous incl GUN gateway and WebTorrent
-* [dweb-objects](https://github.com/internetarchive/dweb-objects) library of dweb objects
+* [dweb-objects](https://github.com/internetarchive/dweb-objects) library of dweb objects and examples (not maintained)
 * [dweb-archive](https://github.com/internetarchive/dweb-archive) archive UI in JavaScript
 * [dweb-archivecontroller](https://github.com/internetarchive/dweb-archive) Knows about the structure of archive objects

@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 // noinspection JSUnresolvedVariable
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-objects dweb-objects:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports) //TODO-MIRROR check using GUN for metadata
 
 // noinspection JSUnusedLocalSymbols
 const debug = require('debug')("dweb-mirror:test");
 // Other IA repos
 // noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
-// noinspection JSUndefinedPropertyAssignment
-global.DwebObjects = require('@internetarchive/dweb-objects'); //Includes initializing support for names
 // noinspection JSUnusedLocalSymbols
 const ArchiveItem = require('./ArchiveItemPatched');
 // noinspection JSUnusedLocalSymbols

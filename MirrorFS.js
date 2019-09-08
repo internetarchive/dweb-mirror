@@ -19,7 +19,6 @@ var ReadableStreamClone = require("readable-stream-clone"); // Allow safe duplic
 // other packages of ours
 const ParallelStream = require('parallel-streams');
 const {gateway, ObjectFromEntries} = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
-//Should always be defined in caller prior to requiring dweb-objects
 
 // other packages in this repo - note it is intentional that this does not depend on config
 const HashStore = require('./HashStore');

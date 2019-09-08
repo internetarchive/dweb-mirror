@@ -164,11 +164,6 @@ If you make change to dweb-transports:
 ```
 cd dweb-transports ; webpack --mode development -w &
 ```
-If you make changes to dweb-objects (which is unlikely, there isn't much there any more:
-```
-  cd dweb-objects ; webpack --mode development -w &
-```
-
 If you make changes to dweb-mirror, then ctrl-C out of the server and restart it.
 ```
 cd dweb-mirror ; ./internetarchive -sc &

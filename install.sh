@@ -41,8 +41,6 @@ ARCHIVEUI=`firstof ../dweb-archive/dist ./node_modules/@internetarchive/dweb-arc
 
 echo "linking into ArchiveUI at ${ARCHIVEUI}"
 pushd "${ARCHIVEUI}"
-lnfirst . ../../dweb-objects/dist/dweb-objects-bundle.js \
-	../../dweb-mirror/node_modules/@internetarchive/dweb-objects/dist/dweb-objects.bundle.js
 lnfirst . ../../dweb-transports/dist/dweb-transports-bundle.js \
 	../../dweb-mirror/node_modules/@internetarchive/dweb-transports/dist/dweb-transports.bundle.js
 pushd bookreader

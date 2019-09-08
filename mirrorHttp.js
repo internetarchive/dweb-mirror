@@ -26,9 +26,6 @@ TODO-GATEWAY - special case for both metadata and download when already on dweb.
  */
 
 //TODO-URI add compatability with archive.org standard urls scan this file first, should be a git issue but
-
-process.env.DEBUG="dweb-mirror:* parallel-streams:* dweb-transports dweb-transports:* dweb-objects dweb-objects:* dweb-archive dweb-archive:* dweb-archivecontroller:*";
-//process.env.DEBUG=process.env.DEBUG + " dweb-mirror:mirrorHttp";
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const url = require('url');
 const express = require('express'); //http://expressjs.com/
