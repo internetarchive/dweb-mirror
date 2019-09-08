@@ -305,7 +305,7 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
         zip       Name of file holding the image
         file      file within zip
         noCache, wantStream, wantSize, skipNet, skipFetchFile, copyDirectory see common arguments
-        reqUrl    string as in brOptions.data ... uri from /BookReader.. (path and query, but not scale/rotate)
+        reqUrl    string as in brOptions.data ... uri from /BookReader.. (path and query, (original note said no scale & rotate, but looks like passed now)
         cb(err, data || stream || size) returns either data, or if wantStream then a stream
      */
     let zipfile;
@@ -323,12 +323,25 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
             if (page) { // This is the cover , its not scaled or rotated
                 MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory }, cbw);
             } else { // Looking for page by number with scale and rotation
-                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, skipNet, copyDirectory, skipFetchFile, // Find which valid scale/rotate we have,
+                MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, copyDirectory, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
                     (err, relFilePath2) => { // undefined if not found
                         // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
                         //TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
-                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, skipFetchFile, copyDirectory, relFilePath: relFilePath2 || relFilePath }, cbw);
+                        MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet, skipFetchFile, copyDirectory, relFilePath: relFilePath2 || relFilePath },
+                          (err, res)=>{ if (err) {
+                              MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, copyDirectory, // Find which valid scale/rotate we have,
+                                relFileDir: `${this.itemid}/_pages/${zipfile}`,
+                                bestEffort: true},
+                              (err1, relFilePath3) => { // undefined if not found
+                                if (err1) {
+                                  cbw(err); // Return error from cacheAndOrStream
+                                } else {
+                                  MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet: true, skipFetchFile, copyDirectory, relFilePath: relFilePath3}, cbw);
+                                }})
+                            } else { // Found it
+                              cbw(null, res);
+                            }});
                     }
                 )
             } }
@@ -436,7 +449,9 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       * Write each member to its own `<IDENTIFIER>_member.json`
    */
   if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
-  const { noCache, noStore, skipNet, copyDirectory } = opts;
+  let { noCache, noStore, skipNet, copyDirectory } = opts;
+  noCache = noCache || !(copyDirectory || MirrorFS.directories.length);
+  noStore = noStore || !(copyDirectory || MirrorFS.directories.length);
   if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
 
   function f(cb1) {
@@ -754,6 +769,25 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
     });
 };
 
+/**
+ * Return an object suitable for passing to fetch_page
+ * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
+ * @returns { parameters for fetch_page }
+ */
+ArchiveItem.prototype.pageParms = function( pageManifest, fetchPageOpts) {
+  const url = new URL(pageManifest.uri);
+  const idealScale = pageManifest.height / 800;
+  const quantizedScale = [32,16,8,4,2,1].find(x => x <= idealScale);
+  url.searchParams.append("scale", quantizedScale);
+  url.searchParams.append("rotate", 0);
+  return Object.assign({}, fetchPageOpts, {
+    zip: url.searchParams.get("zip"),
+    file: url.searchParams.get("file"),
+    scale: quantizedScale,
+    rotate: 0,
+    reqUrl: url.pathname + url.search
+  });
+}
 ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined}, cb) {
   // For texts, Add .downloaded info on all pages, and summary on Item
   // Note ArchiveItem might not yet have bookreader field loaded when this is called.
@@ -778,29 +812,16 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
               }, cb1),  // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
               cb1 => each(
                 [].concat(...this.bookreader.brOptions.data),
-                (d, cb2) => {
-                  if (d.downloaded) {
+                (pageManifest, cb2) => {
+                  if (pageManifest.downloaded) {
                     cb2();
                   } else {
-                    // See ALMOST-SAME-CODE-BOOKMETA
-                    const url = new URL(d.uri);
-                    url.searchParams.append("scale", 2);
-                    url.searchParams.append("rotate", 0);
-                    this.fetch_page({
-                      copyDirectory,
-                      wantSize: true,
-                      zip: url.searchParams.get("zip"),
-                      file: url.searchParams.get("file"),
-                      scale: 2,
-                      rotate: 0,
-                      reqUrl: url.pathname + url.search,
-                      skipNet: true
-                    }, (err, size) => {
+                    this.fetch_page(this.pageParms(pageManifest, {copyDirectory, wantSize: true, skipNet: true}), (err, size) => {
                       if (err) {
-                        d.downloaded = false;
+                        pageManifest.downloaded = false;
                       } else {
-                        d.downloaded = true;
-                        d.size = size;
+                        pageManifest.downloaded = true;
+                        pageManifest.size = size;
                       }
                       cb2();
                     });

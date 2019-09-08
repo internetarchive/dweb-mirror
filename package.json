@@ -30,6 +30,7 @@
     "parallel-streams": "^0.0.14",
     "prettier-bytes": "^1.0.4",
     "readable-stream": "^3.4.0",
+    "readable-stream-clone": "git://github.com/mitra42/readable-stream-clone",
     "sha": "^2.0.1"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",

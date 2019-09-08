@@ -14,6 +14,7 @@ const waterfall = require('async/waterfall');
 const map = require('async/map');
 // noinspection ES6ConvertVarToLetConst
 var exec = require('child_process').exec;
+var ReadableStreamClone = require("readable-stream-clone"); // Allow safe duplication of readable-stream
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
@@ -184,7 +185,9 @@ class MirrorFS {
        * like fs.writeFile but will mkdir the directory before writing the file
        * checks where to put the file, first choice copyDirectory, 2nd somewhere the item is already stored, 3rd first of config.directories
        */
-        // See https://github.com/internetarchive/dweb-mirror/issues/193
+      // See https://github.com/internetarchive/dweb-mirror/issues/193
+      if (!(copyDirectory || MirrorFS.directories.length))
+          cb(new Error(`writeFile: Nowhere to write ${relFilePath} to`));
       waterfall([
         cb1 => {
           if (copyDirectory) {
@@ -275,7 +278,7 @@ class MirrorFS {
         }
     }
 
-    static checkWhereValidFileRotatedScaled( {relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined,
+    static checkWhereValidFileRotatedScaled( {bestEffort=false, relFileDir=undefined, file=undefined, scale=undefined, rotate=undefined,
                                                  noCache=undefined, copyDirectory=undefined}, cb) {
         /*
             Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return its path if found.
@@ -285,12 +288,17 @@ class MirrorFS {
             scale:      scale wanted at
             rotate:     rotation wanted
             noCache:    Dont check cache for it
+            bestEffort: if set, then return the best file we have first looking for larger files, then smaller.
             cb(err, filepath) - Careful, its err,undefined if not found unlike checkWhereValidFile
          */
         const scales = [];
-        for(let i=Math.floor(scale); i>0; i--) { scales.push(i); }  // A = e.g. [ 8...1 ]
+        const idealScale = Math.floor(scale);
+        for(let i=idealScale; i>0; i--) { scales.push(i); }  // A = e.g. [ 8...1 ]
+        if (bestEffort) { //typically this is the test to do if fails
+            for(let i=idealScale+1; i<=32; i++) { scales.push(i); } // A = e.g. [ 9..32 ]
+        }
         detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
-            (rel, cb2) => this.checkWhereValidFile(rel, {noCache, copyDirectory}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger or same size as
+            (rel, cb2) => this.checkWhereValidFile(rel, {noCache, copyDirectory}, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger (i.e. smaller 'scale') or same size as
             cb
         )
     }
@@ -385,9 +393,15 @@ class MirrorFS {
         cb behavior needs explanation !
             If wantStream, then cb will call back as soon as a stream is ready from the net
             If !wantStream, then cb will only call back (with undefined) when the file has been written to disk and the file renamed.
-            In particular this means that wantStream will not see a callback if one of the errors occurs after the stream is opened.
+            In particular this means that wantStream=true will not see a callback if one of the errors occurs after the stream is opened.
+
+        Behavior on error if wantStream:
+            Handling errors on streams is hard as the stream can open, but then never pass data.
+            For this reason the stream is only returned via cb(null, stream) when data starts to be received,
+            otherwise an cb(err) allows consumer to take a fallback behavior
         */
         const cacheDirectory = copyDirectory || this.directories[0]; // Where the file should be put if creating it
+        let cbCalledOnFirstData = false;
         this.checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory},
           (err, existingFilePath) => {
             if (err) {  //Doesn't match
@@ -438,12 +452,51 @@ class MirrorFS {
             }
         }
         function _cleanupOnFail(filepathTemp, mess, cb) {
+            //TODO See https://nodejs.org/api/stream.html#stream_readable_pipe_destination_options re closing the writable on error
+          if (filepathTemp) {
             fs.unlink(filepathTemp, (err) => {
-                if (err) { debug("ERROR: Can't delete %s", filepathTemp); } // Shouldnt happen
-                if (!wantStream) cb(err || new Error(mess)); // Cant send err if wantStream as already done it
-            })
+              if (err) { debug("ERROR: Can't delete %s", filepathTemp); } // Shouldnt happen
+            });
+          }
+          if (!wantStream || !cbCalledOnFirstData) cb(new Error(mess)); // Cant send err if wantStream && cbCalledOnFirstData as already done it
+
         }
-        function _notcached() {
+      function _closeWriteToCache({hashstreamActual, writable, filepathTemp, newFilePath}, cb) {
+        // noinspection JSCheckFunctionSignatures
+        // The hashstream is upstream so should have flushed first.
+        const hexhash = hashstreamActual.toString('hex');
+        // noinspection EqualityComparisonWithCoercionJS
+        if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== "undefined") && (hexhash !== sha1))) { // Intentionally != as metadata is a string
+          // noinspection JSUnresolvedVariable
+          const message = `File ${debugname} size=${writable.bytesWritten} sha1=${hexhash} doesnt match expected ${expectsize} ${sha1}, deleting`;
+          debug("ERROR %s", message);
+          _cleanupOnFail(filepathTemp, message, cb);
+        } else {
+          fs.rename(filepathTemp, newFilePath, (err) => {
+            if (err) {
+              console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
+              if (!wantStream) cb(err); // If wantStream then already called cb
+            } else {
+              this._hashstore(cacheDirectory).put("sha1.relfilepath", multihash58sha1(hashstreamActual), relFilePath, (err) => {
+                debug(`Closed ${debugname} size=${writable.bytesWritten} %s`, err ? err.message : "");
+                this.seed({
+                  relFilePath,
+                  directory: cacheDirectory
+                }, (unusedErr, unusedRes) => {
+                }); // Seed to IPFS, WebTorrent etc
+                //Ignore err & res, its ok to fail to seed and will be logged inside seed()
+                // Also - its running background, we are not making caller wait for it to complete
+                // noinspection JSUnresolvedVariable
+                if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
+                  callbackEmptyOrData(newFilePath);
+                }
+              });
+            }
+          })
+        }
+      }
+
+      function _notcached() {
             /*
             Four possibilities - wantstream &&|| partialrange
             ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; unsupported, though could be in callbackEmptyOrData; !ws&!p caching
@@ -458,7 +511,9 @@ class MirrorFS {
                     debug("Not caching %s because specifying a range %s:%s and wantStream", debugname, start, end);
                     DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, cb); // Dont cache a byte range, just return it
                 } else {
-                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, (err, s) => { //Returns a promise, but not waiting for it
+                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, (err, s) => {
+                        //Returns a promise, but not waiting for it
+                        // For HTTP s is result of piping .body from fetch (a stream) to a through stream
                         if (err) {
                             debug("cacheAndOrStream had error reading", debugname, err.message);
                             cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream
@@ -468,62 +523,46 @@ class MirrorFS {
                             const newFilePath = path.join(cacheDirectory, relFilePath);
                             const relFilePathTemp = relFilePath + ".part";
                             const filepathTemp = path.join(cacheDirectory, relFilePathTemp);
-                            MirrorFS._fileopenwrite({ relFilePath: relFilePathTemp, cacheDirectory }, (err, fd) => { // Will make directory if reqd
+
+                              MirrorFS._fileopenwrite({ relFilePath: relFilePathTemp, cacheDirectory }, (err, fd) => { // Will make directory if reqd
                                 if (err) {
                                     debug("ERROR MirrorFS.cacheAndOrStream: Unable to write to %s: %s", filepathTemp, err.message);
                                     cb(err);
                                 } else {
                                     // fd is the file descriptor of the newly opened file;
-                                    // noinspection JSPotentiallyInvalidUsageOfClassThis
                                     const hashstream = this._hashstream();
                                     const writable = fs.createWriteStream(null, {fd: fd});
                                     // Note at this point file is neither finished, nor closed, its a stream open for writing.
-                                    //fs.close(fd); Should be auto closed when stream to it finishes
                                     writable.on('close', () => {
-                                        // noinspection JSCheckFunctionSignatures
-                                        const hexhash = hashstream.actual.toString('hex');
-                                        // noinspection EqualityComparisonWithCoercionJS
-                                        if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== "undefined") && (hexhash !== sha1))) { // Intentionally != as metadata is a string
-                                            // noinspection JSUnresolvedVariable
-                                            const message = `File ${debugname} size=${writable.bytesWritten} sha1=${hexhash} doesnt match expected ${expectsize} ${sha1}, deleting`;
-                                            debug("ERROR %s", message);
-                                            _cleanupOnFail(filepathTemp, message, cb);
-                                        } else {
-                                            fs.rename(filepathTemp, newFilePath, (err) => {
-                                                if (err) {
-                                                    console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
-                                                    if (!wantStream) cb(err); // If wantStream then already called cb
-                                                } else {
-                                                    this._hashstore(cacheDirectory).put("sha1.relfilepath", multihash58sha1(hashstream.actual), relFilePath, (err)=>{
-                                                        debug(`Closed ${debugname} size=${writable.bytesWritten} %s`,err ? err.message : "");
-                                                        this.seed({relFilePath, directory: cacheDirectory}, (unusedErr, unusedRes) => { }); // Seed to IPFS, WebTorrent etc
-                                                        //Ignore err & res, its ok to fail to seed and will be logged inside seed()
-                                                        // Also - its running background, we are not making caller wait for it to complete
-                                                        // noinspection JSUnresolvedVariable
-                                                        if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
-                                                            callbackEmptyOrData(newFilePath);
-                                                        }
-                                                    });
-                                                }
-                                            })
-                                        }
+                                      //fs.close(fd); Should be auto closed when stream to it finishes
+                                      _closeWriteToCache.call(this, {hashstreamActual: hashstream.actual, writable, newFilePath, filepathTemp}, cb)
                                     });
-                                    s.on('error', (err) => {
-                                        const message = `Failed to read ${urls} from net err=${err.message} wanStream=${wantStream}`;
-                                        debug("ERROR %s", message);
-                                        _cleanupOnFail(filepathTemp, message, cb);
-                                    })
                                     try {
-                                        s.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                                        if (wantStream) cb(null, s);
+                                        const s1 = new ReadableStreamClone(s);
+                                        const s2 = new ReadableStreamClone(s);
+                                        //TODO consider only opening hashstream and writable if the stream starts (i.e. 'readable')
+                                        s1.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                                        s1.once('error', (err) => {
+                                            // Dont report error - its already reported
+                                            s1.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
+                                        })
+                                        s2.once('error', (err) => {
+                                          const message = `Failed to read ${urls} from net err=${err.message} wantStream=${wantStream}`;
+                                          debug("ERROR %s", message);
+                                          _cleanupOnFail(filepathTemp, message, cb);
+                                          s2.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
+                                        })
+                                        s2.once('readable', () => {
+                                          // If !wantStream the callback happens when the file is completely read
+                                          // If !wantStream the callback happens when the file is completely read
+                                          if (wantStream && !cbCalledOnFirstData)  { cbCalledOnFirstData = true; debug('XXX'); cb(null, s2); }
+                                        })
                                     } catch(err) {
                                         console.error("ArchiveFilePatched.cacheAndOrStream failed ",err);
                                         if (wantStream) cb(err);
                                     }
                                 }
-                            });
-
-
+                              });
                         }
                     });
                 }

@@ -8605,6 +8605,11 @@ read-pkg@^1.0.0:
     normalize-package-data "^2.3.2"
     path-type "^1.0.0"
 
+readable-stream-clone@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/readable-stream-clone/-/readable-stream-clone-0.0.4.tgz#4c237f1f4f406bda1048b9576951cc02fcd2baad"
+  integrity sha1-TCN/H09Aa9oQSLlXaVHMAvzSuq0=
+
 "readable-stream@1 || 2", readable-stream@2.3.6, readable-stream@^2.0.0, readable-stream@^2.0.1, readable-stream@^2.0.2, readable-stream@^2.0.4, readable-stream@^2.0.6, readable-stream@^2.1.5, readable-stream@^2.2.2, readable-stream@^2.2.8, readable-stream@^2.3.0, readable-stream@^2.3.3, readable-stream@^2.3.5, readable-stream@^2.3.6, readable-stream@~2.3.6:
   version "2.3.6"
   resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-2.3.6.tgz#b11c27d88b8ff1fbe070643cf94b0c79ae1b0aaf"

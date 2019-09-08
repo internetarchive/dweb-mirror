@@ -57,6 +57,9 @@ ArchiveMember.prototype.read = function({copyDirectory}, cb) {
 ArchiveMember.prototype.save = function({copyDirectory=undefined} = {}, cb) {
     if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
     function f(cb) {
+      if (!(copyDirectory || MirrorFS.directories.length)) {
+          cb(new Error("Nowhere to save to"));
+      } else {
         const namepart = this.identifier; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
         const savedkeys = gateway.url_default_fl;
         // noinspection JSUnusedLocalSymbols
@@ -67,7 +70,9 @@ ArchiveMember.prototype.save = function({copyDirectory=undefined} = {}, cb) {
                 debug("Unable to write metadata to %s: %s", relFilePath, err.message); cb(err);
             } else {
                 cb(null, this);
-            }}); }};
+            }}); } }
+};
+
 
 ArchiveMember.prototype.saveThumbnail = function({skipFetchFile=false, noCache=false, wantStream=false, copyDirectory=undefined } = {}, cb) {  //TODO-API
     /*

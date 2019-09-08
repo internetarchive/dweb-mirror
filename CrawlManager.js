@@ -297,43 +297,40 @@ class CrawlPage extends Crawlable {
             requires: parent + archiveitem + identifier + (page || scale+rotate+zip+file)
             identifier  Identifier of item
             archiveitem ArchiveItem
-            page    string - usually "cover_t.jp2"
-            scale   int usually 2 (larger = smaller image)
-            rotate  int usually 0
-            zip     name of directory
-            file    file inside zip
+            pageParms { As passed to fetch_page
+              page    string - usually "cover_t.jp2"
+              scale   int usually 2 (larger = smaller image)
+              rotate  int usually 0
+              zip     name of directory
+              file    file inside zip
+              reqUrl
+            }
             parent  [str*] see Crawlable
          */
         // noinspection JSUnusedLocalSymbols
-        const {file=undefined, relfilepath=undefined, identifier=undefined, zip=undefined, page=undefined, reqUrl=undefined, archiveitem=undefined} = opts;
-        const name = (page ? [identifier, page]  : [ identifier + zip, file]).join('/');
+        const {relfilepath=undefined, identifier=undefined, archiveitem=undefined, pageParms} = opts;
+        const name = (pageParms.page ? [identifier, pageParms.page]  : [ identifier + pageParms.zip, pageParms.file]).join('/');
         super(name, parent);
         Object.assign(this, opts);  // Handle opts in process as may be async
     }
     process(crawlmanager, cb) {
         console.assert(this.archiveitem, "Crawl of page needs archiveitem");
         if (this.isUniq(crawlmanager)) {
-            // if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
-            debug('Processing "%s" %s x1/%s rotate=%s via %o', this.identifier, this.page || (this.zip + "/" + this.file), this.scale, this.rotate, this.parent); // Parent includes identifier
-            const skipFetchFile = crawlmanager.skipFetchFile
-            this.archiveitem.fetch_page({
-                copyDirectory: crawlmanager.copyDirectory,
-                wantStream: false,
-                noCache: false,
-                reqUrl: this.reqUrl,
-                zip: this.zip,
-                file: this.file,
-                scale: this.scale,
-                rotate: this.rotate,
-                page: this.page,
-                skipFetchFile,
-            }, cb);
+          // if (!(crawlmanager.maxFileSize && (parseInt(this.file.metadata.size) > crawlmanager.maxFileSize))) {
+          debug('Processing "%s" %s x1/%s rotate=%s via %o', this.identifier,
+            this.pageParms.page || (this.pageParms.zip + "/" + this.pageParms.file), this.pageParms.scale, this.pageParms.rotate, this.parent); // Parent includes identifier
+          this.archiveitem.fetch_page(Object.assign(this.pageParms, {
+            copyDirectory: crawlmanager.copyDirectory,
+            wantStream: false,
+            noCache: false,
+            skipFetchFile: crawlmanager.skipFetchFile,
+          }), cb);
         } else {
-            cb();
+          cb();
         }
     }
     isUniq(crawlmanager) {
-        const key = [this.identifier,this.page || this.zip, this.file].join('/');
+        const key = [this.identifier,this.pageParms.page || this.pageParms.zip, this.pageParms.file].join('/');
         const prevTasks = crawlmanager._uniqFiles[key];
         if (prevTasks) { return false; }
         else {
@@ -424,6 +421,32 @@ class CrawlItem extends Crawlable {
         }
     }
 
+    /**
+     * Crawl all the pages of a book
+     * @param crawlmanager  CrawlManager
+     * @param cb            cb(err)     synchronous, so currently called immediately
+     */
+    _crawlPages(crawlmanager, cb) {
+        const asParent = this.asParent();
+        if (['details', 'all'].includes(this.level)) { // Details
+            crawlmanager._push(new CrawlPage({
+                identifier: this.item.itemid,
+                archiveitem: this.item,
+                pageParms: {
+                  page: "cover_t.jpg",
+                  reqUrl: `/arc/archive.org/download/${this.identifier}/page/cover_t.jpg`
+                }
+            }, asParent));
+            this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(pageManifest => {
+                crawlmanager._push(new CrawlPage( {
+                  pageParms: this.item.pageParms(pageManifest, { skipNet: false }),
+                  identifier: this.item.itemid,
+                  archiveitem: this.item}, asParent));
+            }));
+        }
+        cb();
+    }
+
     process(crawlmanager, cb) {
         debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level,  this.parent,  this.search || "");
         this.item = new ArchiveItem({identifier: this.identifier, query: this.query});
@@ -469,33 +492,7 @@ class CrawlItem extends Crawlable {
                 },
                 (cb4a) => { // If its a mediatype=bookreader subtype=bookreader get the pages
                     if (this.item && this.item.metadata && (this.item.metadata.mediatype === "texts") && (this.item.subtype() === "bookreader")) {
-                        const asParent = this.asParent();
-                        if (['details', 'all'].includes(this.level)) { // Details
-                            crawlmanager._push(new CrawlPage({
-                                identifier: this.item.itemid,
-                                archiveitem: this.item,
-                                page: "cover_t.jpg",
-                                reqUrl: `/arc/archive.org/download/${this.identifier}/page/cover_t.jpg`,
-                                }, asParent));
-                            this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(d => {
-                                // See ALMOST-SAME-CODE-BOOKMETA
-                                const url = new URL(d.uri);
-                                // noinspection JSCheckFunctionSignatures
-                                url.searchParams.append("scale",2);
-                                // noinspection JSCheckFunctionSignatures
-                                url.searchParams.append("rotate",0);
-                                crawlmanager._push(new CrawlPage({
-                                    identifier: this.item.itemid,
-                                    archiveitem: this.item,
-                                    file: url.searchParams.get("file"),
-                                    reqUrl: url.pathname + url.search,
-                                    zip: url.searchParams.get("zip"),
-                                    scale: 2,
-                                    rotate: 0,
-                                }, asParent));
-                            }));
-                        }
-                        cb4a();
+                        this._crawlPages(crawlmanager, cb4a);
                     } else {
                         cb4a();
                     }
