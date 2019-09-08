@@ -222,11 +222,18 @@ function connect(cb) {
     const connectOpts = config.connect;
     //wrtc is not available on some platforms (esp 32 bit such as Rachel3+) so only include if requested (by webtorrent.tracker = 'wrtc' and available.
 
-    //TODO-SPLIT do conditional requires here
-    if (connectOpts.transports.includes('IPFS')) {
-        // No longer packaged in dweb-transports, include specifically only if going to use it
-        require('ipfs'); // Sets global Ipfs
-    }
+    // SEE-OTHER-ADDTRANSPORT in dweb-transports dweb-archive dweb-mirror
+    // TODO-SPLIT these will need to move into local server or may be excluded by cross-origin low-bandwidth rule in chrome
+    // TODO-SPLIT move this code section back to dweb-transports as an exposed function on DwebTransports
+    // These are no longer packaged in dweb-transports, include specifically only if going to use it
+    const transportsScripts = {
+        'IPFS': ['ipfs'], // 2.3Mb Sets global Ipfs
+        'GUN': ['gun/gun.js', 'gun/lib/path.js', 'gun/nts', 'gun/lib/wire', 'gun/lib/multicast', 'gun/lib/radix.js',
+            'gun/lib/radisk.js', 'gun/lib/store.js', 'gun/lib/rindexed.js'], // 40kb
+    };
+    connectOpts.transports.forEach( t => (transportsScripts[t] || [])).forEach(s => {
+        debug("Loading transport %s via %s", t, s);
+        require(s); } );
 
     if (connectOpts.transports.includes('WEBTORRENT') && connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
         try {
