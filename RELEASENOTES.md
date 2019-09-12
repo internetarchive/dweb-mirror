@@ -6,6 +6,8 @@
 
 ## Release 0.2.0
 
+* 0.2.50: Explicitly require transports only if in config; Bookreader resolution optimisation; 
+* 0.2.50: Remove dweb-objects dependency, 
 * 0.2.49: dev installer - add webpack; MirrorFS change prefered directory; simplify rachel instructions
 * 0.2.48: config.directories fix; hashstores bug; Rachel install; error return from related
 * 0.2.47: install_armbian.sh
