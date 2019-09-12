@@ -226,14 +226,20 @@ function connect(cb) {
     // TODO-SPLIT these will need to move into local server or may be excluded by cross-origin low-bandwidth rule in chrome
     // TODO-SPLIT move this code section back to dweb-transports as an exposed function on DwebTransports
     // These are no longer packaged in dweb-transports, include specifically only if going to use it
+    // And make sure to do add via yarn during installation
     const transportsScripts = {
-        'IPFS': ['ipfs'], // 2.3Mb Sets global Ipfs
+        //Install with 'yarn add ipfs'; adds 2.3Mb Sets: global.Ipfs
+        'IPFS': ['ipfs'],
+        //Install with 'yarn add gun'; adds 40kb Sets; global.Gun
         'GUN': ['gun/gun.js', 'gun/lib/path.js', 'gun/nts', 'gun/lib/wire', 'gun/lib/multicast', 'gun/lib/radix.js',
-            'gun/lib/radisk.js', 'gun/lib/store.js', 'gun/lib/rindexed.js'], // 40kb
+            'gun/lib/radisk.js', 'gun/lib/store.js', 'gun/lib/rindexed.js'],
+        //Install with 'yarn add webtorrent'; adds 271kb Sets: global.WebTorrent
+        'WEBTORRENT': 'webtorrent'
     };
-    connectOpts.transports.forEach( t => (transportsScripts[t] || [])).forEach(s => {
+    connectOpts.transports.forEach( t =>
+      (transportsScripts[t] || []).forEach(s => {
         debug("Loading transport %s via %s", t, s);
-        require(s); } );
+        require(s); } ));
 
     if (connectOpts.transports.includes('WEBTORRENT') && connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
         try {

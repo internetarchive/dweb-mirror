@@ -32,9 +32,9 @@ There is also an INSTALLATION-osx-dev.md for developers (a useful task would be 
 to make any edits to it if required)
 
 ## Using it - starting the server.
-See the Installation docs but on most platforms general the server should start at reboot. 
+See the Installation docs but on most platforms the server should start at reboot. 
 
-If not then if you've got it installed in your home directory then assuming its in the default location ...
+If not, then assuming you've got it installed in your home directory ...
 
 ```
 cd ~/node_modules/dweb-mirror && ./internetarchive --server &
@@ -97,7 +97,7 @@ through three levels:
 
 The server checks for caches of content in directories called `archiveorg` in
 all the likely places, in particular it looks for any inserted USB drives
-on most systems, and if none are found, it uses `/library/archiveorg`.
+on most systems, and if none are found, it uses `~/archiveorg`.
 
 The list of places it checks, in an unmodified installation can be seen at 
 `https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml#L7`.
@@ -114,8 +114,8 @@ subdirectories, or to move them to an attached USB.  Its also safe to move
 attached USB's from one device to another.
 
 The one directory you should not move or delete is `archiveorg/.hashstore` in
-any of these locations, the server will refetch anything else it needs if you
-browse to the item again when connected to the internet. 
+any of these locations, the server will refetch anything else it needs next time you
+browse to the item while connected to the internet. 
 
 ### Maintenance
 
@@ -153,8 +153,6 @@ understand how yaml works before editing this file, if you break it, you can
 copy a new default from
 [dweb-mirror.config.yaml on the repo](https://github.com/internetarchive/dweb-mirror/blob/master/dweb-mirror.config.yaml)
 
-TODO Note this file will probably move location. 
-
 Note that this file is also edited automatically when the Crawl button
 described above is clicked. 
 
@@ -189,7 +187,7 @@ sudo sh
 # cd into location for your installation - which varies between platforms
 cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror || cd /usr/local/node_modules/@internetarchive/dweb-mirror || cd ~/node_modules/@internetarchive/dweb-mirror
 
-# To get a full list of possible arguments
+# To get a full list of possible arguments and some more examples
 ./internetarchive --help
 
 # Perform a standard crawl
