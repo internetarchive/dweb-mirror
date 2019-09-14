@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.51: Move Requires back into DwebTransports
 * 0.2.50: Explicitly require transports only if in config; Bookreader resolution optimisation; 
 * 0.2.50: Remove dweb-objects dependency, 
 * 0.2.49: dev installer - add webpack; MirrorFS change prefered directory; simplify rachel instructions

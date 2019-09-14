@@ -11,7 +11,7 @@
   "dependencies": {
     "@internetarchive/dweb-archive": "^0.1.96",
     "@internetarchive/dweb-archivecontroller": "^0.1.78",
-    "@internetarchive/dweb-transports": "^0.2.0",
+    "@internetarchive/dweb-transports": "^0.2.2",
     "@stratumn/canonicaljson": "^1.0.3",
     "async": "^2.6.2",
     "child_process": "^1.0.2",
@@ -49,5 +49,5 @@
     "install": "./install.sh",
     "update": "./install.sh"
   },
-  "version": "0.2.50"
+  "version": "0.2.51"
 }
