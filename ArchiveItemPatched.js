@@ -323,6 +323,13 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
             if (page) { // This is the cover , its not scaled or rotated
                 MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory }, cbw);
             } else { // Looking for page by number with scale and rotation
+               //Strategy is complex:
+               // First check for a file of the scale or larger -> reFilePath2
+               // Try Streaming - either from relFilePath2 or urls
+               // If that fails see if we have a file again but this time with 'bestEffort' which will accept smaller files -> relFilePath3
+               // If we find it succeeds stream it from relFilePath3
+               // Else we don't have any versions of this page, and failed to stream, so its an error
+
                 MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, copyDirectory, // Find which valid scale/rotate we have,
                     relFileDir: `${this.itemid}/_pages/${zipfile}`},
                     (err, relFilePath2) => { // undefined if not found
@@ -333,8 +340,8 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
                               MirrorFS.checkWhereValidFileRotatedScaled({file, scale, rotate, noCache, copyDirectory, // Find which valid scale/rotate we have,
                                 relFileDir: `${this.itemid}/_pages/${zipfile}`,
                                 bestEffort: true},
-                              (err1, relFilePath3) => { // undefined if not found
-                                if (err1) {
+                              (err1, relFilePath3) => { // undefined if cant find any versions of this page (including smaller)
+                                if (err1 || !relFilePath3) {
                                   cbw(err); // Return error from cacheAndOrStream
                                 } else {
                                   MirrorFS.cacheAndOrStream({urls, wantStream, wantSize, debugname, noCache, skipNet: true, skipFetchFile, copyDirectory, relFilePath: relFilePath3}, cbw);

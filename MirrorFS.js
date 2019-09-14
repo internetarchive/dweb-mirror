@@ -322,12 +322,14 @@ class MirrorFS {
               waterfall([
                 (cb3) => { // if no relFilePath check the hashstore
                     if (relFilePath) {
-                            cb3(null);
-                    } else {
-                        this._hashstore(cacheDirectory).get(algorithm + ".relfilepath", digest, (err,res) => {
-                            relFilePath = res; // poss undefined - saving over relFilePath parameter which is undefined
-                            cb3(err || !relFilePath); // Shouldnt be error but fail this waterfall if didn't find hash in this cache.
-                        });
+                      cb3(null);
+                    } else if (!digest) {
+                      cb3(true);
+                    } else { // Didn't find the file, but have a digest so can look for it cache
+                      this._hashstore(cacheDirectory).get(algorithm + ".relfilepath", digest, (err,res) => {
+                          relFilePath = res; // poss undefined - saving over relFilePath parameter which is undefined
+                          cb3(err || !relFilePath); // Shouldnt be error but fail this waterfall if didn't find hash in this cache.
+                      });
                     }
                 },
                 (cb4) => { // Check file readable
@@ -358,8 +360,8 @@ class MirrorFS {
                 }
               ], (err, unused) => cb2(null, !err)) // Did the detect find one
             }, (err, res) => {
-                // Three possibilities - err (something failed) res (found) !err && !res (not found)
-                if (err)
+                // Three possibilities - err (something failed) res (found) !err && !res (not found), but return error on fail anyway
+                if (err && (err instanceof Error))
                     cb(err);
                 else if (!res)
                     cb (new Error(`${relFilePath} not found in caches`));

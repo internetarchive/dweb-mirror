@@ -78,6 +78,10 @@ class HashStore {
         function f(cb2) {
             // This is similar to level.get except not finding the value is not an error, it returns undefined.
             // noinspection JSPotentiallyInvalidUsageOfClassThis
+            if (!table || !key) {
+                debug("Error: <hashstore>.get requires table (%o) and key (%o)", table, key);
+                cb(new Error("<hashstore>.get requires table and key"));
+            }
             return waterfall([
                 cb => this._db(table, cb),
                 (db, cb) => db.get(key, cb)
