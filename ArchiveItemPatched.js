@@ -653,7 +653,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
     const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    if (identifier) {
+    if (identifier && this.hasPlaylist()) {
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_playlist.json");
         // noinspection JSUnresolvedVariable
@@ -804,7 +804,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
   // Note ArchiveItem might not yet have bookreader field loaded when this is called.
   // cb(err)
   this.fetch_metadata({skipNet: true, copyDirectory}, (err, ai) => {
-    if (err || !ai || (ai.metadata.mediatype !== "texts") || (this.subtype() !== "bookreader")) {
+    if (err || !ai || !ai.metadata || (ai.metadata.mediatype !== "texts") || (this.subtype() !== "bookreader")) {
       cb(null); // Not a book - dont consider when checking if downloaded
     } else {
       this.fetch_bookreader({copyDirectory, skipNet: true}, (err, ai) => {
@@ -885,8 +885,8 @@ ArchiveItem.prototype.summarizeFiles = function(cb) {
   this.downloaded.files_all_count = this.files.length;
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;
-  // files_details is false for is_dark; searches have no files so true; otherwise looks at minimumForUI
-  this.downloaded.files_details = (!this.is_dark) && (!this.files.length || this.minimumForUI().every(af => af.downloaded));
+  // files_details is false for is_dark; searches have no files so true; cant download tv so false; otherwise looks at minimumForUI
+  this.downloaded.files_details = (["tv"].includes(this.subtype()) && (!this.is_dark) && (!this.files.length || this.minimumForUI().every(af => af.downloaded)));
   cb(null);
 }
 
