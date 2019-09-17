@@ -461,18 +461,18 @@ Set the configuration in the ConfigManager, and write to user file
 
 Write user configuration to file
 
-##### deleteUserTask(identifier, level, cb)
+##### deleteUserTask({identifier, query}, cb)
 Remove task for identifier (handles multi-identifier tasks correctly)
 
-##### writeUserTaskLevel(identifier, level, cb)
+##### writeUserTaskLevel({identifier, level, query}, cb)
 
 Update, or create a new task for an identifier (handles multi-identifier tasks correctly)
 
-##### findTask(identifier)
+##### findTask({identifier, query})
 
 Find and return task form config
 
-##### crawlInfo(identifier, mediatype=undefined);
+##### crawlInfo({identifier, query, mediatype});
  
 Check if member being crawled and return info suitable for adding into ArchiveMember and usable by the UI
 

@@ -173,7 +173,7 @@ function optsToConfig() {
         // noinspection ES6ConvertVarToLetConst
         global.debugidentifier = opts.debugidentifier }
     if (opts.verbose || opts.dummy) {
-        debug( "Config:"); debug(yaml.safeDump(ObjectFilter(config, (key, unusedValue) => key !== "configOpts")));
+        debug( "Config:"); debug(yaml.dump(ObjectFilter(config, (key, unusedValue) => key !== "configOpts")));
     }
     if (opts.mdns) { config.setOpts({mdns: opts.mdns})}
     if (opts.nomdns) { config.setOpts({mdns: undefined})}

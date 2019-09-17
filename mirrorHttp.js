@@ -266,6 +266,7 @@ function mirrorHttp(config, cb) {
                         // is an array of pointers into same objects so its getting updated as well
                         o.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr, unusedmembers) => {
                           resp.response.downloaded = o.downloaded;
+                          resp.response.crawl = o.crawl;
                           res.json(resp);
                         });
                     }
@@ -393,10 +394,11 @@ function mirrorHttp(config, cb) {
         });
     });
     app.get('/admin/setconfig/:identifier/:level', function (req, res, next) {
-        const identifier = req.params["identifier"];
+        const identifier = req.params["identifier"] === "_" ? undefined : req.params["identifier"];
         const delayTillReconsider = 3000; // ms time to wait for another key press before running crawl
         const crawlid = 0; // Always setting on default crawl which will be '0'
-        config.writeUserTaskLevel( identifier,  req.params["level"], err => {
+        // req.query.q is either "string to find" or structured like "collection:foo AND name:bar" it is NOT urlencoded by here
+        config.writeUserTaskLevel({identifier, query: req.query.q, level: req.params["level"]}, err => {
             if (err) {
                 next(err);
             } else {

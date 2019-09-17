@@ -80,9 +80,9 @@ class MirrorConfig extends ConfigController {
         this.writeUserFile(MirrorConfig.userConfigFile, cb);
     }
 
-    deleteUserTask(identifier) {
+    deleteUserTask({identifier, query}) {
         //Remove task for identifier (handles multi-identifier tasks correctly)
-        let task = this.findTask(identifier);
+        let task = this.findTask({identifier});
         if (task) {
             if (Array.isArray(task.identifier) && (task.identifier.length > 1)) {
                 task.identifier.splice(task.identifier.indexOf(identifier), 1); // Old task - remove identifier
@@ -91,43 +91,51 @@ class MirrorConfig extends ConfigController {
             }
         }
     }
-    writeUserTaskLevel(identifier, level, cb) {
+    writeUserTaskLevel({identifier, level, query}, cb) {
         //Update, or create a new task for an identifier (handles multi-identifier tasks correctly)
         if (level === "none") {
-            this.deleteUserTask(identifier);
+            this.deleteUserTask({identifier, query});
         } else {
-            let task = this.findTask(identifier);
+            let task = this.findTask({identifier, query});
             if (!task) {
                 ObjectDeeperAssign(this, {apps: {crawl: {}}});
                 if (!this.apps.crawl.tasks) {
                     this.apps.crawl.tasks = []
                 }
-                task = {identifier};
+                task = Object.assign({}, identifier ? {identifier} : null, query ? {query} : null)
                 this.apps.crawl.tasks.push(task);
             } else if (Array.isArray(task.identifier) && (task.identifier.length > 1)) {
                 task.identifier.splice(task.identifier.indexOf(identifier), 1); // Old task - remove identifier
                 task = Object.assign({}, task, {identifier}); // New task for just this identifier
                 this.apps.crawl.tasks.push(task);
             }
-            // By this point this.apps.crawl.tasks[] should have a task {identifier}, possibly with old state i.e. findTask(identifier) would now succeed
+            // By this point this.apps.crawl.tasks[] should have a task {identifier}, possibly with old state i.e. findTask({identifier}) would now succeed
             task.level = level;     // Only change level of that task
         }
         this.writeUser(cb)  // And write back current state
     }
-    findTask(identifier) {
+    findTask({identifier, query}) {
         //Find and return task form config
-        return this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
+        return this.apps.crawl.tasks.find(t => (identifier && t.identifier && t.identifier.includes(identifier)) || (query && t.query === query));
     }
-    crawlInfo(identifier, mediatype=undefined) {
+
+    /**
+     * Find any task and return crawlInfo (which is the task)
+     * @param identifier
+     * @param query
+     * @param mediatype
+     * @returns {identifier, query, search, related } // A task object as in the config.apps.crawl.tasks
+     */
+    crawlInfo({identifier=undefined, query=undefined, mediatype=undefined}) {
         /*
            Check if member being crawled and return info suitable for adding into ArchiveMember and usable by the UI
          */
-        let task = this.apps.crawl.tasks.find(t => t.identifier.includes(identifier));
+        let task = this.findTask({identifier, query});
         if (!task) {
             task = {}
         } else {
                 const isDetailsOrMore = CrawlManager._levels.indexOf(task.level) >= CrawlManager._levels.indexOf("details");
-                const isSearch = mediatype === "collection"; //TODO-UXLOCAL need to catch searches (which dont use regular identifiers)
+                const isSearch = query || (mediatype === "collection") ; //TODO-UXLOCAL need to catch searches (which dont use regular identifiers)
                 task.search = task.search || (isDetailsOrMore && isSearch && this.apps.crawl.opts.defaultDetailsSearch);
         }
         return task;

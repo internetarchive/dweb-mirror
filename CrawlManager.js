@@ -98,9 +98,9 @@ class CrawlManager {
         } else if (Array.isArray(task.identifier)) {
             task.identifier.forEach(identifier => this.pushTask(Object.assign({}, task, {identifier})));
         } else {
-            if (task.identifier.includes('/') && task.identifier !== "/") {
+            if (task.identifier && task.identifier.includes('/') && task.identifier !== "/") { // want a file rather than an identifier
                 this._push(new CrawlFile({relfilepath: task.identifier}, []));
-            } else {
+            } else { // Could be item (specified by identifier) or a search (specified by a query)
                 this._push(new CrawlItem(Object.assign({}, task, {crawlmanager: this}), []));
             }
         }
@@ -271,9 +271,9 @@ class CrawlFile extends Crawlable {
                         end: undefined,
                     }, cb);
                 } else {
-                    crawlmanager.errors.push({task: this, error: new Error(`Skipping ${this.file.metadata.name} via ${this.parent.join('/')} size ${prettierBytes(parseInt(this.file.metadata.size))} > ${prettierBytes(crawlmanager.maxFileSize)}`), date: (new Date(Date.now()).toISOString())});
-                    debug('Skipping "%s" File via %o, size %s > %s', this.file.metadata.name, this.parent, prettierBytes(parseInt(this.file.metadata.size)), prettierBytes(crawlmanager.maxFileSize));
-                    cb();
+                    const msg = `Skipping ${this.file.metadata.name} via ${this.parent.join('/')} size ${prettierBytes(parseInt(this.file.metadata.size))} > ${prettierBytes(crawlmanager.maxFileSize)}`;
+                    debug(msg);
+                    cb(new Error(msg));
                 }
             } else {
                 cb();
@@ -364,7 +364,7 @@ class CrawlItem extends Crawlable {
 
     static fromSearchMember(member, taskparms, parent, crawlmanager) {
         // create a new CrawlItem and add to taskQ
-        // Handles weird saved-searches in fav-xxx
+        // Handles weird saved-searches in fav-xxx {mediatype: search, identifier: query}
         return new CrawlItem({
             member, crawlmanager,
             identifier: member.mediatype === "search" ? undefined : member.identifier,
@@ -483,10 +483,12 @@ class CrawlItem extends Crawlable {
                 (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     // Find the minimum set of files and push to queue
                     const asParent = this.asParent();
-                    if (this.level === "details") { // Details
-                        (this.item.minimumForUI() || []).forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
-                    } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
-                        if (this.item.files) this.item.files.forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
+                    if (this.identifier) { // (but only on items, not on searches)
+                        if (this.level === "details") { // Details
+                            (this.item.minimumForUI() || []).forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
+                        } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
+                            if (this.item.files) this.item.files.forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
+                        }
                     }
                     cb4(null);
                 },
@@ -499,7 +501,7 @@ class CrawlItem extends Crawlable {
                 },
                 (cb5) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
                     // Get the related items
-                    if (["details", "all"].includes(this.level) || this.related) {
+                    if (this.identifier && (["details", "all"].includes(this.level) || this.related)) {
                         const taskparms = this.related || crawlmanager.defaultDetailsRelated;
                         this.item.relatedItems({copyDirectory, wantStream: false, wantMembers: true}, (err, searchmembers) => {
                             if (err) {
@@ -524,20 +526,28 @@ class CrawlItem extends Crawlable {
                         if (typeof ai.page === "undefined") ai.page = 1;
                         const search = Array.isArray(this.search) ? this.search : [this.search];
                         ai.rows = search.reduce((acc, queryPage) => acc + queryPage.rows, 0); // Single query all rows
-                        ai.sort = search[0].sort;
+                        ai.sort = Array.isArray(search[0].sort) ? search[0].sort : [ search[0].sort ];
                         ai.fetch_query({noCache, copyDirectory}, (err, searchMembers) => { // Needs to update start, but note opts can override start
-                            let start = 0;
-                            search.forEach(queryPage => {
-                                if (queryPage.sort && (queryPage.sort !== this.item.sort)) {
-                                    this.errors.push({task: task, error: new Error(`ERROR in configuration - Sorry, can't (yet) mix sort types in ${this.debugname} ignoring {queryPage.sort}`), date: (new Date(Date.now()).toISOString())});
-                                    debug("ERROR in configuration - Sorry, can't (yet) mix sort types in %s ignoring %s", this.debugname, queryPage.sort)
-                                }
-                                searchMembers.slice(start, start + queryPage.rows).forEach(sm =>
-                                  crawlmanager._push(
-                                        CrawlItem.fromSearchMember(sm, queryPage, this.asParent(), crawlmanager) ));
-                                start = start + queryPage.rows;
-                            });
-                            cb6();
+                            if (err) { cb6(err); } else {
+                                let start = 0;
+                                search.forEach(queryPage => {
+                                    if (queryPage.sort && (queryPage.sort !== this.item.sort[0])) {
+                                        // Note pushing error cos can only call cb6 once
+                                        const msg = `ERROR in configuration - Sorry, can't (yet) mix sort types in ${this.debugname} ignoring {queryPage.sort}`;
+                                        this.errors.push({
+                                            task: task,
+                                            error: new Error(msg),
+                                            date: (new Date(Date.now()).toISOString())
+                                        });
+                                        debug(msg);
+                                    }
+                                    searchMembers.slice(start, start + queryPage.rows).forEach(sm =>
+                                      crawlmanager._push(
+                                        CrawlItem.fromSearchMember(sm, queryPage, this.asParent(), crawlmanager)));
+                                    start = start + queryPage.rows;
+                                });
+                                cb6();
+                            }
                         });
                     } else {
                         cb6();

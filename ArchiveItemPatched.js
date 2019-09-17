@@ -35,7 +35,11 @@ const MirrorFS = require('./MirrorFS');
 ArchiveItem.prototype._namepart = function() {
     // The name used for the directory and file prefixes, normally the item identifier, but some special cases
     if (!this.itemid && this.query) {
-        return "_SEARCH_"+MirrorFS.quickhash(this.query, {algorithm: 'sha1', format:'multihash58'})
+      // Goal here is a string that: gives an indication of what it is; is filesystem safe; doesnt map similar but different queries to same string
+      // Npm's sanitize-filename does a reasonable job BUT it maps all unsafe chars to same result,
+      // encodeURLcomponent probably does a reasonable job, except for *
+      return encodeURIComponent(`_SEARCH_${this.query}_${this.sort.join('_')}`).replace(/\*/g,'%2A')
+      //OBS return "_SEARCH_"+MirrorFS.quickhash(this.query, {algorithm: 'sha1', format:'multihash58'})
     } else if (this.itemid) {
         return this.itemid;
     } else {
@@ -722,7 +726,7 @@ ArchiveItem.addCrawlInfoRelated = function(rels, {copyDirectory, config=undefine
   parallel([
     cb2 => each(hits,
       (hit, cb3) => {
-        Object.assign(hit._source, {crawl: config.crawlInfo(hit._id)});
+        Object.assign(hit._source, {crawl: config.crawlInfo({identifier: hit._id})});
         cb3(null)
       },
       cb2),
@@ -944,7 +948,7 @@ ArchiveItem.prototype.addCrawlInfoMembers = function({config, copyDirectory=unde
 ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}={}, cb) {
   // In place add
   // Note that .itemid &| .metadata may be undefined
-  Object.assign(this, {crawl: config.crawlInfo(this.itemid, this.metadata && this.metadata.mediatype)});
+  Object.assign(this, {crawl: config.crawlInfo({identifier: this.itemid, query: this.query, mediatype: this.metadata && this.metadata.mediatype})});
   if  ((typeof this.downloaded !== "object") || (this.downloaded === null)) { // Could be undefined, or legacy boolean
     this.downloaded = {};
   }

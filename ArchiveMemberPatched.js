@@ -41,7 +41,7 @@ ArchiveMember.read = function({ identifier=undefined, copyDirectory=undefined },
     });
 };
 ArchiveMember.prototype.addCrawlInfo = function({config}, cb) {
-    Object.assign(this, {crawl: config.crawlInfo(this.identifier)});
+    Object.assign(this, {crawl: config.crawlInfo({identifier: this.identifier})});
     cb(null);
 };
 ArchiveMember.addCrawlInfo = function(arr, {config=undefined, copyDirectory=undefined}={}, cb) { // Should work on an [ArchiveMember*]
