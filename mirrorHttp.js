@@ -37,7 +37,7 @@ const waterfall = require('async/waterfall');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 
 // IA packages
-const {gateway, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
+const {gateway, specialidentifiers, homeQuery} = require('@internetarchive/dweb-archivecontroller/Util');
 //auto test for presence of wrtc, its not available on rachel
 let wrtc;
 try {
@@ -226,25 +226,32 @@ function mirrorHttp(config, cb) {
 
     function streamQuery(req, res, next) {
         // req.opts = { noCache}
+        let wantCrawlInfo;
         let o;
         // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
         if (req.query.q && req.query.q.startsWith("collection:") && req.query.q.includes('simplelists__items:')) { // Only interested in standardised q=collection:ITEMID..
-            //TODO when Aaron has built entry point e.g. members/COLLECTION then rebuild this and dweb-archivecontroller.ArchiveItem._fetch_query to use it
-            // Special case: query just looking for members of a collection
-            //e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
-            const identifier = req.query.q.split(' OR ')[0].split(':')[1];
-            o = new ArchiveItem({sort: req.query.sort, identifier}); // Dont set query, allow _fetch_query to build default
+          //TODO when Aaron has built entry point e.g. members/COLLECTION then rebuild this and dweb-archivecontroller.ArchiveItem._fetch_query to use it
+          // Special case: query just looking for members of a collection
+          //e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
+          const identifier = req.query.q.split(' OR ')[0].split(':')[1];
+          o = new ArchiveItem({sort: req.query.sort, identifier}); // Dont set query, allow _fetch_query to build default
+          wantCrawlInfo = true;
         // Another special case - a query just looking to expand identifiers
         } else if (req.query.q && req.query.q.startsWith("identifier:")
-            && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
-            && (req.query.q.lastIndexOf(':(') === 10)) {
-            // Special case: query just looking for fields on a list of identifiers
-            const ids = req.query.q.slice(12,-1).split(' OR '); // ["foo","bar"]
-            o = new ArchiveItem();
-            o.membersFav = ids.map(identifier => ArchiveMember.fromIdentifier(identifier));
-            // The members will be expanded by fetch_query either from local cache or by querying upstream
+          && !req.query.q.includes('*')                               // exclude eg identifier:electricsheep-flock*
+          && (req.query.q.lastIndexOf(':(') === 10)) {
+          // Special case: query just looking for fields on a list of identifiers
+          const ids = req.query.q.slice(12, -1).split(' OR '); // ["foo","bar"]
+          o = new ArchiveItem();
+          o.membersFav = ids.map(identifier => ArchiveMember.fromIdentifier(identifier));
+          // The members will be expanded by fetch_query either from local cache or by querying upstream
+          wantCrawlInfo = false;
+        } else if (req.query.q === homeQuery) {
+          o = new ArchiveItem({identifier: "home", sort: req.query.sort, query: req.query.q })
+          wantCrawlInfo = true;
         } else {
-            o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
+          o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
+          wantCrawlInfo = true;
         }
         // By this point via any route above, we have o as an object with either a .query or .membersFav || .membersSearch
         // as array of unexpanded members (which fetch_query|_fetch_query will get)
@@ -264,11 +271,15 @@ function mirrorHttp(config, cb) {
                     } else {
                         // Note we are adding crawlinfo to o - the ArchiveItem, but the resp.response.docs
                         // is an array of pointers into same objects so its getting updated as well
+                      if (!wantCrawlInfo) {
+                        res.json(resp);
+                      } else {
                         o.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr, unusedmembers) => {
                           resp.response.downloaded = o.downloaded;
                           resp.response.crawl = o.crawl;
                           res.json(resp);
                         });
+                      }
                     }
                 });
             }

@@ -206,7 +206,7 @@ class MirrorFS {
         (filepath, cb3) => fs.writeFile(filepath, data, cb3)
       ], err => {
           if (err) {
-            debug("ERROR: MirrorFS.writeFile failed to write %s: %s", filepath, err.message);
+            debug("ERROR: MirrorFS.writeFile failed to write %s %s: %s", copyDirectory, relFilePath, err.message);
           }
           cb(err); // May be null
         });
