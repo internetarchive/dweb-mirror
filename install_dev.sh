@@ -38,6 +38,7 @@ do
   if [ -d ${REPO} ]
   then
     pushd ${REPO}
+    git checkout -f
     git pull
     popd
   else

@@ -113,6 +113,8 @@ Look in that directory, and there should be sub-directories appearing for each i
 You can safely delete any of the crawled material and it will be re-fetched if needed.
 
 ### 6. IPFS (optional)
+(Note IPFS is not currently being tested for dweb-mirror and this may not work)
+
 Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
 but it might need editing if you have an odd combinations.
 ```
@@ -155,7 +157,7 @@ sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
 
 Restart your machine and check that http://localhost:4244 still works.
 
-### Making changes
+### 8. Making changes
 You can make changes in the UI in dweb-archive, iaux/packages/ia-components, bookreader 
 or dweb-archive-controller then:
 ```
@@ -173,7 +175,7 @@ cd dweb-mirror ; ./internetarchive -sc &
 ```
 
 
-### Running without dweb-mirror  e.g. to develop in dweb-transports
+### 9. Running without dweb-mirror  e.g. to develop in dweb-transports
 
 To run without dweb-mirror, 
 ```

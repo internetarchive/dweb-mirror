@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.53: Slight improvement on re-runability of install_dev.sh
 * 0.2.52: Catch error handling around page resolutions; Crawl Indicators for search; workaround embed API bug; bug fixes on is_dark; crawl indicators; 
 * 0.2.51: Move Requires back into DwebTransports
 * 0.2.50: Explicitly require transports only if in config; Bookreader resolution optimisation; 
