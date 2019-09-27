@@ -1,6 +1,9 @@
-# Installation instructions for dweb-mirror on IIAB on Raspberry Pi 3
+# Installation instructions for dweb-mirror development environment
 
 See [README.md] for more info
+
+Note these are tested on Mac OSX only, I would love someone to test on Linux and submit changes 
+on the repo (or just send me a corrected version of this file)
 
 ## Installation
  

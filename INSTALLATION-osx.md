@@ -1,4 +1,4 @@
-# Installation instructions for dweb-mirror on IIAB on Mac OSX
+# Installation instructions for dweb-mirror on Mac OSX
 
 See [README.md] for more info
 

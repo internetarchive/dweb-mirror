@@ -13,6 +13,7 @@ will be much easier to follow.
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
  * Armbian on OrangePi or similar [INSTALLATION-armbian.md](./INSTALLATION-armbian.md)
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
+ * Yunohost [INSTALLATION-yunohost.md](./INSTALLATION-yunohost.md)
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
@@ -58,12 +59,16 @@ you'll need to download the operating system, and burn an SD
 * Armbian on OrangePi
   From [Armbian](https://www.armbian.com/download/)
   Pick the exact model and choose the Debian (Buster) over the Ubuntu
+* Yunohost on RPI (probably on others do)
+  From [Yunohost](https://yunohost.org/#/images) pick the current image (this is tested on 3.4.2)
+  Note as of Sept 2019, the image the image is dated Feb 2019 and wouldnt boot on my RPI4.
 
 #### Blow this to a SD
 
 * On a Mac for anything except NOOBS
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
-  * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
+  * Run Etcher (it can use a .img or a .zip but for any image in .7z you'll need to expand it first), 
+  * Select a fresh 16GB or bigger SD card as the destination - bigger cards means more content
 
 * For NOOBS
   * Unzip it
@@ -187,7 +192,39 @@ or b)
 * This doc might be helpful
   https://docs.armbian.com/User-Guide_Advanced-Features/#how-to-set-wireless-access-point
 
-### 1G: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
+### 1H: Yunohost (tested on Raspberry Pi 3 only)
+If this fails, or if you want something slightly different from my example then
+check Yunohost's instructions but beware the project is in its early days and 
+ at the time of writing they were seriously inaccurate )
+* Insert the SD card and boot
+* Finding the box can be tricky, there are a bunch of ways suggested at https://yunohost.org/#/ssh
+  but the easiest (for me) method was missing. 
+  The default name of the box is `raspberrypi` so in a lot of cases, 
+  until you do the `postinstall` step,  
+  `ssh root@raspberrypi` will work. 
+
+Next steps are simplified from https://yunohost.org/#/postinstall
+You can do the next step in the browser but there is no feedback when it fails - as it did for me, 
+  so I'd recommend using the command line. 
+  
+If you dont have a domain pick a name YOURDOMAIN is the example I'm using, and a good password.
+```
+ssh root@raspberrypi
+password: yunohost
+raspberrypi# yunohost tools postinstall
+Main domain: YOURDOMAIN.nohost.me
+New administration password: YOURPASSWORD
+Confirm administration password: YOURPASSWORD
+```
+It should then complete the process reasonably quickly.
+
+If you are runnng behind a router you have to setup port forwarding, this is tricky. 
+Yunohost's instructions are at https://yunohost.org/#/isp_box_config , I haven't tested them.
+
+Theoretically you should be able to access it at https://YOURDOMAIN.nohost.me/yunohost/admin 
+but this didn't work for me not even when port forwarding was added. 
+
+### 1H: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
 
 We haven't tested yet on other machines, but some hints on how to port ... 
 
