@@ -876,7 +876,6 @@ The following files are present in `dweb-mirror` but are still a work in progres
 * [INSTALLATION.md]
 * [README.md] - main documentation
 * [RELEASENOTES.md] - history of releases
-* test.js - used to run test code against specific problems, not specified.
 * [URL_MAPPING.md] - how universal urls flow through the different mappings in mirrorHttp and elsewhere.
 
 
