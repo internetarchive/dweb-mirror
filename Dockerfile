@@ -19,7 +19,7 @@
 
 
 # Specify node version, alternatives node:8 or node:alpine
-FROM node:8
+FROM node:10
 WORKDIR /app
 
 # Copy just package.json, package-lock.json and then npm build so it can save the image

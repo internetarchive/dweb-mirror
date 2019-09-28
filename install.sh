@@ -1,6 +1,6 @@
 #!/bin/bash
 # Note - this can be run multiple times, and should adjust to current reality
-
+# Note this will go away once we move the bundles and bookreader into dweb-mirror/dist
 
 set -e # Break on error
 set -x
