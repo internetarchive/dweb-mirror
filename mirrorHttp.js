@@ -533,8 +533,8 @@ function mirrorHttp(config, cb) {
 // noinspection JSUnresolvedFunction
     app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
 // noinspection JSUnresolvedFunction
-    app.get('/archive/bookreader/BookReader/*', function (req, res, next) { //TODO-BOOK this is not generic for all platforms use same technique as for config.archiveui.directory
-        _sendFileFromDir(req, res, next, config.archiveui.directory + "/bookreader/BookReader");
+    app.get('/archive/bookreader/BookReader/*', function (req, res, next) {
+        _sendFileFromDir(req, res, next, config.bookreader.directory);
     });
     app.get('/archive/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         _sendFileFromDir(req, res, next, config.archiveui.directory);

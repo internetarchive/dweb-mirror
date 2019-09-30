@@ -15,11 +15,14 @@ directories:
 rescanDirectories: 15 # How often to rescan for these directories (in seconds)
 # Where to find the ArchiveUI relative to the directory this file and the code resides in
 archiveui:
-  directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh
+  directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh (which will be deprecated)
     - ../dweb-archive/dist # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
-    - node_modules/@internetarchive/dweb-archive/dist # Or a repo cloned during 'npm install'
-
-# How to connect to the net, for deweb-mirror HTTP directly to the gateway is usually the best way
+    - node_modules/@internetarchive/dweb-archive-dist # Or a repo installed as a dependency via 'yarn install'
+bookreader:
+  directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh (which will be deprecated)
+    - ../bookreader/BookReader # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
+    - node_modules/@internetarchive/bookreader/BookReader # Or a repo installed as a dependency via 'yarn install'
+# How to connect to the net, for dweb-mirror HTTP directly to the gateway is usually the best way
 # especially for low CPU/low bandwidth environments.
 connect:
   transports: # This is the list of transports that the server or crawler will use to fetch files

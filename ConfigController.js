@@ -74,7 +74,7 @@ class ConfigController {
                         if (err) { cb(err, null); } else {
                             const config =  new this(...configobjs, userConfig);
                             // noinspection JSUnresolvedVariable
-                            debug("config summary: directory:%o archiveui:%s", config.directories, config.archiveui.directory);
+                            debug("config summary: directory:%o archiveui:%s bookreader:%s", config.directories, config.archiveui.directory, config.bookreader.directory);
                             cb(null, config);
                         }
                     });

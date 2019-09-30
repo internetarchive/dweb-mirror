@@ -55,6 +55,7 @@ class MirrorConfig extends ConfigController {
         this.directories = oldDirectories; // and restore as actually want only resolv
         this.resolveDirectories(); // Handle ~/ ./ ../ and expand * or ?? etc
         this.archiveui.directory = ConfigController.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
+        this.bookreader.directory = ConfigController.firstExisting(this.bookreader.directories); // Handle ~/ ./ ../ * ?? and find first match
     }
 
     setupPeriodically(setState) {
