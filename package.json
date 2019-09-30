@@ -45,9 +45,6 @@
     "url": "git://github.com/internetarchive/dweb-mirror.git"
   },
   "scripts": {
-    "build": "echo 'There is no build process for dweb-mirror currently.'",
-    "install": "./install.sh",
-    "update": "./install.sh"
   },
   "version": "0.2.53"
 }

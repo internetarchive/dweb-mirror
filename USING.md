@@ -28,7 +28,7 @@ The address to access will depend on your configuration.
   * if connected to WiFi “Internet in a Box", try http://box.lan:4244
   * if connected via a router then http://box.local:4244 may work
 * On Rachel then http://rachel.local:4244 often works
-* If your server is running with `--mdns` then http://archive.local:4244 will work.
+* If MDNS is working on your network, then http://archive.local:4244 will work.
 * If running on your own machine (a laptop for example) then http://localhost:4244 should work
 * Otherwise ask your system admin for the address of the machine its running on, usually it will be on `:4244`
 

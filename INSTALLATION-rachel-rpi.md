@@ -7,10 +7,11 @@ If that's not what you are using then one of the following documents might be mu
  * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
  * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md)
  * Raspberry Pi without IIAB [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
- * Orange Pi without IIAB [INSTALLATION-orangepizero.md](./INSTALLATION-orangepizero.md)
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
+ * Armbian on OrangePi or similar [INSTALLATION-armbian.md](./INSTALLATION-armbian.md)
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
+ * Yunohost [INSTALLATION-yunohost.md](./INSTALLATION-yunohost.md)
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
@@ -46,7 +47,7 @@ You can now boot your machine.
 
 The easiest way is to run the installation script
 ```
-curl -o/tmp/install.sh -L https://unpkg.com/@internetarchive/dweb-mirror/rachel/install.sh
+curl -o/tmp/install.sh -L https://unpkg.com/@internetarchive/dweb-mirror/install.sh
 chmod +x /tmp/install.sh
 sudo /tmp/install.sh
 ```
@@ -108,8 +109,12 @@ If you don’t get a Archive UI then look at the server log
 service internetarchive status
 ```
 Will get the status and most recent lines
+```
+journalctl -u internetarchive
+```
+Will get the most recent lines (add `-f` to follow it)
 
-On Rachel/RPI journalctl is missing, in which case ...
+On Rachel/RPI journalctl doesn't seem to always work, in which case ...
 ```
 tail -f /var/log/daemon.log
 ```

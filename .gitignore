@@ -3,3 +3,4 @@ testleveldb.Testtable
 radata
 userids_private.json
 .idea
+yarn-error.log

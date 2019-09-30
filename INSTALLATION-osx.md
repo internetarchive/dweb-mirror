@@ -10,7 +10,7 @@ At the moment this is one set for developing, or use, later I'll split it when i
 
 You will need git, node, npm, yarn, which may or may not be already installed.
 
-* git: type "git" in a Terminal window, if git is installed you'll get the help message,
+* git: type "git --version" in a Terminal window, if git is installed you'll get the help message,
 if not then it should prompt you to install Xtools command line tools, accept ...
 * node and npm: try `node --version`, it should report v10 or better
   * otherwise https://nodejs.org should know its a Mac and prompt you to install, 
@@ -110,7 +110,7 @@ Note that directories specified in the config file can be written using shell or
 
 * From a command line:
 ```
-cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc --mdns &
+cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc &
 ```
 * starts the HTTP server
 * the startup is a little slow but you'll see some debugging when its live.
