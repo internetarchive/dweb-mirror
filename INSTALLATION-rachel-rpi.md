@@ -45,12 +45,15 @@ You can now boot your machine.
 * ssh to 10.10.10.10
 * Login as `pi` with password `rachel`
 
+### 2. Run the installer
+
 The easiest way is to run the installation script
 ```
 curl -o/tmp/install.sh -L https://unpkg.com/@internetarchive/dweb-mirror/install.sh
 chmod +x /tmp/install.sh
 sudo /tmp/install.sh
 ```
+I fit fails, its safe to rerun `/tmp/install.sh`
 
 ### 3. Edit configuration
 
@@ -100,7 +103,7 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 
 #### Browsing
 
-In a browser open: http://rachel.local:4244 
+In a browser open: http://rachel.local:4244 or http://rachel:4244
 or via the main interface at http://rachel.local and click Internet Archive
 
 #### Troubleshooting
@@ -114,11 +117,6 @@ journalctl -u internetarchive
 ```
 Will get the most recent lines (add `-f` to follow it)
 
-On Rachel/RPI journalctl doesn't seem to always work, in which case ...
-```
-tail -f /var/log/daemon.log
-```
-
 Look for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
@@ -128,10 +126,7 @@ Expect, on slower machines/networks, to see no images the first time,
 refresh after a little while and most should appear. 
 
 #### Disk storage
-Any of these platforms should be able to see a disk plugged into the USB port that 
-contains `archiveorg` at its top level. 
-This is tested on IIAB-on-RPI, Rachel-on-RPI and Mac OSX.
-On other RPI or Armbian it may need a variation of the techniques in install_rachel.sh
+The box should be able to see a disk plugged into the USB port that contains `archiveorg` at its top level. 
 
 ## 7. Auto-starting
 
@@ -149,12 +144,16 @@ service internetarchive status
 ## 8. Updating
 
 The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
+
+The quickest way is 
 ```
-cd ~/node_modules/@internetarchive   # or wherever you started the process in 3a above.
+cd ~   # or wherever you started the process in 3a above.
 yarn install
 yarn upgrade    # Upgrade all packages
 ```
+
+But you can also rerun the install procedure in Step 2, which will skip steps that have 
+
 ### Troubleshooting
 
 Logs are in /var/log/daemon.log. 
-

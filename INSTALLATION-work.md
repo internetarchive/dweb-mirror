@@ -492,7 +492,7 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 The address to go to is platform dependent.
 
 * On IIAB try: http://box.local:4244 or http://box.lan:4244 or via the main interface at http://box.local and click on Internet Archive
-* On Rachel: http://rachel.local:4244 or via the main interface at http://rachel.local and click Internet Archive
+* On Rachel: http://rachel.local:4244 or http://rachel:4244 or via the main interface at http://rachel.local and click Internet Archive
 * When on a browser on the same machine: http://localhost:4244
 * On any LAN that supports MDNS (Bonjour) http://archive.local:4244
 
@@ -567,6 +567,9 @@ sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
 ```
 Note that I've currently had problems with getting a Mac to start automatically. 
 
+### Rachel/RPI
+Its built into the installer, so should be automatic
+
 ### Other platforms
 Autostarting varies from platform to platform. 
 See the note in [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md) for Rachel specific notes.
@@ -618,11 +621,16 @@ sudo yarn update
 ```
 ### For anyone except developers or IIAB
 The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
+
+The quickest way is 
 ```
-cd ~/node_modules/@internetarchive   # or wherever you started the process in 3a above.
+cd ~   # or wherever you started the process in 3a above.
 yarn install
 yarn upgrade    # Upgrade all packages
 ```
+
+But you can also rerun the install procedure in Step 2, which will skip steps that have 
+
 ### For Developers
 ```
 cd ~/git/dweb-mirror

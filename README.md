@@ -1,4 +1,4 @@
-# Internet Archive - Universal Library project README 
+# Offline Internet Archive README 
 
 
 The project is a local server that allows users to browse resources from the

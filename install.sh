@@ -97,12 +97,16 @@ fi
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  step XXX "Installing nodejs yarn git libsecret"
-  sudo apt-get install -y nodejs yarn git libsecret-1-dev
+  step XXX "Installing nodejs yarn git npm"
+  sudo apt-get install -y nodejs yarn git npm
   # Note previously installing "npm" but no longer using
   # Note yarn alternative can skip the apt-key & sources steps above and ...
   # curl -o- -L https://yarnpkg.com/install.sh | bash
   # source ~/.bashrc # Fix path
+  set +e
+  step XXX "Trying to install libsecret which may fail" # Failed on rachel
+  sudo apt-get install -y libsecret-1-dev # Allow libsecret-1-dev to fail , we migth not need it
+  set -e
 else
   step XXX "Installing wget nodejs yarn"
   wget --version >>/dev/null || brew install wget
@@ -124,12 +128,14 @@ fi
 # [ -d node_modules/cmake ] || [ -d /usr/local/share/.config/yarn/global/node_modules/cmake/ ] || sudo yarn global add cmake
 
 step XXX "Creating cache directory for content"
-mkdir -p ${CACHEDIR} && chown ${USER} ${CACHEDIR}
+sudo mkdir -p ${CACHEDIR} && sudo chown ${USER} ${CACHEDIR}
 
 step XXX "Yarn install or update dweb-mirror"
 cd ${INSTALLDIR} # By default ${HOME}
 yarn config set child-concurrency ${YARNCONCURRENCY}
-if [ -d node_modules/@internetarchive/dweb-mirror ]
+# Careful - this next test may look duplicative but a failure to install can leave directory but no package.json,
+# next install would do an install;upgrade removing the packages, and then failing
+if [ -d node_modules/@internetarchive/dweb-mirror -a -e package.json ]
 then
   # Previously installed, just check the install and upgrade
   yarn install
@@ -147,7 +153,7 @@ step XXX "Setup service to autostart at boot and start server"
 # Note its clear we need to edit the service but then its unclear that the armbian and rachel strategies are different, cross-try them.
 cat internetarchive.service \
 | sed -e "s:{{ internetarchive_dir }}:${INSTALLDIR}:" | sed -e "s:User=root:User=${USER}:" >/tmp/internetarchive.service
-if [ "${OPERATINGSYSTEM}" = "armbian" || "${OPERATINGSYSTEM}" = "rachel" ]
+if [ "${OPERATINGSYSTEM}" = "armbian" -o "${PLATFORM}" = "rachel" ]
 then
   diff /tmp/internetarchive.service /lib/systemd/system || sudo cp /tmp/internetarchive.service /lib/systemd/system
   sudo systemctl enable internetarchive.service # Links /etc/systemd/system/multi-user.targets.wants/internetarchive.service to /lib/systemd/system/internetarchiveservice
@@ -224,4 +230,7 @@ EOT
 fi
 
 echo "Installation of offline Internet Archive (dweb-mirror) complete"
-
+if [ ! "${OPERATINGSYSTEM}" = "darwin" ]
+then
+  service internetarchive status
+fi
