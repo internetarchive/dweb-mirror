@@ -2,8 +2,6 @@
 
 This set of installation instructions are for dweb-mirror running on a Orange Pi Zero.
 
-IMPORTANT - THESE ARE PARTIAL INSTRUCTIONS - I"M STILL WORKING THROUGH THEM CONVERTING THE RASPBERRY PI ONESs
-
 If that's not what you are using then one of the following documents might be much easier to follow. 
 
  * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
@@ -40,181 +38,67 @@ but the process probably works with other variants of the Orange-Pi.
     * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
     * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding the zip)    
   * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher to write to an SD. (TODO)
-* Inserted into the board's SD holder, and powered up with Kbd and HDMI and Mouse inserted. 
-* If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
-* Powered up
-* It prompted me for some getting started things, 
-* Accepted "Next to get started" though I suspect IIAB's comprehensive install gets some of them as well.
-* Selected your country, language, keyboard - it shouldnt matter which.
-* Changed password since RPis get hacked on default password
-* Connected to WiFi (not necessary if you have Ethernet connected)
-* It automatically Updated OS - this is big - take a break :-)
-    * Note that this process failed for me with failures of size and sha, but a restart, after the prompts for password etc, 
-    got me to a partially completed download so I did not have to start from scratch
-* You might want to ... Menu/Preferences/Config / Set display to highest resolution
 
-### 1C: World-Possible/Rachel on Rachel 3+
-See [./INSTALLATION-rachel.md](./INSTALLATION-rachel.md]), installation instructions are not complete
-so they haven't been incorporated here yet.
+### Booting and connecting
+I found https://lucsmall.com/2017/01/19/beginners-guide-to-the-orange-pi-zero/ to be a useful guide if you have problems.
 
-### 1D: World-Possible/Rachel on Raspberry Pi
-See [./INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md]), installation instructions are not complete
-so they haven't been incorporated here yet.
+Booting an Orange Pi Zero or similar is tricky as there is no display/keyboard and you need the IP address to connect.
+Insert the SD card then Ethernet and power. 
+Note Armbian doesn't work with the common trick of `ping 192.0168.0.255` followed by `arp -a` to find new machines on your net.
+The best way appears to be to log into your router and look for "orangepi" or similar in the DHCP table. 
+Lets assume its 192.168.0.55
 
-### 1E: Raspbian without IIAB or Rachel
+`ssh root@1292.168.0.55`  and respond to password with the default `1234`
 
-If you just want dweb-mirror running on a NOOBS based RPi (and don't want Internet In A Box) try this. 
+Change your password immediately - it should prompt you and create a new user, we recommend calling this "pi"
 
-While it is unlikely that the process below is particularly fussy about a roughly normally configured RPi, 
-the following notes might aid in a speedy setup on a new RPi.
-
-We started with a standard preconfigured NOOBS MicroSD card that came with the box we got. 
-
-After the reboot during the process:
-* Change WiFi to connect
-* Default userid = `pi`, password = `raspberry`, change these since SSH will be exposed below.
-* Menu/Preferences/Config
-  * Interfaces:SSH:Enabled
-  * Set display to highest resolution that works for your display
-  * Set Localization if not done during install
-  * Reboots (as part of saving these changes)
-
-In a terminal window, or via SSH to it. 
+One final step - since we cant automate this:
 ```
-sudo apt-get update
-# This next step now seems to happen during normal install, otherwise can be slow
-sudo apt full-upgrade -y 
+  sudo dpkg-reconfigure tzdata
 ```
 
-### 1F: Other machines including OSX but (not Raspberry Pi (IIAB, Rachel or raw) or Rachel3+)
+#### 1F-wifi: WiFi on Armbian
+Typically you'll either want to connect to your WiFi access point and be a server on it,
+OR have the Armbian act as a WiFi point itself.
 
-We haven't tested yet on other machines, but some hints on how to port ... 
+If so, you can do this now, or later. 
 
-If you are working on another configuration that uses Ansible, 
-then the [IIAB Ansible Role](https://github.com/iiab/iiab/tree/master/roles/internetarchive) is a good place to start.
-And also there are [yarn](https://github.com/iiab/iiab/tree/master/roles/yarn) 
-and [node](https://github.com/iiab/iiab/tree/master/roles/nodejs)internetarchive.service.j2 roles in the same repo. 
 
-#### Updating tools
-You'll need git, node, npm, yarn, which should be on most Linux machines, 
-but many platforms ship with seriously out-of-date versions and we only test on current versions, 
-so I recommend updating before installing.
+a) To setup for your wifi to access your Wifi access point.
+ sudo nano /etc/network/interfaces
 
-#### GIT
-Type `git --version` in a Terminal window, if git is installed you'll get the help message,
+And add these lines to the end, using your SSID (aka wifi name) and password
 
-##### ON MAC OSX 
-if Git isnt installed then it should prompt you to install Xtools command line tools, accept ...
+ auto wlan0
+ iface wlan0 inet dhcp
+ wpa-ssid <Your Access Point Name aka SSID>
+ wpa-psk <Your WPA Password>
 
-##### ON OTHER LINUX MACHINES
-* If is not installed or lower than v2.0.0 then See [Atlassian Tutorial](https://www.atlassian.com/git/tutorials/install-git)
+Then start it with
 
-#### NODE
-Try `node --version`, it should report v10 or better, but it was v4.8.2 on Rachel3+ 
-and v8 on Noobs and Raspbian in some cases, or missing in others.
- 
-  * otherwise https://nodejs.org should auto-detect your machine, and prompt you to install, 
-  * select the "recommended" version
+ sudo ifup wlan0
 
-In terminal window or on SSH
+or b)
 
-If that doesn't work, and in particular if it still only installs v8 then force an upgrade.
+* sudo armbian-config > network > hotspot >
+* At some point it asks to "select interface" I think this is the point to pick wlan0 though its unclear whether
+  this is the WiFi interface to use, or for backhaul?
+* TODO document process to change SSID
+* Note that once setup, it can take a minute or two for the WiFi access point to be visible.
+* Also note that it seems to pick unusual IP addresses, 172.24.1.1 was the gateway when I connected to it.
+
+* If anyone knows how to set this up from the command line a PR would be appreciated.
+* This doc might be helpful
+  https://docs.armbian.com/User-Guide_Advanced-Features/#how-to-set-wireless-access-point
+
+### 2. Run the installer
+
+The easiest way is to run the installation script
 ```
-curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
-# This warned that you might need `sudo apt-get install gcc g++ make` which I haven't done
-sudo apt-cache policy nodejs # Should show v10 (on Rachel, only showed v9)
-sudo apt-get install -y nodejs
-node -v # Confirm it upgraded to 10.x
+curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install.sh | bash
 ```
+If it fails, its safe to repeat this.
 
-#### NPM 
-Node will always come with some version of NPM, 
-to upgrade to the latest `sudo npm install npm@latest -g`
-
-#### YARN
-
-Note that on many platforms, a plain `apt-get install yarn` will fail, and get the cmdtest instead, 
-if you did this by mistake then `sudo apt-get remove cmdtest` before trying again
-
-* yarn: `yarn --version` should report `v1.x.x` 
-  * Otherwise: https://yarnpkg.com/en/docs/install should auto-detect and make suggestions. 
-  * But, the easiest way is often, at a terminal window: 
-
-Either (Works on OSX)
-
-TODO - check if these are equivalent
-```
-      curl -o- -L https://yarnpkg.com/install.sh | bash
-```
-or (Works on RPI/NOOBS)
-```
-   curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-   echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-   sudo apt-get update && sudo apt-get install yarn
-```
-
-#### node-pre-gyp and cmake
-The following yarn install might or might not be needed but seems to speed 
-up compiles and updates.
-```
-sudo yarn add node-pre-gyp cmake
-```
-##### ON MAC OSX
-If you get an error `wget: No such file or directory` 
-then the easiest fix is to install `brew` which is a generally useful package manager.
-Follow the one line instructions at https://brew.sh,  which needs you to have Admin access. 
-
-Then run `brew install wget` 
-
-If that fails (as it did for me on an older Mac running OSX10.11 (the last version on Mac Minis)
-you can try the instructions at http://osxdaily.com/2012/05/22/install-wget-mac-os-x/
-but it works fine to continue without `node-pre-gyp` and `cmake`
-
-### 2. Install dweb-mirror
-
-There are two alternatives, either as an "Appliance" which we recommend for most users,
-
-Or if you want to develop the code then skip to 2B 
-
-#### dweb-mirror as a server / appliance (tested on Rachel 3+ and RPi3)
-
-We will install it as a standard node_module under your home directory.
-
-Create a top level cache directory.
-
-This has to be called `archiveorg` but can be in your home directory (if you plan
-on running the server there) or can be in `/.data`, `/library` or at the top
-level of any disk e.g.
-
-```
-mkdir -p "${HOME}/archiveorg" && chown ${USER} ~/archiveorg
-```
-If its anywhere other than in `~`, `/.data`, or `/library` or at the top level of one of your disks, 
-then edit `~/dweb-mirror.config.yaml` after you've finished installing to add the lines such as:
-```
-directories:
-  - /foo/bar/archiveorg # wherever you put 'archiveorg'
-  - /Volumes/*/archiveorg # Check any plugged in drives
-```
-
-Now add the packages we need for dweb-mirror.
-
-Choose where you want to put them, if in doubt then the home directory is probably good, 
-on some platforms, notably Rachel, we had to use `/usr/local` or some things broke.
-```
-cd ~  # CD into wherever you'll put this, the rest of the instructions assume "~"
-yarn add @internetarchive/dweb-mirror @internetarchive/dweb-archive
-```
-Expect to see lots of warning, most of these are from packages we don't control 
-that depend on packages that have moved, been deprecated or have a security warning. 
-
-If it fails, then
-```
-sudo yarn install
-```
-which can be safely rerun. 
-
-The example above would install dweb-mirror as `~/git/node_modules/@internetarchive/dweb-mirror`
 
 ### 3. Edit configuration
 
@@ -236,51 +120,25 @@ and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for i
    
 Note that directories specified in the config file can be written using shell or unix conventions such as "~/" or "../".
 
-### 4. Test browsing
 
-First start the server.
-* For Developers: From a command line:
-```
-cd ~/git/dweb-mirror && ./internetarchive --server &
-```
-* For Anyone else: From a command line:
+### 4. Test crawling and browsing
+
+#### Crawling
+Crawling will happen automatically, but you can also test it manually.
+
+From a command line:
+
 ```
 cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc &
 ```
 * starts the HTTP server
+* It might take 10-15 seconds to start, be patient
+* It should start crawling, and get just a minimal set of icons for the home page.
 * the startup is a little slow but you'll see some debugging when its live.
-* If it reports `ERROR: Directory for the cache is not defined or doesnt exist`
-  * then it means you didn't create a directory for it to use as a cache
-  * the server wants you to do this, so that it doesn't fill a disk somewhere you don't want it to happen
+* If you see a message like `Requeued fetch of https://dweb.me/info failed` then it means it cannot see 
+  the archive's servers (on `dweb.me`) so it won't be able to crawl or cache initial material until you 
+  connect to the WiFi or Ethernet. 
 
-* Try going to `http://localhost:4244` 
-* Or from another machine: `http://archive.local:4244` or `http://<IP of your machine>:4244`
-* open http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244
-to see the test crawl.
-If you don’t get a Archive UI then look at the server log (in console) 
-to see for any “FAILING” log lines which indicate a problem
-
-Expect to see errors in the Browser log for 
-* http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
-
-Expect, on slower machines/networks, to see no images the first time, 
-refresh after a little while and most should appear. 
-
-### 5. Test crawling
-
-Start the crawler.
-
-For Developers:
-```
-cd ~/git/dweb-mirror
-./internetarchive --crawl
-```
-
-For anyone else:
-```
-cd ~/node_modules/@internetarchive/dweb-mirror
-./internetarchive --crawl
-```
 Without any other arguments, `crawl` will read a set of files into into the first (already existing) directory
 configured in `~/dweb-mirror.config.yaml` 
 or if there are none there, it will look in its installation directory for `configDefaults.yaml`.
@@ -289,61 +147,39 @@ Look in that directory, and there should be sub-directories appearing for each i
 
 You can safely delete any of the crawled material and it will be re-fetched if needed.
 
-### 6. IPFS (optional)
-Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
-but it might need editing if you have an odd combinations.
+#### Browsing
 
-cd into the installation directory.
-For developers `cd ~/git/dweb-mirror`
-For everyone else `cd ~/node_modules/@internetarchive/dweb-mirror`
+In a browser open: http://archive.local:4244 or http://<IP of your machine>:4244
 
+#### Troubleshooting
+If you don’t get a Archive UI then look at the server log 
 ```
-./install_ipfs.sh
+service internetarchive status
 ```
-Now start the daemon, first time it initializes and configures a repo
+Will get the status and most recent lines
 ```
-start_ipfs daemon  & 
+journalctl -u internetarchive
 ```
-If it complains that 8080 is in use, then you missed editing start_ipfs and can fix this with 
-```
-ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8081
-start_ipfs daemon &
-```
-Allow ipfs to start, once it says Daemon is ready, Ctrl-C out of it
+Will get the most recent lines (add `-f` to follow it)
 
-In the future to update IPFS just run the same installation process above should update it.
+Logs are in /var/log/daemon.log if you want to analyse more deeply.
+
+Look for any “FAILING” log lines which indicate a problem
+
+Expect to see errors in the Browser log for 
+* http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
+
+Expect, on slower machines/networks, to see no images the first time, 
+refresh after a little while and most should appear. 
+
+#### Disk storage
+The box should be able to see a disk plugged into the USB port that contains `archiveorg` at its top level. 
 
 ## 7. Auto-starting
 
-On many platforms you'll need to setup a service, 
-there is a template to work from at [~/node_modules/@internetarchive/dweb-mirror/internetarchive.service]. 
-It needs the location of your installation.
-Edit the WorkingDirectory and User lines to say
-```
-User=pi
-WorkingDirectory=/home/pi/node_modules/@internetarchive/dweb-mirror
-```
-And copy to somewhere it will get used
-```
-sudo su
-cp /home/pi/node_modules/@internetarchive/dweb-mirror/internetarchive.service /lib/systemd/system
-cd /etc/systemd/system/multi-user.target.wants
-ln -s  /lib/systemd/system/internetarchive.service .
-systemctl daemon-reload
-service internetarchive start
-```
-Check its running
-```
-service internetarchive status
-journalctl -u internetarchive -f
-```
-Note that it might complain about wrtc not being present, which is to be expected on a RPI
-You can ctrl-C out of this log.
+The server will autostart at reboot, or if it crashes.
 
-the last line of the crwwl will usually be something like `Completed but server still running` 
-after which should be, approximately once a minute, a check of dweb.me/info
-
-Restart your machine and check that http://localhost:4244 still works.
+Restart your machine and check that http://rachel.local:4244 still works.
 ```
 sudo shutdown -r
 ```
@@ -351,24 +187,15 @@ When it comes back up
 ```
 service internetarchive status
 ```
-
-Check that http://localhost:4244 still works.
-
 ## 8. Updating
 
-TODO Docs on Updating dweb-mirror for Developers and integrate ansible updating for IIAB
+The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
 
-### For anyone except developers or IIAB
+The quickest way is 
 ```
-cd ~/node_modules/@internetarchive   # or wherever you started the process in 3a above.
+cd ~   # or wherever you started the process in 3a above.
+yarn install
 yarn upgrade    # Upgrade all packages
 ```
-### For Developers
-```
-cd ~/git/dweb-mirror
-git pull
-yarn upgrade
-# Note there is an intentional feature/bug, in npm and possibly in yarn in that it that doesnt 
-# automatically run an "update" script. 
-yarn run update 
-```
+
+But you can also rerun the install procedure in Step 2, which will skip steps that have 

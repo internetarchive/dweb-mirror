@@ -53,7 +53,7 @@ curl -o/tmp/install.sh -L https://unpkg.com/@internetarchive/dweb-mirror/install
 chmod +x /tmp/install.sh
 sudo /tmp/install.sh
 ```
-I fit fails, its safe to rerun `/tmp/install.sh`
+If it fails, its safe to rerun `/tmp/install.sh`
 
 ### 3. Edit configuration
 
@@ -117,6 +117,8 @@ journalctl -u internetarchive
 ```
 Will get the most recent lines (add `-f` to follow it)
 
+Logs are in /var/log/daemon.log if you want to analyse more deeply.
+
 Look for any “FAILING” log lines which indicate a problem
 
 Expect to see errors in the Browser log for 
@@ -153,7 +155,3 @@ yarn upgrade    # Upgrade all packages
 ```
 
 But you can also rerun the install procedure in Step 2, which will skip steps that have 
-
-### Troubleshooting
-
-Logs are in /var/log/daemon.log. 

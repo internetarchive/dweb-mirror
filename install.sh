@@ -28,21 +28,20 @@ step 00 Determining what kind of box this is
 
 # Convert the portable uname results into go specific environment note Mac has $HOSTTYPE=x86_64 but not sure that is on other platforms
 case `uname -m` in
-"armv7l") ARCHITECTURE="arm";;    # e.g. Raspberry 3. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
+"armv7l") ARCHITECTURE="arm";;    # e.g. Raspberry 3 or OrangePiZero. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
 "x86_64") ARCHITECTURE="amd64";;  # e.g. a Mac OSX
 "i?86") ARCHITECTURE="386";;      # e.g. a Rachel3+
-"TODO") ARCHITECTURE="xxx";;      # TODO Armbian / OrangePI
-#TODO Need check on Arbmbian / OrangePi
 *) echo "Unknown processor type `uname -m`, needs configuring"; ARCHITECTURE="unknown";;
 esac
 
 # Now find OS type, note Mac also has a $OSTYPE
 case `uname -s` in
 "Darwin") OPERATINGSYSTEM="darwin";;   # e.g. a Mac OSX
-"Linux") OPERATINGSYSTEM="linux";;     # e.g. Raspberry 3 or Rachel3+
-"TODO") OPERATINGSYSTEM="armbian";;    #TODO Need check on Arbmbian / OrangePi
+"Linux") OPERATINGSYSTEM="linux";;     # e.g. Raspberry 3 or Rachel3+ or OrangePiZero/Armbian
 *) echo "Unknown Operating system type `uname -s` - needs configuring"; OPERATINGSYSTEM="unknown";;
 esac
+# Hard to tell Armbian from Raspbian or a bigger Linux so some heuristics here
+[ ! -e /usr/sbin/armbian-config ] || OPERATINGSYSTEM="armbian"
 
 #TODO detect Rachel, IIAB etc and set $PLATFORM
 PLATFORM="unknown"
@@ -66,7 +65,7 @@ echo "Architecture: ${ARCHITECTURE} OS: ${OPERATINGSYSTEM} PLATFORM: ${PLATFORM}
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  if ! yarn --version
+  if ! yarn --version 2>/dev/null
   then
   step XXX "Adding Yarn sources"
     curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
@@ -87,12 +86,6 @@ else # Its OSX
   git --version || xcode-select --install  # Get Git and other key command line tools (need this before "brew"
   brew --version || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
   set -e
-fi
-
-if [ $OPERATINGSYSTEM = "armbian" ]
-then
-  step XXX "Armbian only - setting timezone"
-  sudo dpkg-reconfigure tzdata
 fi
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
@@ -141,7 +134,7 @@ then
   yarn install
   yarn upgrade
 else
-  # Not previously installed, install, but dont upgrade (wastes time)
+  # Not previously installed, install, but dont upgrade as it wastes time
   yarn add @internetarchive/dweb-mirror
   yarn install
 fi
