@@ -33,6 +33,7 @@ case `uname -m` in
 "i?86") ARCHITECTURE="386";;      # e.g. a Rachel3+
 *) echo "Unknown processor type `uname -m`, needs configuring"; ARCHITECTURE="unknown";;
 esac
+# See also /sys/firmware/devicetree/base/model
 
 # Now find OS type, note Mac also has a $OSTYPE
 case `uname -s` in
@@ -42,6 +43,7 @@ case `uname -s` in
 esac
 # Hard to tell Armbian from Raspbian or a bigger Linux so some heuristics here
 [ ! -e /usr/sbin/armbian-config ] || OPERATINGSYSTEM="armbian"
+[ ! -e /etc/dpkg/origins/raspbian ] || OPERATINGSYSTEM="raspbian"
 
 #TODO detect Rachel, IIAB etc and set $PLATFORM
 PLATFORM="unknown"
@@ -146,7 +148,7 @@ step XXX "Setup service to autostart at boot and start server"
 # Note its clear we need to edit the service but then its unclear that the armbian and rachel strategies are different, cross-try them.
 cat internetarchive.service \
 | sed -e "s:{{ internetarchive_dir }}:${INSTALLDIR}:" | sed -e "s:User=root:User=${USER}:" >/tmp/internetarchive.service
-if [ "${OPERATINGSYSTEM}" = "armbian" -o "${PLATFORM}" = "rachel" ]
+if [ "${OPERATINGSYSTEM}" = "armbian" -o "${PLATFORM}" = "rachel" -o "${OPERATINGSYSTEM}" = "raspbian" ]
 then
   diff /tmp/internetarchive.service /lib/systemd/system || sudo cp /tmp/internetarchive.service /lib/systemd/system
   sudo systemctl enable internetarchive.service # Links /etc/systemd/system/multi-user.targets.wants/internetarchive.service to /lib/systemd/system/internetarchiveservice
