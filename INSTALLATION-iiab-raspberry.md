@@ -184,14 +184,3 @@ git pull
 cd /opt/iiab/internetarchive
 sudo yarn update
 ```
-
-### For anyone except developers or IIAB
-The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
-```
-cd ~/node_modules/@internetarchive   # or wherever you started the process in 3a above.
-yarn upgrade    # Upgrade all packages
-```
-
-
-SEE NOTE ABOUT 
-  * We've seen on Rachel, problems with `Buster Lite` that required `apt update && apt get -y libsecret-1-dev`
