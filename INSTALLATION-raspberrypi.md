@@ -7,9 +7,11 @@ If that's not what you are using then one of the following documents might be mu
  * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
  * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md)
  * Raspberry Pi without IIAB [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
+ * Orange Pi without IIAB [INSTALLATION-orangepizero.md](./INSTALLATION-orangepizero.md)
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
+ * Yunohost [INSTALLATION-yunohost.md](./INSTALLATION-yunohost.md)
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
@@ -20,7 +22,7 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 * [README.md](./README.md) for more general information
 * [https://github.com/internetarchive/dweb-mirror/issues/110] for meta task for anything Raspberry related.
 
-## 1. Getting your machine ready.
+### 1. Getting your machine ready.
 
 This is important, as the installation instructions does not work without some preliminary upgrades,
 especially for some of the smaller platforms.
@@ -126,7 +128,7 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 
 #### Browsing
 
-In a browser open: http://archive.local:4244 or http://archive:4244
+In a browser open: http://archive.local:4244 or http://archive:4244 or http://<IP of your machine>:4244
 
 #### Troubleshooting
 If you don’t get a Archive UI then look at the server log 
@@ -176,4 +178,5 @@ yarn install
 yarn upgrade    # Upgrade all packages
 ```
 
-But you can also rerun the install procedure in Step 2, which will skip steps that have 
+But you can also rerun the install procedure in Step 2, 
+which will skip steps that have already completed.

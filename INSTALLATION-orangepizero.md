@@ -11,6 +11,7 @@ If that's not what you are using then one of the following documents might be mu
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
+ * Yunohost [INSTALLATION-yunohost.md](./INSTALLATION-yunohost.md)
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
@@ -22,17 +23,22 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 * [dweb-mirror issue#224](https://github.com/internetarchive/dweb-mirror/issues/224) 
   for any questions or problems with OrangePi
 
-## 1. Getting your machine ready.
+### 1. Getting your machine ready.
 
-This is important, as the installation instructions dont work without some preliminary upgrades,
+This is important, as the installation instructions does not work without some preliminary upgrades,
 especially for some of the smaller platforms.
+
+#### Download image
 
 Orange Pi's run best with Armbian - from https://www.armbian.com/download/
 These instructions were tested on the Orange Pi Zero, with the Debian variety which is currently "Buster".
 but the process probably works with other variants of the Orange-Pi. 
 
 * Downloaded the image to your laptop (~250Mb)
-* Select a fresh SD card as the destination (the larger the card, the more content it can hold)
+
+#### Blow this to a SD
+
+* Select an SD card as the destination (the larger the card, the more content it can hold)
 * Program the SD card with this image
   * On a Mac:
     * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
@@ -91,7 +97,7 @@ or b)
 * This doc might be helpful
   https://docs.armbian.com/User-Guide_Advanced-Features/#how-to-set-wireless-access-point
 
-### 2. Run the installer
+### 2. Run the installer to install dweb-mirror
 
 The easiest way is to run the installation script
 ```
@@ -99,13 +105,12 @@ curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install.sh | bash
 ```
 If it fails, its safe to repeat this.
 
-
 ### 3. Edit configuration
 
 If you are doing anything non-standard, then you'll need to create and edit 
 a local configuration file.  Otherwise the application will create it the first time its needed.
 ```
-cd ~/git/dweb-mirror
+cd ~/node_modules/@internetarchive/dweb-mirror
 
 cp ./dweb-mirror.config.yaml ${HOME} # Copy sample to your home directory and edit, 
 ```
@@ -119,7 +124,6 @@ and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for i
   I suggest testing and then editing
    
 Note that directories specified in the config file can be written using shell or unix conventions such as "~/" or "../".
-
 
 ### 4. Test crawling and browsing
 
@@ -149,7 +153,7 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 
 #### Browsing
 
-In a browser open: http://archive.local:4244 or http://<IP of your machine>:4244
+In a browser open: http://archive.local:4244 or http://archive:4244 or http://<IP of your machine>:4244
 
 #### Troubleshooting
 If you don’t get a Archive UI then look at the server log 
@@ -179,7 +183,7 @@ The box should be able to see a disk plugged into the USB port that contains `ar
 
 The server will autostart at reboot, or if it crashes.
 
-Restart your machine and check that http://rachel.local:4244 still works.
+Restart your machine and check that http://archive.local:4244 still works.
 ```
 sudo shutdown -r
 ```
@@ -187,6 +191,7 @@ When it comes back up
 ```
 service internetarchive status
 ```
+
 ## 8. Updating
 
 The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
@@ -198,4 +203,5 @@ yarn install
 yarn upgrade    # Upgrade all packages
 ```
 
-But you can also rerun the install procedure in Step 2, which will skip steps that have 
+But you can also rerun the install procedure in Step 2, 
+which will skip steps that have already completed.

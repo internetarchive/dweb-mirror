@@ -7,9 +7,9 @@ If that's not what you are using then one of the following documents might be mu
  * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
  * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md)
  * Raspberry Pi without IIAB [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
+ * Orange Pi without IIAB [INSTALLATION-orangepizero.md](./INSTALLATION-orangepizero.md)
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
- * Armbian on OrangePi or similar [INSTALLATION-armbian.md](./INSTALLATION-armbian.md)
  * Mac OSX Developer [INSTALLATION-osx-dev.md](./INSTALLATION-osx-dev.md)
  * Yunohost [INSTALLATION-yunohost.md](./INSTALLATION-yunohost.md)
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
@@ -30,11 +30,13 @@ Download the temporary image from
 
 #### Blow this to a SD
 
-* On a Mac
-  * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
-  * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
+* Select an SD card as the destination (the larger the card, the more content it can hold)
+* Program the SD card with this image
+  * On a Mac:
+    * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
+    * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding the zip)    
+  * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher to write to an SD. (TODO)
 
-* On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
 
 You can now boot your machine.
 
@@ -45,7 +47,7 @@ You can now boot your machine.
 * ssh to 10.10.10.10
 * Login as `pi` with password `rachel`
 
-### 2. Run the installer
+### 2. Run the installer to install dweb-mirror
 
 The easiest way is to run the installation script
 ```
@@ -154,4 +156,5 @@ yarn install
 yarn upgrade    # Upgrade all packages
 ```
 
-But you can also rerun the install procedure in Step 2, which will skip steps that have 
+But you can also rerun the install procedure in Step 2, 
+which will skip steps that have already completed.
