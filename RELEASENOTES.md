@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.55: Fix path to archiveui, Dockerfile rework
 * 0.2.54: Dependency moved from dweb-archive to dweb-archive-dist; Unified install.sh and update Installation docs to reflect. 
 * 0.2.53: Slight improvement on re-runability of install_dev.sh
 * 0.2.52: Catch error handling around page resolutions; Crawl Indicators for search; workaround embed API bug; bug fixes on is_dark; crawl indicators; 
