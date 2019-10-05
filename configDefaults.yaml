@@ -16,8 +16,10 @@ rescanDirectories: 15 # How often to rescan for these directories (in seconds)
 # Where to find the ArchiveUI relative to the directory this file and the code resides in
 archiveui:
   directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh (which will be deprecated)
-    - ../dweb-archive/dist # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
-    - node_modules/@internetarchive/dweb-archive-dist # Or a repo installed as a dependency via 'yarn install'
+    - ../dweb-archive/dist # Dev repo parallel to this
+    - node_modules/@internetarchive/dweb-archive/dist # Dev repo as dependency
+    - ../dweb-archive-dist # Dist repo cloned parallel to us (this is the most common config)
+    - node_modules/@internetarchive/dweb-archive-dist # Dist repo as a dependency
 bookreader:
   directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh (which will be deprecated)
     - ../bookreader/BookReader # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development

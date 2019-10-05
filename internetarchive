@@ -290,6 +290,10 @@ waterfall([
         (obj) => { if (typeof obj.directories !== "undefined") MirrorFS.setState({directories: obj.directories}) },
         (err, res) => { config = res; cb(err); }), // Load config early, so can use in opts processing
     cb => cb(optsToConfig()), // Currently synchronous returning err||null
+    cb => {
+        if (opts.server && ! config.archiveui.directory) { debug("ERROR unlikely to work as none of %o present",config.archiveui.directoriest)}
+        cb(null);
+    },
     cb => { MirrorFS.init({
                 directories: config.directories,
                 httpServer: httpOrHttps+"://localhost:"+config.apps.http.port,
