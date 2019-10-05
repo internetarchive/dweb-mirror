@@ -4,8 +4,8 @@
 # Docker reference: https://docs.docker.com/engine/reference/builder/
 # Building
 # > cd ...dweb-mirror
-# > docker image build -t mitraardron/dweb-mirror:latest .
-# > docker push mitraardron/dweb-mirror:latest                                    # Send to repo
+# > docker image build --no-cache -t mitraardron/dweb-mirror:latest .   # Use no-cache or it might not rebuild from a changed npm
+# > docker push mitraardron/dweb-mirror:latest                          # Send to repo
 #
 # For testing
 # > docker run -i -p 4244:4244 --name internetarchive mitraardron/dweb-mirror:latest           # Test it
@@ -34,7 +34,7 @@ RUN mkdir -p /root/archiveorg
 # This was "COPY . /app" but better to get dweb-mirror from npm,
 # will be sure then to get a release rather than whatever is local
 #Have to run install during the build otherwise will build for different environment and fail with ELF error in at least wrtc
-RUN yarn add @internetarchive/dweb-mirror && yarn install
+RUN yarn add @internetarchive/dweb-mirror
 
 # tell the world we use port 4244, doesnt actually make docker do anything
 EXPOSE 4244
