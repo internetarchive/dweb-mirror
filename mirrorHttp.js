@@ -202,7 +202,7 @@ function mirrorHttp(config, cb) {
                 (err, s) => { // Have stream of file or error
                     if (err) {
                         // Failed - report
-                        debug("streamArchiveFile failed for %s/%s: %s", itemid, filename, err.message);
+                        debug("ERROR: streamArchiveFile failed for %s/%s: %s", itemid, filename, err.message);
                         res.status(404).send(err.message);
                     } else {
                         // Succeeded - pipe back to user with headers

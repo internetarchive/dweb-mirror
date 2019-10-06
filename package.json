@@ -9,10 +9,10 @@
   },
   "name": "@internetarchive/dweb-mirror",
   "dependencies": {
+    "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
     "@internetarchive/dweb-archive-dist": "^0.2.0",
     "@internetarchive/dweb-archivecontroller": "^0.1.79",
     "@internetarchive/dweb-transports": "^0.2.5",
-    "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
     "@stratumn/canonicaljson": "^1.0.3",
     "async": "^2.6.2",
     "child_process": "^1.0.2",
@@ -44,7 +44,6 @@
     "type": "git",
     "url": "git://github.com/internetarchive/dweb-mirror.git"
   },
-  "scripts": {
-  },
+  "scripts": {},
   "version": "0.2.55"
 }

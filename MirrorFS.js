@@ -250,12 +250,12 @@ class MirrorFS {
                             debug("MirrorFS creating directory: %s", path.dirname(filepath));
                             MirrorFS._mkdir(path.dirname(filepath), err => {
                                 if (err) {
-                                    console.error("Failed to mkdir for", filepath, err.message);
-                                    cb(err);
+                                  debug("ERROR: Failed to mkdir for", filepath, err.message);
+                                  cb(err);
                                 } else {
                                     fs.open(filepath, 'w', (err, fd) => {
                                         if (err) { // This shouldnt happen, we just checked the cacheDirectory.
-                                            console.error("Failed to open", filepath, "after mkdir");
+                                            debug("ERROR: Failed to open", filepath, "after mkdir");
                                             cb(err);
                                         } else {
                                             cb(null, fd);
