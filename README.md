@@ -1,3 +1,5 @@
+[![npm](https://img.shields.io/npm/v/@internetarchive/dweb-mirror.svg)](npm.im/@internetarchive/dweb-mirror)
+
 # Offline Internet Archive README 
 
 
