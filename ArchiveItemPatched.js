@@ -402,9 +402,10 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         if (opts.skipNet) {
             cb(new Error("skipNet set"));
         } else {
-            this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, unusedAI) => { // Process Fjords and load .metadata and .files etc - allow is_dark just throw before caller
-                cb(err); // Maybe or maybe not err
-            });
+          // Note _fetch_metadata will expand specialidentifiers
+          this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, unusedAI) => { // Process Fjords and load .metadata and .files etc - allow is_dark just throw before caller
+            cb(err); // Maybe or maybe not err
+          });
         }
     }
     function tryReadOrNet(cb) { // Try and Read and if not, then get from net, obeying options cb(err, doSave)
@@ -415,7 +416,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
                         cb(err, true); // If net succeeded then save
                     });
                 } else { // cached
-                    cb(null, !!copyDirectory); // cached but check for explicit requirement to copy
+                    cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid))); // cached but check for explicit requirement to copy
                 }
             })
         } else {
@@ -686,7 +687,7 @@ ArchiveItem.prototype.relatedItems = function({ wantStream=false, wantMembers=fa
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
     const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
-    if (identifier) {
+    if (identifier && ! Object.keys(specialidentifiers).includes(identifier)) {
         // noinspection JSUnresolvedVariable
         const relFilePath = path.join(this._namepart(), this._namepart()+"_related.json");
         // noinspection JSUnresolvedVariable

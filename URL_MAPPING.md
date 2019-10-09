@@ -1,6 +1,6 @@
 # An overview of mapping of URLs in dweb
 
-TODO write abbreviations
+NOTE THIS IS OUT OF DATE, NEEDS A MAINTENANCE PASS, DONT RELY ON IT BEING ACCURATE
 
 #### Abbreviations and explanations
 

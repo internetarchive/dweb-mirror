@@ -190,7 +190,7 @@ class MirrorFS {
       waterfall([
         cb1 => {
           if (copyDirectory) {
-            cb1(copyDirectory);
+            cb1(null, copyDirectory);
           } else {
             this.checkWhereValidFile(relFilePath.split('/')[0], {},
               (err, res) =>
