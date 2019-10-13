@@ -1,4 +1,5 @@
 #!/bin/sh
+# NOTE THIS IS UNUSED AN UNMAINTAINED, IT MIGHT NOT WORK, PR's WELCOME ON github.com/@internetarchive/dweb-mirror
 # Modified from https://github.com/ipfs/go-ipfs/blob/master/bin/container_daemon
 # Almost same code in "dweb" and "dweb-mirror" repos - main difference is enabling Filestore
 # all changes commented

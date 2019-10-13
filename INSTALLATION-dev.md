@@ -2,61 +2,44 @@
 
 See [README.md] for more info
 
-Note these are tested on Mac OSX only, I would love someone to test on Linux and submit changes 
+These documents are for people who want to work on code either for dweb-mirror or dweb-archive.
+For non developers see [./INSTALLATION.md](./INSTALLATION.md).
+
+Note these are currently tested on Mac OSX only, I would love someone to test on Linux and submit changes 
 on the repo (or just send me a corrected version of this file)
 
-## Installation
- 
-### 1. Prelim - getting your machine ready.
 
-You will need git, node, npm, yarn, which may or may not be already installed.
+## Automatic Installation
 
-* git: type "git" in a Terminal window, if git is installed you'll get the help message,
-if not then it should prompt you to install Xtools command line tools, accept ...
-* node and npm: try `node --version`, it should report v10 or better
-  * otherwise https://nodejs.org should know its a Mac and prompt you to install, 
-  * select the "recommended" version
-* yarn: `yarn --version` should report `v1.x.x` 
-  * Otherwise: https://yarnpkg.com/en/docs/install should auto-detect and make suggestions. 
-  * But, the easiest way is often, at a terminal window: 
-```
-      curl -o- -L https://yarnpkg.com/install.sh | bash
-```
+The easiest way to install is to use the installation script, 
+if it fails on your platform, it should exit at the failing step, and you can edit it and run it again.
 
-#### node-pre-gyp and cmake
-The following yarn install might or might not be needed but seems to speed 
-up compiles and updates.
-```
-sudo yarn add node-pre-gyp cmake
-```
-If you get an error `wget: No such file or directory` 
-then the easiest fix is to install `brew` which is a generally useful package manager.
-Follow the one line instructions at https://brew.sh,  which needs you to have Admin access. 
-
-Then run `brew install wget` 
-
-If that fails (as it did for me on an older Mac running OSX10.11 (the last version on Mac Minis)
-you can try the instructions at http://osxdaily.com/2012/05/22/install-wget-mac-os-x/
-but it works fine to continue without `node-pre-gyp` and `cmake`
-
-### 2. Install dweb-mirror
-
-There are two alternatives, 
-* 2A to run as an appliance (recommended)
-* 2B to work on the code on this machine or not. 
-
-If you want to install on OSX for development read on, otherwise check ./INSTALLATION-osx.md.
-
-#### dweb-mirror for development
-
-The easiest one line way is to run the installation script 
 ```
 curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_dev.sh | bash
 ```
-by defaults it will install in the git subdirectory of wherever you are running this
-you could alternatively download that script and edit the location where you want to install. 
 
-Either way, it will install all the repos that are part of the dweb-mirror system and link them together. 
+## Manual Installation
+
+This will depend on your platform but some hints.
+
+You will need:
+* Node version 10 or later
+* Yarn version 1.0.0 or later
+* Git
+* Npm (the one installed by Node should be fine)
+
+(The installer gets all these if missing)
+
+It seems to help package updating etc if you install `node-pre-gyp` and `cmake`
+```
+sudo yarn add node-pre-gyp cmake
+```
+
+You'll need to clone the repositories from Git, 
+use `lerna` and `yarn` to install them and then
+crosslink them. 
+
+This is non-trivial to get right which is why we built the installer ! 
 
 ### 3. Edit configuration
 
@@ -141,7 +124,8 @@ should update it.
 
 ### 7. Auto-starting
 
-TODO - this doesnt appear to work, needs investigation
+#### On Mac OSX
+TODO - this doesnt appear to work on OSX, and needs investigation
 
 If you want the server to start automatically when the mac boots. 
 Run the following commands in a terminal window
@@ -156,6 +140,10 @@ sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
 ```
 
 Restart your machine and check that http://localhost:4244 still works.
+
+#### On Linux
+Some variation of the code in [./install.sh](./install.sh) will be needed, 
+this hasn't been tested as for development we always run the server manually in the debugger,
 
 ### 8. Making changes
 You can make changes in the UI in dweb-archive, iaux/packages/ia-components, bookreader 

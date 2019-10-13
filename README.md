@@ -1,38 +1,79 @@
-# Offline Internet Archive README 
+# Offline Internet Archive
 
+## Introduction to the Offline Internet Archive project
 
-The project is a local server that allows users to browse resources from the
-Internet Archive stored on local drives - including USB drives.  
+The internet now seems like a utility, available everywhere from our homes and offices to trains and planes.
+But utility-level access is not yet a reality for more than half of the world’s population who lack consistent, 
+or indeed any access, to the Internet.
 
-It includes a crawler that can regularly synchronize local collections, against
-a list of Internet Archive items and collections, and those collections can be
-moved between installations.
+## Why?
 
-When connected to the internet, the server works as a Proxy, i.e. it will store
-Internet Archive (IA) content the user views for later off-line viewing. 
+* Cost: Internet access is unaffordable to people with low or no income.
+* Connectivity: In many developing countries and rural areas the infrastructure that enables 
+  internet access is unreliable, slow, or simply unavailable. Natural disasters, uprisings, and war 
+  compound the challenge.
+* Censorship: Some countries limit internet access for political reasons. Several countries block the 
+  Internet Archive. In some countries, Facebook has become synonymous with the internet – but it is hardly 
+  a substitute for free and open World Wide Web.
 
-There are components (not yet fully integrated) to integrate the IA server with decentralized tools
-including IPFS, WebTorrent, GUN, WOLK, both for fetching content and for
-serving it back to the net or locally. 
+The Internet Archive offers perhaps the world’s largest online store of open content. 
+The wisdom of the ages, just a few clicks away. As Wikipedia has become the world’s encyclopedia, 
+the Internet Archive has become its library. 
+Central to our mission is establishing “Universal Access to All Knowledge”. 
+Access to our library of millions of books, journals, audio and video recordings and beyond is free to anyone
+— with one caveat — the need for a reliable internet connection.
 
-This is an ongoing project, continually adding support for new Internet Archive
-content types; new platforms; and new decentralized transports.
+Lack of access to today’s internet is a significant factor in poorer educational outcomes, 
+inter-generational poverty and disempowerment as identified by the UN in their 
+Sustainable Development Goal #9. The Offline Archive project works towards making online collections 
+available — regardless of internet availability.     
+
+Part of the challenge is that those of us who live where the Internet works well, are adding graphics, 
+video and other demands on bandwidth faster than access is being improved in many parts of the world.
+
+An evolving ecosystem is emerging to enable access over poorer internet. Typically the approaches build 
+around low cost, low power, devices that can be installed, in communities and schools for example, and 
+deliver content either offline or through better usage of a narrow pipe to the net.
+
+We have built an offline server that:
+
+* Crawls Internet Archive collections to a local server.
+* Serves that content locally,
+* Caches content while browsing.
+* Moves content between servers by sneakernet — on disks, USB sticks, and SD cards.
+* Delivers (mostly) the Internet Archive UI offline in javascript in the browser,
+* Is open source
+* And is being made available in other languages.
+
+The server is integrated into the Internet-In-A-Box (IIAB) platform, 
+and can be installed on top of the Rachel platform, 
+or hopefully any linux based platform. 
+Our approach should improve access for anything from a US$20 Raspberry Pi 
+up to a server holding terabytes of data for an institution. 
+We are also collaborating with other parts of the ecosystem, integrating the Archive’s APIs with those 
+of other partners, to make it easier for them to incorporate Archive content. 
 
 ## Contributing
 
-We'd love to have you contribute, please email mitra@archive.org and I'll figure out how to help you get started. 
+We'd love to have you contribute, please email mitra@archive.org, or interact with the rest of this repo,
+and I'll figure out how to help you get started. 
 (TODO setup a better channel for this !)
 
 ## Installation
-Please see the separate INSTALLATION-xxx documents, these are a work in progress, but are generally tested for each 
-platform, and there is a generic INSTALLATION-work.md which should have everything and is great if you are trying to 
-install on a new platform.
 
-There is also an INSTALLATION-osx-dev.md for developers (a useful task would be for someone with a Linux machine 
-to make any edits to it if required)
+If you would like to run the offline archive server then see [INSTALLATION.md](./INSTALLATION.md), 
+and the documents it points to. 
+
+If you want to fix bugs, develop code or contribute in other ways then see [INSTALLATION-dev.md](./INSTALLATION-dev.md).
+(Note this document was written for Mac OSX users, a useful task would be for someone with a Linux machine
+to make any edits to it if required, or just confirms it is correct.)
+
+Also see these documents to update an existing installation,
+Or to troubleshoot an existing installation.
 
 ## Using it - starting the server.
-See the Installation docs but on most platforms the server should start at reboot. 
+See the Installation docs, but on most platforms (except, currently, on Mac OSX) 
+the server should start at reboot. 
 
 If not, then assuming you've got it installed in your home directory ...
 
@@ -48,36 +89,29 @@ it can be turned on or off at a terminal window with `service internetarchive st
 
 ### Browsing
 
-If you are working directly on the machine (e.g. its your Mac) then
-browse to [http://localhost:4244] which will open the UI in the browser and it should see the Archive UI.
+Open the web page - the address depends on the platform. 
 
-If you are remote from the machine, then browser to: `http://<IP of machine>:4244`, 
-if mdns works on your platform then `http://archive:4244` should work.
+* http://archive.local:4244 or http://archive:4244 should work on any platform, 
+  but this depends on the configuration of your LAN.
+* If you know the IP address then http:<IP Address>:4244 will work
+* On MacOSX (or if using a browser on the RaspberryPi/OrangePi): http://localhost:4244
+* On Rachel try http://rachel.local:4244 or http://rachel:4244
+  or via the main interface at http://rachel.local and click Internet Archive
+* On IIAB The server can be accessed at [http://box:4244](http://box:4244) or
+  [http://box.lan:4244](http://box.lan:4244) (try
+  [http://box.local:4244](http://box.local:4244) via mDNS over a local network,
+  if you don't have name resolution set up to reach your Internet-in-a-Box).
 
-On IIAB The server can be accessed at [http://box:4244](http://box:4244) or
-[http://box.lan:4244](http://box.lan:4244) (try
-[http://box.local:4244](http://box.local:4244) via mDNS over a local network,
-if you don't have name resolution set up to reach your Internet-in-a-Box).
-
-
-If you don’t get an Archive UI then look at the server log (in browser console)
-to see for any “FAILING” log lines which indicate a problem. 
-
-Expect to see errors in the Browser log for
-`http://localhost:5001/api/v0/version?stream-channels=true` which is checking
-for a local IPFS server which is not started here.
-
-Expect, on slower machines or slower network connections, to see no images the
-first time, refresh after a little while and most should appear. 
+Try walking through [./USING.md](./USING.md) to get a tour of the system,
+and you can click `Home` or the Internet Archive logo, if you just want to explore the Internet Archive's 
+resources.
 
 ## Administration
 
 Administration is carried out mostly through the same User Interface as browsing. 
 
-Access [http://localhost:4244/local](http://localhost:4244/local) to see a
-display of local content, this interface is under development and various admin
-tools will be added here.  Unless your box has been configured differently this 
-should also be the page you get at [http://box.lan:4244/local](http://box.lan:4244/local).
+Select `local` from any of the pages to access a display of local content. 
+Administration tools are under `Settings`.
 
 Access [http://localhost:4244/home](http://localhost:4244/home) to get the Internet
 Archive main interface if connected to the net. 
@@ -93,7 +127,7 @@ through three levels:
 * Full - crawls everything on the item, this can be a LOT of data, including
   full size videos etc, so use with care if bandwidth/disk is limited.
 
-### Disks
+### Disk storage
 
 The server checks for caches of content in directories called `archiveorg` in
 all the likely places, in particular it looks for any inserted USB drives
@@ -103,19 +137,21 @@ The list of places it checks, in an unmodified installation can be seen at
 `https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml#L7`.
 
 You can override this in `dweb-mirror.config.yaml` in the home directory of the
-user that runs the server, this is currently `/root/dweb-mirror.config.yaml`
+user that runs the server. (Note on IIAB this is currently in `/root/dweb-mirror.config.yaml`)
 (see 'Advanced' below)
 
 Archive's `Items` are stored in subdirectories of the first of these
 directories found, but are read from any of the locations. 
 
 If you disk space is getting full, its perfectly safe to delete any
-subdirectories, or to move them to an attached USB.  Its also safe to move
-attached USB's from one device to another.
+subdirectories (except `archiveorg/.hashstore`), and the server will refetch anything else it needs 
+next time youbrowse to the item while connected to the internet. 
+Its also safe to move directories to an attached USB 
+(underneath a `archiveorg` directory at the top level of the disk) 
+It is also safe to move attached USB's from one device to another.
 
-The one directory you should not move or delete is `archiveorg/.hashstore` in
-any of these locations, the server will refetch anything else it needs next time you
-browse to the item while connected to the internet. 
+Some of this functionality for handling disks is still under active development, 
+but most of it works now.
 
 ### Maintenance
 
@@ -136,11 +172,7 @@ cached,  just to rebuild a table of checksums.
 Most functionality of the tool is controlled by two YAML files, the second of
 which you can edit if you have access to the shell. 
 
-You can view the current configuration by going to
-[http://box.lan:4244/info](http://box.lan:4244/info) or
-[http://localhost:4244/info](http://localhost:4244/info) depending on how you
-are connected.
-
+You can view the current configuration by going to `/info` on your server.
 The default, and user configurations are displayed as the `0` and `1` item in
 the `/info` call. 
 
@@ -156,83 +188,55 @@ copy a new default from
 Note that this file is also edited automatically when the Crawl button
 described above is clicked. 
 
-As the project develops, this file will be editable via a UI. 
-
-## Update
-
-Dweb-mirror is under rapid development, as is the JavaScript UI.  It's
-recommended to update frequently. 
-
-From a Terminal window
-```
-sudo sh # Run all commands as root
-cd /opt/iiab/internetarchive
-yarn install  # Makes sure you have at least the minimum packages
-yarn upgrade  # Currently this can take up to about 20 minutes to run, we hope to reduce that time
-```
+As the project develops, this file will be more and more editable via a UI. 
 
 ## Crawling
 
 The Crawler runs automatically at startup and when you add something to the crawl, 
-but it can also be run at a command line. 
+but it can also be configurable through the YAML file described above
+or run at a command line for access to more functionality.
 
-Its highly configurable either through the YAML file described above, or from
-the command line.
-
-In a shell 
+In a shell
 ```
-# Run all commands as root from dweb-mirror's directory
 sudo sh
-
-# cd into location for your installation - which varies between platforms
-cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror || cd /usr/local/node_modules/@internetarchive/dweb-mirror || cd ~/node_modules/@internetarchive/dweb-mirror
-
-# To get a full list of possible arguments and some more examples
-./internetarchive --help
-
-# Perform a standard crawl
+```
+cd into the location for your installation, on most platforms it is:
+```
+cd ~/node_modules/@internetarchive/dweb-mirror 
+```
+Or on IIAB it would be
+```
+cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror
+```
+Perform a standard crawl
+```
 ./internetarchive --crawl 
-
-# To fetch the "foobar" item from IA. 
+```
+To fetch the "foobar" item from IA. 
+```
 ./internetarchive --crawl foobar 
-
-# To crawl top 10 items in the prelinger collection sufficiently to display and put 
-# them on a disk plugged into the /media/pi/xyz
-# TODO check where pi actually put them. 
+```
+To crawl top 10 items in the prelinger collection sufficiently to display and put 
+them on a disk plugged into the /media/pi/xyz.
+```
 ./internetarchive --copydirectory /media/pi/xyz/archiveorg --crawl --rows 10 --level details prelinger
 ```
-## Troubleshooting
-
-There are two logs of relevance, the browser and the server.
-
-**Browser**: If using Chrome then this is at View / Developer Tools /
-JavaScript Console or something similar.
-
-**Server**: 
-On IIAB or on Rachel/RPI from a Terminal window. 
+To get a full list of possible arguments and some more examples
 ```
-journalctl -u internetarchive
+./internetarchive --help
 ```
-TODO find log files on other platforms
-
-## Known Issues
-
-See
-[github dweb-mirror issues](https://github.com/internetarchive/dweb-mirror/issues);
-and
-[github dweb-archive issues](https://github.com/internetarchive/dweb-archive/issues);
 
 ## More info
 
+I recommend following through the tour in [USING.md](./USING.md)
+
 Dweb-Mirror lives on GitHub at:
-* [dweb-mirror](https://github.com/internetarchive/dweb-mirror)
-* [source](https://github.com/internetarchive/dweb-mirror)
-* [issues](https://github.com/internetarchive/dweb-mirror/issues)
-* [API.md](./API.md) API documentation for dweb-mirror
+* dweb-mirror (the server) [source](https://github.com/internetarchive/dweb-mirror),
+  and [issues tracker](https://github.com/internetarchive/dweb-mirror/issues)
+* dweb-archive (the UI) [source](https://github.com/internetarchive/dweb-archive),
+  and [issues tracker](https://github.com/internetarchive/dweb-archive/issues)
 
 This project is part of the Internet Archive's larger Dweb project, see also:
-* [dweb-universal](https://github.com/internetarchive/dweb-universal) info about others distributing the web
-* [dweb-transport](https://github.com/internetarchive/dweb-transport) miscellaneous incl GUN gateway and WebTorrent
-* [dweb-objects](https://github.com/internetarchive/dweb-objects) library of dweb objects and examples (not maintained)
-* [dweb-archive](https://github.com/internetarchive/dweb-archive) archive UI in JavaScript
-* [dweb-archivecontroller](https://github.com/internetarchive/dweb-archive) Knows about the structure of archive objects
+* [dweb-universal](https://github.com/mitra42/dweb-universal) info about others working to bring access offline.
+* [dweb-transports](https://github.com/internetarchive/dweb-transports) for our transport library to IPFS, WEBTORRENT, WOLK, GUN etc
+* [dweb-archivecontroller](https://github.com/internetarchive/dweb-archivecontroller) for an object oriented wrapper around our APIs

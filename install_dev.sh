@@ -20,11 +20,100 @@ PARENTDIRECTORY=git
 REPOS="dweb-transports dweb-archivecontroller bookreader dweb-archive dweb-mirror iaux"
 # Note that dweb-transport and dweb-gatewahy are not installed they are only useful when running as a gateway server at the archive.
 
-echo "==== Checking for presence of yarn ========================="
-if ! yarn --version
+function step {
+  STEPALL=$*
+  STEPNUMBER=$1
+  shift
+  STEPNAME="$*"
+  #Uncomment next line if you want to find where it failed
+  #echo "Offline Internet Archive Installer: ${STEPNUMBER}" > /tmp/step
+  echo "Offline Internet Archive Installer: ${STEPNAME}"
+}
+
+# Convert the portable uname results into go specific environment note Mac has $HOSTTYPE=x86_64 but not sure that is on other platforms
+case `uname -m` in
+"armv7l") ARCHITECTURE="arm";;    # e.g. Raspberry 3 or OrangePiZero. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
+"x86_64") ARCHITECTURE="amd64";;  # e.g. a Mac OSX
+"i?86") ARCHITECTURE="386";;      # e.g. a Rachel3+
+*) echo "Unknown processor type `uname -m`, needs configuring"; ARCHITECTURE="unknown";;
+esac
+# See also /sys/firmware/devicetree/base/model
+
+# Now find OS type, note Mac also has a $OSTYPE
+case `uname -s` in
+"Darwin") OPERATINGSYSTEM="darwin";;   # e.g. a Mac OSX
+"Linux") OPERATINGSYSTEM="linux";;     # e.g. Raspberry 3 or Rachel3+ or OrangePiZero/Armbian
+*) echo "Unknown Operating system type `uname -s` - needs configuring"; OPERATINGSYSTEM="unknown";;
+esac
+# Hard to tell Armbian from Raspbian or a bigger Linux so some heuristics here
+[ ! -e /usr/sbin/armbian-config ] || OPERATINGSYSTEM="armbian"
+[ ! -e /etc/dpkg/origins/raspbian ] || OPERATINGSYSTEM="raspbian"
+
+#TODO detect Rachel, IIAB etc and set $PLATFORM
+PLATFORM="unknown"
+[ ! -e /etc/rachelinstaller-version ] || PLATFORM="rachel"
+
+# And setup some defaults
+INSTALLDIR=`pwd`  # Default to where we are running this from
+YARNCONCURRENCY=1 # Good for a 386 or arm, below that use 1, for OSX go up
+CACHEDIR="${HOME}/archiveorg"
+
+# Override defaults based on above
+case "${PLATFORM}" in
+"rachel") CACHEDIR="/.data/archiveorg";;
+esac
+case "${ARCHITECTURE}" in
+"386") YARNCONCURRENCY=2;;
+"amd64") YARNCONCURRENCY=4;;
+esac
+
+echo "Architecture: ${ARCHITECTURE} OS: ${OPERATINGSYSTEM} PLATFORM: ${PLATFORM} CACHEDIR: ${CACHEDIR} INSTALLDIR: ${INSTALLDIR}"
+
+if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  echo "==== Yarn not found, installing it ==========================="
-  curl -o- -L https://yarnpkg.com/install.sh | bash
+  if ! yarn --version 2>/dev/null
+  then
+  step XXX "Adding Yarn sources"
+    curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+  fi
+  set +e # update and upgrade often have non-zero return codes even though safe to continue
+  step XXX "Apt update"
+  sudo apt-get update
+
+  step XXX "Upgrade all Apt packages"
+  sudo dpkg --configure -a # Clear out any previous locks/interrupted opts - especially kolibri install
+  sudo apt-get upgrade    # Make sure running latest version
+  sudo apt -y autoremove
+  set -e # Exit on errors
+else # Its OSX
+  #set +e  # Uncomment if these unneccessarily have failure exit codes
+  step XXX "Checking git and brew are installed"
+  git --version || xcode-select --install  # Get Git and other key command line tools (need this before "brew"
+  brew --version || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  set -e
+fi
+
+if [ "${OPERATINGSYSTEM}" != "darwin" ]
+then
+  step XXX "Installing nodejs yarn git npm"
+  sudo apt-get install -y nodejs yarn git npm
+  # Note previously installing "npm" but no longer using
+  # Note yarn alternative can skip the apt-key & sources steps above and ...
+  # curl -o- -L https://yarnpkg.com/install.sh | bash
+  # source ~/.bashrc # Fix path
+  set +e
+  step XXX "Trying to install libsecret which may fail" # Failed on rachel
+  sudo apt-get install -y libsecret-1-dev # Allow libsecret-1-dev to fail , we migth not need it
+  set -e
+else
+  step XXX "Installing wget nodejs yarn"
+  wget --version >>/dev/null || brew install wget
+  # The brew installer for node is broken (fails to run the npx line in bookreader/package.json), use the line below as found on https://nodejs.org/en/download/package-manager/#macos
+  #node --version >>/dev/null || brew install nodejs
+  node --version >>/dev/null || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
+  yarn --version >>/dev/null || curl -o- -L https://yarnpkg.com/install.sh | bash
+  source ~/.bashrc # Fix up path
 fi
 
 echo "==== Creating parent directory ========================="
@@ -46,9 +135,9 @@ do
   fi
 done
 
-echo "Selecting mitra-release branch of iaux"
+echo "Selecting mitra-i18n branch of iaux"
 pushd iaux
-git checkout mitra--release
+git checkout mitra-i18n # Normally mitra--release
 popd
 
 for REPO in ${REPOS}

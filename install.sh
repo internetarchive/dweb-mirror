@@ -112,12 +112,6 @@ else
   source ~/.bashrc # Fix up path
 fi
 
-if [ $PLATFORM = "rachel" ]
-then
-  step XXX "Rachel only - requirements for usbmount: debhelper and exfat-fuse"
-  sudo apt-get install -y debhelper exfat-fuse
-fi
-
 # Previously used, but dont believe need now that not installing as many dependencies.
 # yarn global add node-pre-gyp
 # [ -d node_modules/cmake ] || [ -d /usr/local/share/.config/yarn/global/node_modules/cmake/ ] || sudo yarn global add cmake
@@ -168,10 +162,13 @@ then
   sudo chown -R www-data:www-data /var/www/modules/en-internet_archive
 fi
 
-# TODO this usb strategy might work on other platforms esp OrangePi
-if [ "${PLATFORM}" = "rachel" ]
+# Dont try it on OSX, IIAB doesnt uses this installer,
+# Tested on raw RPI, RPI+Rachel; armbian/orangepi not needed on RPI+IIAB which uses own installer;
+if [ "${PLATFORM}" = "rachel" -o "${OPERATINGSYSTEM}" = "raspbian" -o "${OPERATINGSYSTEM}" = "armbian" ]
 then
-  step XXX "Rachel only: setting up USB mount"
+  step XXX "Raspberries (including Rachel) only - usb mount - getting dependencies"
+  sudo apt-get install -y debhelper exfat-fuse
+  step XXX "Raspberries (including Rachel) only - getting and building usbmount package from fork that fixes some bugs"
   cd /var/tmp
   if [ -d usbmount ]
   then
@@ -181,11 +178,13 @@ then
 	  git clone https://github.com/rbrito/usbmount.git
 	  cd usbmount
   fi
-  dpkg-buildpackage -us -uc -b
+  # Raspbian didnt require sudo, but armbian does
+  sudo dpkg-buildpackage -us -uc -b
   cd ..
   sudo apt install -y ./usbmount_0.0.24_all.deb
-  echo "Installer: Editing /etc/usbmount/usbmount.conf in place"
+  step XXX "Raspberries (including Rachel) only - editing usbmount.conf in place"
   sudo sed 's/FILESYSTEMS=.*/FILESYSTEMS="vfat ext2 ext3 ext4 ntfs-3g ntfs exfat hfsplus fuseblk"/' -i- /etc/usbmount/usbmount.conf
+  echo "It should recognize USB drives after the next reboot"
 fi
 
 if [ "${OPERATINGSYSTEM}" = "armbian" ]

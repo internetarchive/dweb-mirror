@@ -1,5 +1,5 @@
 #!/bin/bash
-#NOTE THIS MAY BE SERIOUSLY OUT OF DATE
+#NOTE THIS IS SERIOUSLY OUT OF DATE and not used - see head of Dockerfile for hints about usage.
 set -x
 export ipfs_staging=/Users/mitra/temp/ipfsstaging
 export ipfs_data=/Users/mitra/temp/ipfsdata

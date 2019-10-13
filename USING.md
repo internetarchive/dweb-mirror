@@ -2,7 +2,7 @@
 
 ## Summary
 
-*Note: This aspect of the system is currently (July 2019) in rapid evolution, 
+*Note: This aspect of the system is currently (October 2019) in rapid evolution, 
 updating your system is likely to improve it: see [./INSTALLATION.md]*
 
 This file is intended to compliment the [README](./README.md) and [INSTALLATION](INSTALLATION.md) documents. 

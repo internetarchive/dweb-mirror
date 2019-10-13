@@ -1,5 +1,6 @@
 #!/bin/bash
 set -x
+
 # I put this script together given the unavailability of any "official" way to install IPFS from a script
 # Alternatives include "ipfs-update" which is written in GO, and installs from source, but depends on GO >= 1.9 which means it fails on Raspberry Pis
 # Or getting from the web page at 'https://dist.ipfs.io/#ipfs-update' but that isn't easy to automate since the links are version specific
@@ -107,3 +108,21 @@ else
         ipfs config --json Experimental.FilestoreEnabled true
     fi
 fi
+exit
+######################################################################################
+Install IPFS, there are several strategies in install_ipfs.sh that should at least cover your Mac,
+but it might need editing if you have an odd combinations.
+```
+cd ~/node_modules/@internetarchive/dweb-mirror
+./install_ipfs.sh
+```
+Now start the daemon, first time it initializes and configures a repo
+```
+start_ipfs daemon  &
+```
+If it complains that 8080 is in use, then you missed editing start_ipfs and can fix this with
+```
+ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8081
+start_ipfs daemon &
+```
+Allow ipfs to start, once it says Daemon is ready, Ctrl-C out of it
