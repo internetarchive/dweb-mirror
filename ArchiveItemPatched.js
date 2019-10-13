@@ -682,7 +682,7 @@ ArchiveItem.prototype.relatedItems = function({ wantStream=false, wantMembers=fa
     /*
     Save the related items to the cache, TODO-CACHE-AGING
     wantStream      true => cb(err, stream)
-    wantMembers     true => cb(err, [ArchiveMember*]
+    wantMembers     true => cb(err, [ArchiveMember*] if want ArchiveMember returns, typically false in mirrorHttp as passing back to browser as is.
     !wantStream && !wantMembers => cb(err, { hits: hit: [ {}* ]  }
     cb(err, stream|obj)  Callback on completion with related items object (can be [])
     */
@@ -714,7 +714,7 @@ ArchiveItem.prototype.relatedItems = function({ wantStream=false, wantMembers=fa
             }
         });
     } else {
-        cb(null, wantMembers ? [] : undefined);
+        cb(null, wantMembers ? [] : undefined );
     }
 };
 ArchiveItem.addCrawlInfoRelated = function(rels, {copyDirectory, config=undefined}={}, cb) {

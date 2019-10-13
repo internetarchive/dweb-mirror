@@ -115,8 +115,10 @@ function mirrorHttp(config, cb) {
 
     function sendRelated(req, res, next) {
         // req.opts = { noCache, copyDirectory}
-        const ai = new ArchiveItem({identifier: req.params[0]});
+        const identifier = req.params[0];
+        const ai = new ArchiveItem({identifier});
         waterfall([
+                (cb) => cb((identifier && ! Object.keys(specialidentifiers).includes(identifier)) ? null : new Error(`ERROR There is no related info for special identifier ${identifier}`)),
                 (cb) => ai.fetch_metadata(req.opts, cb),
                 (ai, cb) => ai.relatedItems({copyDirectory: req.opts.copyDirectory, wantMembers: false, noCache: req.opts.noCache}, cb),
                 (res, cb) => ArchiveItem.addCrawlInfoRelated(res, {config, copyDirectory: req.opts.copyDirectory}, (err) => cb(err, res)),
