@@ -441,6 +441,17 @@ function mirrorHttp(config, cb) {
     app.get('/admin/crawl/status', (req, res) => {
         res.json(CrawlManager.status());
     });
+  app.get('/admin/crawl/add', (req, res) => {
+    // Expect opts identifier, query, copyDirectory, but could be adding search, related, in future
+    // Order is significant, config should NOT be overridable by query parameters.
+    CrawlManager.add({...req.query, config}, err => {
+      if (err) { // No errors expected
+        next(err);
+      } else {
+        sendInfo(req, res); // Send info again for UI
+      }
+    });
+  });
     app.get('/admin/crawl/add/:identifier', (req, res) => {
       CrawlManager.add({config, identifier: req.params.identifier, copyDirectory: req.opts.copyDirectory}, err => {
         if (err) { // No errors expected

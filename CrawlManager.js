@@ -191,12 +191,12 @@ class CrawlManager {
                 || new CrawlManager(Object.assign({}, config.apps.crawl.opts, {copyDirectory, debugidentifier: copyDirectory, name: copyDirectory}));
     }
     //Test is curl -Lv http://localhost:4244/admin/crawl/add/AboutBan1935?copyDirectory=/Volumes/Transcend/archiveorgtest20190701
-    static add({identifier=undefined, config=undefined, copyDirectory=undefined}, cb) {
+    static add({identifier=undefined, query=undefined, config=undefined, copyDirectory=undefined}, cb) {
         // Called by mirrorHttp to do a one-time crawl of an item
         const crawlmanager = copyDirectory
           ? this.findOrCreateCrawlManager({config, copyDirectory})
           : this.crawls[0];
-        crawlmanager._push(new CrawlItem({identifier, level: "details", crawlmanager}, []));
+        crawlmanager._push(new CrawlItem({identifier, query, level: "details", crawlmanager}, []));
         // Note this wont restart a paused crawl, if crawl has finished then pushing a task will make it continue
         cb(null); // No errors currently
     }
