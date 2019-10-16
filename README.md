@@ -113,7 +113,7 @@ Administration is carried out mostly through the same User Interface as browsing
 Select `local` from any of the pages to access a display of local content. 
 Administration tools are under `Settings`.
 
-Access [http://localhost:4244/home](http://localhost:4244/home) to get the Internet
+Click on the Archive logo, in the center-top, to get the Internet
 Archive main interface if connected to the net. 
 
 While viewing an item or collection, the "Crawl" button in the top bar
@@ -161,7 +161,7 @@ moving cached items around.
 # Run everything as root
 sudo su
 # cd into location for your installation
-cd /opt/iiab/internetarchive/node_modules/@internetarchive/dweb-mirror
+cd ~/node_modules/@internetarchive/dweb-mirror
 ./internetarchive -m
 ```
 This will usually take about 5-10 minutes depending on the amount of material
@@ -180,7 +180,7 @@ In the Repo is a
 [default YAML file](https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml)
 which is commented.  It would be a bad idea to edit this, so I'm not going to
 tell you where it is on your installation!  But anything from this file can be
-overridden by lines in `/root/dweb-mirror.config.yaml`.  Make sure you
+overridden by lines in `~/dweb-mirror.config.yaml`.  Make sure you
 understand how yaml works before editing this file, if you break it, you can
 copy a new default from
 [dweb-mirror.config.yaml on the repo](https://github.com/internetarchive/dweb-mirror/blob/master/dweb-mirror.config.yaml)

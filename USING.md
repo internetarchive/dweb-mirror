@@ -48,7 +48,7 @@ Below that is a row of information specific to the offline application.
 First are health indicators. 
 * If it shows "Mirror" in Red, it means we can't communicate with the mirror gateway, 
 this will only happen if the gateway goes offline part way through a process.
-* Normally you'll see an indicator for HTTP, which is Green when the gateway can talk to the Archive, 
+* Normally you'll see an indicator for GATEWAY, which is Green when the gateway can talk to the Archive, 
   and Red when you are offline.
 * Next to that might be indicators for WebTorrent or IPFS if they have been enabled. 
 
@@ -56,7 +56,7 @@ this will only happen if the gateway goes offline part way through a process.
 
 * Then comes an indicator for this page, whether it is being crawled, and if so approximately how much has been stored. 
 
-* If the mirror is online to the Internet Archive (HTTP shows Green) then next comes a "Reload" button, 
+* If the mirror is online to the Internet Archive (GATEWAY shows Green) then next comes a "Reload" button, 
 you can click this to force it to check with the Archive for an up to date list. 
 It is most useful on collections when someone else might have added something, 
 but your gateway might be remembering an old version.
@@ -99,10 +99,8 @@ in the same way tiles do, and also show you (approximately) the total downloaded
 Click on the Crawl button till it turns Green and it will download a full copy of the book, video or audio.
 It waits about 30 seconds to do this, allowing time to cycle back to the desired level of crawling.
 These items will also appear on your Local page.  
-See the note above, usually you won’t want to leave it at yellow (all) as this will usually try
+See the note above, usually you won’t want to leave it at blue (all) as this will usually try
 (there are some size limits) to download all the files.
-
-[Issue 229](https://github.com/internetarchive/dweb-mirror/issues/229) re yellow/blue indicators.
 
 There is a Reload button which will force the server to try archive.org, 
 this is useful if you think the item has changed, or for debugging.
@@ -116,6 +114,7 @@ The server checks whether these disks are present every 15 seconds, so to use a 
 * Insert the USB 
 * Create a folder at its top level called `archiveorg`
 * Wait about 15 seconds
+* Reload the page you are on
 * Hitting `Save` should now allow this USB disk to be selected. 
 
 ## Collection and Search pages - multiple items
@@ -126,9 +125,6 @@ If you click on the crawl button till its Green then it will check this collecti
 download the tiles for the first page or so, and can be configured to get some of the items as well 
 
 [issue#140](https://github.com/internetarchive/dweb-mirror/issues/140) allow UI to configure. 
-
-Save is not yet enabled for collections or searches.
-[issue#187][https://github.com/internetarchive/dweb-mirror/issues/187]
 
 ## Accessing Internet Archive resources
 
@@ -159,7 +155,7 @@ You can edit this file with care !
 
 From the command line, cd into the directory holding the service to run the crawler e.g. on iIAB
 ```
-cd /opt/iiab/internetarchive
+cd ~/node_modules/dweb-mirror
 ./internetarchive --crawl
 ```
 There are lots of options possible, try `./internetarchive —help` to get guidance.
@@ -186,8 +182,8 @@ cd /media/pi/foo
 # Create a directory to use for the content, it must be called "archiveorg"
 mkdir archiveorg 
 
-# CD wherever you have your installation
-cd /opt/iiab/internetarchive 
+# CD to the installation
+cd ~/internetarchive/node_modules/dweb-mirror
 
 # Copy the current crawl to the directory
 ./internetarchive --crawl --copydirectory /media/foo/archiveorg
