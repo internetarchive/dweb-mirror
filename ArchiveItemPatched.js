@@ -887,6 +887,7 @@ ArchiveItem.prototype.summarizeFiles = function(cb) {
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;
   // files_details is false for is_dark; searches have no files so true; cant download tv so false; otherwise looks at minimumForUI
+  // note until crawlEpubs is the default it doesnt check for the presence of the .epub file
   this.downloaded.files_details =  (!this.is_dark) && (!["tv"].includes(this.subtype()) &&(!this.files.length || this.minimumForUI().every(af => af.downloaded)));
   cb(null);
 }

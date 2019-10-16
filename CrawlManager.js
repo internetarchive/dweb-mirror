@@ -42,10 +42,11 @@ const HashStore = require('./HashStore');
 class CrawlManager {
 
     constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false,
-                    noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined,
+                    noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, crawlEpubs=undefined,
                     defaultDetailsSearch=undefined, defaultDetailsRelated=undefined,callbackDrainOnce=false, name=undefined}={}) {
         this.clearState();
-        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency, limitTotalTasks, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
+        this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency,
+            limitTotalTasks, crawlEpubs, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
         this._taskQ = queue((task, cb) => {
           // Tasks will loop from 1-5 secs if disconnected, the randomness is to spread tasks out.
           asyncUntil(
@@ -485,7 +486,7 @@ class CrawlItem extends Crawlable {
                     const asParent = this.asParent();
                     if (this.identifier) { // (but only on items, not on searches)
                         if (this.level === "details") { // Details
-                            (this.item.minimumForUI() || []).forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
+                            (this.item.minimumForUI({crawlEpubs: crawlmanager.crawlEpubs}) || []).forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
                         } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
                             if (this.item.files) this.item.files.forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
                         }

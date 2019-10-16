@@ -15,7 +15,7 @@ const MirrorFS = require('./MirrorFS');
 
 // noinspection JSUnresolvedVariable
 ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, noCache=false,
-                                                    copyDirectory=undefined, start=0, end=undefined} = {}, cb) {
+                                            wantSize=false, copyDirectory=undefined, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
     skipNet if set will stop it trying the net, and just return info about the current file
@@ -24,12 +24,12 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
     const filename = this.metadata.name;
     const debugname = [itemid, filename].join('/');
     MirrorFS.cacheAndOrStream({ // Try first time without Urls, keep local - note noCache will make this return error unless sha1 specified as no urls either.
-        skipFetchFile, wantStream, start, end, debugname, noCache, copyDirectory,
+        skipFetchFile, wantStream, start, end, debugname, noCache, copyDirectory, wantSize,
         sha1: this.metadata.sha1,
         relFilePath: path.join(itemid, filename),
         expectsize: this.metadata.size,
         ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
-    }, (err, streamOrUndefined) => {
+    }, (err, streamOrUndefinedOrSize) => {
         if (err && skipNet) {
             cb(err);
         } else if (err) { // Unable to retrieve locally, lets get urls and try again
@@ -38,25 +38,25 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
                     cb(err);
                 } else {
                     MirrorFS.cacheAndOrStream({
-                        urls, skipFetchFile, wantStream, start, end, debugname, noCache, copyDirectory,
+                        urls, skipFetchFile, wantStream, wantSize, start, end, debugname, noCache, copyDirectory,
                         sha1: this.metadata.sha1,
                         relFilePath: path.join(itemid, filename),
                         expectsize: this.metadata.size,
                         ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
-                    }, (err, streamOrUndefined) => {
+                    }, (err, streamOrUndefinedOrSize) => {
                         if (err) {
                             debug("Unable to cacheOrStream %s", debugname);
                             cb(err);
                         } else {
                             if (!wantStream && !(start || end)) { this.downloaded = true; }; // No error, and not streaming so must have downloaded
-                            cb(null, wantStream ? streamOrUndefined : this);
+                            cb(null, (wantStream || wantSize) ? streamOrUndefinedOrSize : this);
                         }
                     });
                 }
             })
         } else { // The local check succeeded
             this.downloaded = true;
-            cb(null, wantStream ? streamOrUndefined : this);
+            cb(null, (wantStream || wantSize) ? streamOrUndefinedOrSize : this);
         }
     })
 };
@@ -66,7 +66,10 @@ ArchiveFile.prototype.isDownloaded = function({copyDirectory=undefined}, cb) {
     if (this.downloaded === true) { // Already know its downloaded - note not rechecking, so its possible it was deleted.
         cb(null, this.downloaded);
     } else {                // Maybe, lets check
-        this.cacheAndOrStream({  copyDirectory, skipNet: true, wantStream: false }, (err, res) => {
+        this.cacheAndOrStream({  copyDirectory, skipNet: true, wantStream: false, wantSize: !this.metadata.size }, (err, res) => {
+            if (!err && !this.metadata.size) {
+                this.metadata.size = `${res}`; //TODO needs to be a string
+            }
             // cacheAndOrStream has side effect of setting downloaded
             cb(null, !err)
         });
