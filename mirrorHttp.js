@@ -38,13 +38,6 @@ const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/R
 
 // IA packages
 const {gateway, specialidentifiers, homeQuery} = require('@internetarchive/dweb-archivecontroller/Util');
-//auto test for presence of wrtc, its not available on rachel
-let wrtc;
-try {
-    wrtc = require('wrtc');
-} catch(err) {
-    debug("wrtc not present");
-}
 // Local files
 const MirrorFS = require('./MirrorFS');
 const CrawlManager = require('./CrawlManager');
@@ -590,6 +583,9 @@ function mirrorHttp(config, cb) {
     app.get('/images/*', function (req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
         _sendFileFromDir(req, res, next, config.archiveui.directory + "/images");
     });
+  app.get('/languages/*', function (req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
+    _sendFileFromDir(req, res, next, config.archiveui.directory + "/languages");
+  });
 // noinspection JSUnresolvedFunction
     app.get('/info', sendInfo);
 
