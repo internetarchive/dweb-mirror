@@ -226,16 +226,7 @@ function connect(cb) {
     // TODO-SPLIT these will need to move into local server or may be excluded by cross-origin low-bandwidth rule in chrome
     // These are no longer packaged in dweb-transports, include specifically only if going to use it
     // And make sure to do add via yarn during installation
-    DwebTransports.loadIntoNode(connectOpts);
-    if (connectOpts.transports.includes('WEBTORRENT') && connectOpts.webtorrent && (connectOpts.webtorrent.tracker === "wrtc")) {
-        try {
-            const wrtc = require('wrtc');
-            if (wrtc) connectOpts.webtorrent.tracker = { wrtc };
-        } catch (err) {
-            debug("wrtc requested but not present"); // Allow to continue without wrtc
-            delete connectOpts.webtorrent.tracker;
-        }
-    }
+    DwebTransports.loadIntoNode(connectOpts); // Note runs loadIntoNode from each used DwebTransports.TransportXxx or default DTS.Transport
     if (opts.verbose || opts.dummy) {
         debug( "Connect configuration: %o", connectOpts);
     }

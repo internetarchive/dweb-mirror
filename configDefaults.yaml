@@ -34,7 +34,7 @@ connect:
     #- 'GUN'
     #- 'WOLK'
   webtorrent: # Options to webtorrent
-    tracker: 'wrtc'   # May or may not work on different platforms
+    tracker: 'wrtc'   # May or may not work on different platforms and needs installing
   ipfs: # Options to IPFS
     urlUrlstore: 'http://localhost:5001/api/v0/urlstore/add'
   preferredStreamTransports: # A list, in order of preference of transports to use for streams, only works if they are listed in "connect" above.

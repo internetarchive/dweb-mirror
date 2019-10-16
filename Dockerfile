@@ -33,7 +33,7 @@ RUN mkdir -p /root/archiveorg
 
 # This was "COPY . /app" but better to get dweb-mirror from npm,
 # will be sure then to get a release rather than whatever is local
-#Have to run install during the build otherwise will build for different environment and fail with ELF error in at least wrtc
+#Have to run install during the build otherwise will build for different environment and may fail with ELF error
 RUN yarn add @internetarchive/dweb-mirror
 
 # tell the world we use port 4244, doesnt actually make docker do anything

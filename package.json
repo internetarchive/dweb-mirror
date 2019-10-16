@@ -37,9 +37,6 @@
   "homepage": "https://github.com/internetarchive/dweb-mirror#readme",
   "keywords": [],
   "license": "AGPL-3.0",
-  "optionalDependencies": {
-    "wrtc": "^0.2.1"
-  },
   "repository": {
     "type": "git",
     "url": "git://github.com/internetarchive/dweb-mirror.git"
