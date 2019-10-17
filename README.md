@@ -37,12 +37,12 @@ deliver content either offline or through better usage of a narrow pipe to the n
 
 We have built an offline server that:
 
-* Crawls Internet Archive collections to a local server.
+* Crawls Internet Archive collections to a local server,
 * Serves that content locally,
-* Caches content while browsing.
-* Moves content between servers by sneakernet — on disks, USB sticks, and SD cards.
+* Caches content while browsing,
+* Moves content between servers by sneakernet — on disks, USB sticks, and SD cards,
 * Delivers (mostly) the Internet Archive UI offline in javascript in the browser,
-* Is open source
+* Is open source,
 * And is being made available in other languages.
 
 The server is integrated into the Internet-In-A-Box (IIAB) platform, 
@@ -116,7 +116,7 @@ Administration tools are under `Settings`.
 Click on the Archive logo, in the center-top, to get the Internet
 Archive main interface if connected to the net. 
 
-While viewing an item or collection, the "Crawl" button in the top bar
+While viewing an item or collection, the `Crawl` button in the top bar
 indicates whether the item is being crawled or not.  Clicking it will cycle
 through three levels:
 
@@ -145,7 +145,7 @@ directories found, but are read from any of the locations.
 
 If you disk space is getting full, its perfectly safe to delete any
 subdirectories (except `archiveorg/.hashstore`), and the server will refetch anything else it needs 
-next time youbrowse to the item while connected to the internet. 
+next time you browse to the item while connected to the internet. 
 Its also safe to move directories to an attached USB 
 (underneath a `archiveorg` directory at the top level of the disk) 
 It is also safe to move attached USB's from one device to another.
@@ -157,10 +157,13 @@ but most of it works now.
 
 If you are worried about corruption, or after for example hand-editing or
 moving cached items around. 
+
+Run everything as root
 ```
-# Run everything as root
 sudo su
-# cd into location for your installation
+```
+cd into location for your installation
+```
 cd ~/node_modules/@internetarchive/dweb-mirror
 ./internetarchive -m
 ```
@@ -178,9 +181,9 @@ the `/info` call.
 
 In the Repo is a
 [default YAML file](https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml)
-which is commented.  It would be a bad idea to edit this, so I'm not going to
-tell you where it is on your installation!  But anything from this file can be
-overridden by lines in `~/dweb-mirror.config.yaml`.  Make sure you
+which is commented. It would be a bad idea to edit this, so I'm not going to
+tell you where it is on your installation! But anything from this file can be
+overridden by lines in `~/dweb-mirror.config.yaml`. Make sure you
 understand how yaml works before editing this file, if you break it, you can
 copy a new default from
 [dweb-mirror.config.yaml on the repo](https://github.com/internetarchive/dweb-mirror/blob/master/dweb-mirror.config.yaml)
@@ -200,7 +203,7 @@ In a shell
 ```
 sudo sh
 ```
-cd into the location for your installation, on most platforms it is:
+cd into the location for your installation, on most platforms it is
 ```
 cd ~/node_modules/@internetarchive/dweb-mirror 
 ```
@@ -212,12 +215,12 @@ Perform a standard crawl
 ```
 ./internetarchive --crawl 
 ```
-To fetch the "foobar" item from IA. 
+To fetch the "foobar" item from IA
 ```
 ./internetarchive --crawl foobar 
 ```
 To crawl top 10 items in the prelinger collection sufficiently to display and put 
-them on a disk plugged into the /media/pi/xyz.
+them on a disk plugged into the /media/pi/xyz
 ```
 ./internetarchive --copydirectory /media/pi/xyz/archiveorg --crawl --rows 10 --level details prelinger
 ```
