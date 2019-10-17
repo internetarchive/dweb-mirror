@@ -559,9 +559,15 @@ function mirrorHttp(config, cb) {
                 algorithm: "sha1",
                 copyDirectory: req.opts.copyDirectory,
             },
-            (err, filepath) => res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => {
-                if (err) next()
-            })));
+            (err, filepath) => {
+              if (!err && filepath) {
+                res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => {
+                  if (err) next()
+                });
+              } else {
+                next(); // Not found by contenthash.
+              }
+            }));
     app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
   app.get('/includes/*', (req, res) => { res.redirect("/archive" + req.originalUrl); }); // Matches archive.org and dweb.me
