@@ -83,12 +83,12 @@ class HashStore {
                 cb(new Error("<hashstore>.get requires table and key"));
             }
             return waterfall([
-                cb => this._db(table, cb),
-                (db, cb) => db.get(key, cb)
+                cb3 => this._db(table, cb3),
+                (db, cb3) => db.get(key, cb3)
             ], (err, val) => {
                 if (err && (err.type === "NotFoundError")) { // Undefined is not an error
                     debug("get %s %s failed %s", table, key, err.message);
-                    cb(null, undefined);
+                    cb2(null, undefined);
                 } else {
                     cb2(null, val);
                 }
