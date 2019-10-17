@@ -353,8 +353,18 @@ class MirrorFS {
                         const filepath = path.join(cacheDirectory, relFilePath);
                         this._streamhash(fs.createReadStream(filepath), {format, algorithm}, (err, actual) => {
                             if (err) debug("Error from streamhash for %s: %s", filepath, err.message); // log as error lost in waterfall
-                            if (actual !== digest) { debug("multihash %s %s %s doesnt match file %s which is %s", format, algorithm, digest, filepath, actual); err=true} // Just test boolean anyway
-                            cb6(err);
+                            if (actual !== digest) {
+                              const errmsg = `multihash ${format} ${algorithm} ${digest} doesnt match file ${filepath} which is ${actual} - will delete`;
+                              debug(errmsg);
+                              err = new Error(errmsg);
+                              fs.unlink(filepath, err2 => {
+                                if (err2) {
+                                  debug(err2.message);  // Log failure to unlinke
+                                  err = err2
+                                }; // Return most recent error (which will be lost after testing)
+                              });
+                            }
+                            cb6(err); // not err may be null
                         });
                     }
                 }
