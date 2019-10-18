@@ -142,6 +142,7 @@ class MirrorConfig extends ConfigController {
         return task;
     }
 }
+
 MirrorConfig.userConfigFile =   "~/dweb-mirror.config.yaml"; // contents overwritten by writeUser or setAndWriteUser
 // Default to just top 30 tiles of home page
 MirrorConfig.defaultUserConfig = {apps: {crawl: { tasks: [ { identifier: [ "home"], level: "details", search:[{sort: "-downloads", rows: 30, level: "tile"}]} ]}}};

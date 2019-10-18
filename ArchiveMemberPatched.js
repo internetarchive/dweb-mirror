@@ -15,13 +15,31 @@ const {gateway, ObjectFilter} = require('@internetarchive/dweb-archivecontroller
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 
-ArchiveMember.read = function({ identifier=undefined, copyDirectory=undefined }, cb) {
+//SEE ALMOST-SAME-CODE-NAMEPART in ArchiveMember._namepart and ArchiveItem._namepart
+// noinspection JSUnresolvedVariable
+ArchiveMember._namepart = function({identifier, query, sort}) {
+    // The name used for the directory and file prefixes, normally the item identifier, but some special cases
+    if (!identifier && query) {
+        // Goal here is a string that: gives an indication of what it is; is filesystem safe; doesnt map similar but different queries to same string
+        // Npm's sanitize-filename does a reasonable job BUT it maps all unsafe chars to same result,
+        // encodeURLcomponent probably does a reasonable job, except for *
+        return encodeURIComponent(`_SEARCH_${query}_${sort.join('_')}`).replace(/\*/g,'%2A')
+    } else if (identifier) {
+        return identifier;
+    } else {
+        return undefined; // Should be caught at higher level to decide not to use cache
+    }
+};
+
+
+
+ArchiveMember.read = function({ identifier=undefined, query=undefined, sort=undefined, copyDirectory=undefined }, cb) {
     /*
         Read member info for an item
         identifier: Where to look - can be a real identifier or pseudo-one for a saved search
         cb(err, data structure from file)
     */
-    const namepart = identifier;
+    const namepart = this._namepart({identifier, query, sort});
     const part = "member";
     const relFilePath = path.join(namepart, `${namepart}_${part}.json`);
     MirrorFS.readFile(relFilePath, {copyDirectory}, (err, jsonstring) => {
@@ -48,7 +66,7 @@ ArchiveMember.addCrawlInfo = function(arr, {config=undefined, copyDirectory=unde
     each(arr, (memb, cb2)  => memb.addCrawlInfo({config, copyDirectory}, cb2), cb);
 };
 ArchiveMember.prototype.read = function({copyDirectory}, cb) {
-    ArchiveMember.read({identifier: this.identifier, copyDirectory}, cb);
+    ArchiveMember.read({identifier: this.identifier, query: this.query, sort: this.sort, copyDirectory}, cb);
 };
 
 

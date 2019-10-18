@@ -494,18 +494,19 @@ function mirrorHttp(config, cb) {
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
+//TODO complete as part of https://github.com/internetarchive/dweb-mirror/issues/211
     app.get('/arc/archive.org/metadata/:identifier', function (req, res, next) {
-        new ArchiveItem({identifier: req.params.identifier})
-            .fetch_metadata(Object.assign({darkOk: true},req.opts), (err, ai) => {
-                if (err) {
-                    res.status(404).send(err.message); // Its neither local, nor from server
-                } else {
-                    ai.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr) => {
-                        res.json(ai.exportMetadataAPI());
-                    })
-                }
-            })
-    });
+      const identifier = req.params.identifier
+      _newArchiveItem(identifier, config, req.opts, (err, ai) => {
+        if (err) {
+          res.status(404).send(err.message); // Its neither local, nor from server nor special
+        } else {
+          ai.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr) => {
+            res.json(ai.exportMetadataAPI());
+          })
+        }
+      });
+    })
     app.get('/arc/archive.org/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
         // noinspection JSUnresolvedVariable
         proxyUpstream(req, res, next, {"Content-Type": "application/json"})
@@ -619,5 +620,43 @@ function mirrorHttp(config, cb) {
     });
     cb(null, server);   // Just in case this becomes async
 }
+
+//SEE-IDENTICAL-CODE-CANONICALIZETASKS in dweb-mirror.mirrorHttp and dweb-archive.LocalComponent
+function canonicalizeTasks(tasks) {
+  /* Turn an array of tasks where identifiers may be arrays or singles into canonicalized form - one task per identifier */
+  // This turns each task into an array of tasks with one identifier per task, then flattens that array of arrays into a 1D array
+  return [].concat(...tasks.map(task =>
+    Array.isArray(task.identifier)
+      ? task.identifier.map(identifier => Object.assign({}, task, {identifier}))
+      : task ));
+}
+
+function _newArchiveItem(identifier, config, opts, cb) {
+  // Enhanced version of new ArchiveItem + fetch_metadata + handling special
+  const ai = new ArchiveItem({identifier});
+  if (Object.keys(specialidentifiers).includes(identifier)) {
+    ai.metadata = {};
+    Object.entries(specialidentifiers[identifier]).forEach(kv => ai.metadata[kv[0]] = kv[1]); // Copy over
+    if (ai.itemid === "local") {
+      ArchiveMember.expandMembers(
+        canonicalizeTasks(config.apps.crawl.tasks)
+          .map(t => new ArchiveMember({
+            identifier: t.identifier,
+            query: t.query,
+            sort: t.sort || ["-downloads"],
+            mediatype: t.query ? "search" : undefined
+          }, {unexpanded: true})),
+        (err,res) => {
+          ai.membersFav = res;
+          cb(err, ai);
+        });
+    } else {
+      cb(null, ai);
+    }
+  } else {
+    ai.fetch_metadata(Object.assign({darkOk: true}, opts), cb);
+  }
+}
+
 
 exports = module.exports = mirrorHttp;

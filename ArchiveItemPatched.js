@@ -31,6 +31,7 @@ const MirrorFS = require('./MirrorFS');
  * copyDirectory Where to cache it
  */
 
+//SEE ALMOST-SAME-CODE-NAMEPART in ArchiveMember._namepart and ArchiveItem._namepart
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
     // The name used for the directory and file prefixes, normally the item identifier, but some special cases
@@ -39,7 +40,6 @@ ArchiveItem.prototype._namepart = function() {
       // Npm's sanitize-filename does a reasonable job BUT it maps all unsafe chars to same result,
       // encodeURLcomponent probably does a reasonable job, except for *
       return encodeURIComponent(`_SEARCH_${this.query}_${this.sort.join('_')}`).replace(/\*/g,'%2A')
-      //OBS return "_SEARCH_"+MirrorFS.quickhash(this.query, {algorithm: 'sha1', format:'multihash58'})
     } else if (this.itemid) {
         return this.itemid;
     } else {
@@ -408,20 +408,22 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
           });
         }
     }
-    function tryReadOrNet(cb) { // Try and Read and if not, then get from net, obeying options cb(err, doSave)
-        if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
+
+    // Try and Read and if not, then get from net, obeying options cb(err, doSave)
+    function tryReadOrNet(cb) {
+          if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
             tryRead.call(this, (err) => {
-                if (err) { // noCache, or not cached
-                    tryNet.call(this, (err) => {
-                        cb(err, true); // If net succeeded then save
-                    });
-                } else { // cached
-                    cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid))); // cached but check for explicit requirement to copy
-                }
+              if (err) { // noCache, or not cached
+                tryNet.call(this, (err) => {
+                  cb(err, true); // If net succeeded then save
+                });
+              } else { // cached
+                cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid))); // cached but check for explicit requirement to copy
+              }
             })
-        } else {
+          } else {
             cb(null, false); // Didn't fetch so dont save, but not an error
-        }
+          }
     }
     function trySave(doSave, cb) { // If requested, try and save, obeying options
         if (!doSave || opts.noStore) {
@@ -973,6 +975,5 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
       cb(err);
   });
 };
-
 
 exports = module.exports = ArchiveItem;
