@@ -51,19 +51,19 @@ usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] 
     [--debugidentifier identifier] [--maxFileSize bytes] [--concurrency threads] [--limittotaltasks tasks] [--transport TRANSPORT]*
     [--skipfetchfile] [--noCache] [--dummy] [identifier]*
 
-    h : help print this text
-    v : verbose tell us which config being run (default is currently pretty verbose)
-    q : quiet (TODO implement this)
-    s : server run http server
-    c : crawl run crawler
-    m : maintenance check for things like 0 length files or partials etc and ensure in IPFS
-    l level : Crawl the identifiers to a certain level, valid values are:
+    -h : help print this text
+    -v : verbose tell us which config being run (default is currently pretty verbose)
+    -q : quiet (TODO implement this)
+    -s : server run http server
+    -c : crawl run crawler
+    -m : maintenance check for things like 0 length files or partials etc and ensure in IPFS
+    -l level : Crawl the identifiers to a certain level, valid values are:
                 "tile"    for just enough to print a collection page, including the thumbnail image
                 "metadata" and the full metadata, which will be useful once local search is implemented
                 "details"  and enough to paint a page, including for example a lower bandwidth video
                 "full"     and all the files in the item - beware, this can get very big.
-    r rows          : overrides any (simple) search string to crawl this number of items
-    d depth         : crawl collections found in this collection to a depth,
+    -r rows          : overrides any (simple) search string to crawl this number of items
+    -d depth         : crawl collections found in this collection to a depth,
                       (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
     --copydirectory path : Store a copy of the crawl in this directory (often used for a removable drive)
     --directory path : override the directory set in the configuration for the root of the cache
@@ -294,7 +294,7 @@ waterfall([
     cb => { // Start server before crawler as crawler takes time before returning
         if (opts.server || opts.maintenance || opts.crawl) { startServer(cb); } else { cb(null); }},
     cb => { // Maintenance must be after server start since needs for IPFS, should be before crawl
-        if (opts.maintenance) { MirrorFS.maintenance({ipfs: true}, cb) } else {cb(null);}},
+        if (opts.maintenance) { MirrorFS.maintenance({cacheDirectories: config.directories}, cb) } else {cb(null);}},
     cb => { if (opts.crawl) { crawl(cb); } else { cb(null); }},
     cb => { // Stop express server unless explicit -s option
         if (!opts.server) {stopServer(cb); } else { cb(null); } },

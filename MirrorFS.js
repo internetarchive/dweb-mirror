@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 const path = require('path');
+const canonicaljson = require('@stratumn/canonicaljson');
 // noinspection JSUnresolvedVariable
 const Transform = require('stream').Transform || require('readable-stream').Transform;
 const debug = require('debug')('dweb-mirror:MirrorFS');
@@ -621,8 +622,58 @@ class MirrorFS {
         return s;
     }
 
-    //maybe redo to use async.each etc
-    static maintenance({cacheDirectories = undefined, algorithm = 'sha1', ipfs = false}, cb) {
+  static _maintainCachedItem({identifier=undefined, cacheDirectory=undefined}, cb) {
+    //debug("maintaining %s", identifier);
+    fs.readFile([cacheDirectory, identifier, `${identifier}_meta.json`].join('/'), (err, jsonstring) => {
+      if (!err) {
+        const aiMeta = canonicaljson.parse(jsonstring);
+        if (aiMeta.licenseurl) {
+          debug("maintaining %s licenceurl=%s", identifier, aiMeta.licenseurl);
+        } else {
+          //debug("maintaining %s", identifier);
+        }
+      }
+      cb();
+    });
+  }
+
+  static _arrayOfIdentifiers(dir, cb) {
+   // Return array of items in a cacheDirectory
+    fs.readdir(dir, (err, files) => {
+      if (err) {
+        debug("Failed to read directory %s", cacheDirectory);
+        cb(err);
+      } else {
+        cb(null, files.filter(f => !f.startsWith(".")));
+      }
+    });
+  }
+
+  static _maintainCacheDirectory(cacheDirectory, cb) {
+    // UNUSED SO FAR SHOULD BE PART OF TODO REBUILD MAINTENANCE W/O PARALLELSTREAMS
+    debug("maintaining: %s", cacheDirectory);
+    this._arrayOfIdentifiers(cacheDirectory, (err, identifiers) => {
+      each(identifiers,
+        (identifier, cb) => this._maintainCachedItem({identifier, cacheDirectory}, cb),
+        (err) => {
+          if (err) debug("maintainCacheDirectory failed %o", err);
+          cb(err);
+        })
+    })
+  }
+
+  static maintenance({cacheDirectories = undefined}, cb) {
+    debug("Maintaining File Sytem");
+    each(cacheDirectories,
+      (cacheDirectory, cb) => this._maintainCacheDirectory(cacheDirectory, cb),
+      (err) => {
+        if (err) debug("maintenance failed %o", err);
+        cb(err);
+      });
+  }
+
+  //maybe redo to use async.each etc
+    static maintenanceOLD({cacheDirectories = undefined, algorithm = 'sha1', ipfs = false}, cb) {
         /*
         Perform maintenance on the system.
         Clear out old hashes and load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'.
