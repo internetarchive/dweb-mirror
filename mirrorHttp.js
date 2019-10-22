@@ -1,3 +1,4 @@
+/* global DwebTransports */
 /* Serve the mirrored files via HTTP
 
 This is intended as a fairly generic server for a number of cases, with some configuration to allow for different situations,
@@ -25,7 +26,7 @@ TODO-GATEWAY - special case for both metadata and download when already on dweb.
     Document in README.md and USING.md
  */
 
-//TODO-URI add compatability with archive.org standard urls scan this file first, should be a git issue but
+//TODO-URI add compatibility with archive.org standard urls scan this file first, should be a git issue but
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const url = require('url');
 const express = require('express'); //http://expressjs.com/
@@ -242,7 +243,7 @@ function mirrorHttp(config, cb) {
           // The members will be expanded by fetch_query either from local cache or by querying upstream
           wantCrawlInfo = false;
         } else if (req.query.q === homeQuery) {
-          o = new ArchiveItem({identifier: "home", sort: req.query.sort, query: req.query.q })
+          o = new ArchiveItem({identifier: "home", sort: req.query.sort, query: req.query.q });
           wantCrawlInfo = true;
         } else {
           o = new ArchiveItem({sort: req.query.sort, query: req.query.q});
@@ -339,7 +340,7 @@ function mirrorHttp(config, cb) {
   }
 
 
-    function sendBookReaderJSIA(req, res, next) {
+    function sendBookReaderJSIA(req, res, unusedNext) {
         waterfall([
             (cb) => new ArchiveItem({identifier: req.query.id})
                 .fetch_metadata(req.opts, cb),
@@ -495,18 +496,20 @@ function mirrorHttp(config, cb) {
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
 //TODO complete as part of https://github.com/internetarchive/dweb-mirror/issues/211
-    app.get('/arc/archive.org/metadata/:identifier', function (req, res, next) {
-      const identifier = req.params.identifier
+    app.get('/arc/archive.org/metadata/:identifier', function (req, res, unusedNext) {
+      const identifier = req.params.identifier;
       _newArchiveItem(identifier, config, req.opts, (err, ai) => {
         if (err) {
           res.status(404).send(err.message); // Its neither local, nor from server nor special
         } else {
           ai.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr) => {
-            res.json(ai.exportMetadataAPI());
+            ai.addMagnetLink({copyDirectory: req.opts.copyDirectory, config}, (unusederr) => {
+              res.json(ai.exportMetadataAPI());
+            });
           })
         }
       });
-    })
+    });
     app.get('/arc/archive.org/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
         // noinspection JSUnresolvedVariable
         proxyUpstream(req, res, next, {"Content-Type": "application/json"})
@@ -582,7 +585,7 @@ function mirrorHttp(config, cb) {
   app.get('/download/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
 
 // noinspection JSUnresolvedVariable
-    app.get('/favicon.ico', (req, res, next) => res.sendFile(config.archiveui.directory + "/favicon.ico", {
+    app.get('/favicon.ico', (req, res, unusedNext) => res.sendFile(config.archiveui.directory + "/favicon.ico", {
         maxAge: "86400000",
         immutable: true
     }, (err) => err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico'))); // Dont go to Error, favicons often aborted

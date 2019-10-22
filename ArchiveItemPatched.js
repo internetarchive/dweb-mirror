@@ -11,6 +11,7 @@ const waterfall = require('async/waterfall');
 const each = require('async/each'); // https://caolan.github.io/async/docs.html#each
 const parallel = require('async/parallel'); //https://caolan.github.io/async/docs.html#parallel
 const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
+const parseTorrent = require('parse-torrent'); // TODO-MAGNETLINKS may move to DwebTransports
 
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
@@ -601,6 +602,7 @@ ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=fa
         if (thumbnailFiles.length) {//TODO-THUMBNAIL if more than 1, select smallest (or closest to 10k)
             // noinspection JSUnusedLocalSymbols
             // Loop through files using recursion (list is always short)
+            // TODO this could probably be replaced by async/until or similar
             const recursable = function (err, streamOrUndefined) {
                 if (err) {
                     debug(`saveThumbnail: failed in cacheAndOrStream for ${namepart}: %s`, err.message);
@@ -975,5 +977,37 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
       cb(err);
   });
 };
+
+/**
+ * Parse a torrent file, turn into a magnet link and add
+ * TODO candidate to move back ot ArchiveItem
+ * TODO remove XXX
+ */
+ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=undefined}={}, cb) {
+  cb()
+  /*
+  if (this.metadata && !this.metadata.XXXmagnetlink && !this.metadata.noarchivetorrent) {
+    const torrentFileName = this.itemid + "_archive.torrent";
+    const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
+    if (torrentFile) {
+      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buff) => {
+        debug("XXX Got buff");
+        const torrentObj = parseTorrent(buff);
+        torrentObj["announce"] = (torrentObj["announce-list"] || [])
+        config.connect.webtorrent.trackers.map(m => [m]).forEach(w => torrentObj["announce-list"].push(w)); //TODO whats javascript like push but for arrays - its not append
+        const magnetURI = parseTorrent.toMagnetURI(torrentObj);
+        // TODO DM ISSUE#242 next install parse-torrent then encode as magnet link then modify
+        // TODO make sure to save item in consumer
+        cb();
+      });
+    } else {
+      cb();
+    }
+  } else {
+
+    cb();
+  }
+   */
+}
 
 exports = module.exports = ArchiveItem;

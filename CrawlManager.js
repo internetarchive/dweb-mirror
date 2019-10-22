@@ -1,3 +1,4 @@
+/* global DwebTransports */
 const prettierBytes = require('prettier-bytes');
 const queue = require('async/queue');
 const waterfall = require('async/waterfall');

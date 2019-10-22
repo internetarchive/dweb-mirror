@@ -27,6 +27,7 @@
     "multihashes": "^0.4.15",
     "network-address": "^1.1.2",
     "parallel-streams": "^0.0.14",
+    "parse-torrent": "^7.0.1",
     "prettier-bytes": "^1.0.4",
     "readable-stream": "^3.4.0",
     "readable-stream-clone": "git://github.com/mitra42/readable-stream-clone",

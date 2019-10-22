@@ -14,8 +14,9 @@ const MirrorFS = require('./MirrorFS');
 // See API.md for documentation
 
 // noinspection JSUnresolvedVariable
-ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false, wantStream=false, noCache=false,
-                                            wantSize=false, copyDirectory=undefined, start=0, end=undefined} = {}, cb) {
+ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=false,
+                                                      wantStream=false, noCache=false, wantSize=false, wantBuff=false,
+                                                      copyDirectory=undefined, start=0, end=undefined} = {}, cb) {
     /*
     Cache an ArchiveFile - see MirrorFS for arguments
     skipNet if set will stop it trying the net, and just return info about the current file
@@ -24,12 +25,12 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
     const filename = this.metadata.name;
     const debugname = [itemid, filename].join('/');
     MirrorFS.cacheAndOrStream({ // Try first time without Urls, keep local - note noCache will make this return error unless sha1 specified as no urls either.
-        skipFetchFile, wantStream, start, end, debugname, noCache, copyDirectory, wantSize,
+        skipFetchFile, wantStream, wantBuff, start, end, debugname, noCache, copyDirectory, wantSize,
         sha1: this.metadata.sha1,
         relFilePath: path.join(itemid, filename),
         expectsize: this.metadata.size,
         ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
-    }, (err, streamOrUndefinedOrSize) => {
+    }, (err, streamOrUndefinedOrSizeOrBuff) => {
         if (err && skipNet) {
             cb(err);
         } else if (err) { // Unable to retrieve locally, lets get urls and try again
@@ -38,25 +39,26 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
                     cb(err);
                 } else {
                     MirrorFS.cacheAndOrStream({
-                        urls, skipFetchFile, wantStream, wantSize, start, end, debugname, noCache, copyDirectory,
+                        urls, skipFetchFile, wantStream, wantSize, wantBuff,
+                        start, end, debugname, noCache, copyDirectory,
                         sha1: this.metadata.sha1,
                         relFilePath: path.join(itemid, filename),
                         expectsize: this.metadata.size,
                         ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
-                    }, (err, streamOrUndefinedOrSize) => {
+                    }, (err, streamOrUndefinedOrSizeOrBuff) => {
                         if (err) {
                             debug("Unable to cacheOrStream %s", debugname);
                             cb(err);
                         } else {
                             if (!wantStream && !(start || end)) { this.downloaded = true; }; // No error, and not streaming so must have downloaded
-                            cb(null, (wantStream || wantSize) ? streamOrUndefinedOrSize : this);
+                            cb(null, (wantStream || wantSize) ? streamOrUndefinedOrSizeOrBuff : this);
                         }
                     });
                 }
             })
         } else { // The local check succeeded
             this.downloaded = true;
-            cb(null, (wantStream || wantSize) ? streamOrUndefinedOrSize : this);
+            cb(null, (wantStream || wantSize || wantBuff) ? streamOrUndefinedOrSizeOrBuff : this);
         }
     })
 };

@@ -1,3 +1,4 @@
+/* global DwebTransports */
 //process.env.NODE_DEBUG="fs";    // Uncomment to test fs
 // Node packages
 const crypto = require('crypto');

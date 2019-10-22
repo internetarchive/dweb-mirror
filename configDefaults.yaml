@@ -35,6 +35,11 @@ connect:
     #- 'WOLK'
   webtorrent: # Options to webtorrent
     tracker: 'wrtc'   # May or may not work on different platforms and needs installing
+    trackers:
+      - 'wss://dweb.archive.org:6969'
+      - 'wss://tracker.btorrent.xyz'
+      - 'wss://tracker.openwebtorrent.com'
+      - 'wss://tracker.fastcast.nz'
   ipfs: # Options to IPFS
     urlUrlstore: 'http://localhost:5001/api/v0/urlstore/add'
   preferredStreamTransports: # A list, in order of preference of transports to use for streams, only works if they are listed in "connect" above.
