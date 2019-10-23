@@ -143,7 +143,7 @@ user that runs the server. (Note on IIAB this is currently in `/root/dweb-mirror
 Archive's `Items` are stored in subdirectories of the first of these
 directories found, but are read from any of the locations. 
 
-If you disk space is getting full, its perfectly safe to delete any
+If your disk space is getting full, its perfectly safe to delete any
 subdirectories (except `archiveorg/.hashstore`), and the server will refetch anything else it needs 
 next time you browse to the item while connected to the internet. 
 Its also safe to move directories to an attached USB 
