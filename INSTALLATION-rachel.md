@@ -80,7 +80,7 @@ but there is noone at Rachel who has time to look at it...
 This next list only gets to v9 at present, its worth looking at `/etc/apt/sources.list.d/nodesource.list` if debugging this.
 ```
 sudo node --version # Typically shows an antique version of node around version 4.x
-curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 sudo apt-cache policy nodejs # Should show v10 but for some Rachel problem it only goes to v9 which is ok but sub-optimal
 sudo apt-get install -y nodejs
 sudo npm i -g npm # Update npm

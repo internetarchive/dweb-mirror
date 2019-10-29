@@ -44,7 +44,10 @@ you can skip to step 4 (Install) otherwise ...
 You'll need to download the correct version of the operating system, and then get it onto a SD in one of
 several ways.
 
-#### Orange Pi with Armbian
+Skip ahead to 1A for OrangePi/Armbian; 1B for NOOBS on RPI3; 1C for NOOBS on RPI4;
+1D for Rachel on RPI; 1E for Raspbian (without Rachel or IIAB);  1F for Intel Nuc
+
+#### Step 1A: Orange Pi with Armbian
 Download from https://www.armbian.com/download/
 
 These instructions were tested on the Orange Pi Zero, with the Debian variety which is currently "Buster".
@@ -52,12 +55,12 @@ but the process probably works with other variants of the Orange-Pi, and version
 
 Skip ahead to Step 2: Blow to a SD.
 
-#### NOOBS on RPI3
+#### Step 1B: NOOBS on RPI3
 On the RPI3 we started with a standard preconfigured NOOBS MicroSD card that came with the Canakit box.
 
 Skip ahead to Step 3: Boot
 
-#### NOOBS on RPI4
+#### Step 1C: NOOBS on RPI4
 The RPI4 from Canakit strangely was missing NOOBS, and the Raspberry Pi site is strangely missing NOOBS images, 
 so this requires a slightly different approach than that detailed in 1B below. 
 * Download the zip of NOOBS from https://www.raspberrypi.org/downloads/noobs/ and unzip it
@@ -66,17 +69,24 @@ so this requires a slightly different approach than that detailed in 1B below.
 
 Skip ahead to Step 3: Boot
 
-#### Rachel on Raspberry Pi
+#### Step 1D: Rachel on Raspberry Pi
 Download [Raspbian Buster + Rachel](http://rachelfriends.org/downloads/public_ftp/rachelpi_64EN/rachelpi_2019/rachel-pi_kolibi_buster_unofficial.7z).
 Note this image may be moving soon to a different location soon.
 
-Skip ahead to Step 3: Boot
+Skip ahead to Step 2: Blow to SD.
 
-#### Raspbian image without Rachel or IIAB
+#### Step 1E: Raspbian image without Rachel or IIAB
 Downloaded Raspbian [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) to your laptop (~1GB).
 Any of the distributions should work - I test on the Desktop version, 
 
-Skip ahead to Step 3: Boot
+Skip ahead to Step 2: Blow to SD.
+
+#### Step 1F: Intel Nuc
+By the time you get it, it probably has an operating system on it
+
+TODO - Ask Davide for instructions.
+
+Skip ahead to Step 3D.
 
 ## Step 2: Blow this to a SD
 
@@ -88,6 +98,8 @@ It will prompt you to select: the image you downloaded above, (and will accept .
 and the SD card, and it should Flash and verify.
 
 On Windows or Linux, I'm not sure the best program to use and would appreciate suggestions.
+
+Skip ahead to Step 3 Boot: (3A for NOOBs; 3B for Raspbian; 3C for OrangePi/Armbian) 
 
 ## Step 3: Boot and configure the Operating System
 You can now boot your machine - select the right platform below: 
@@ -111,11 +123,13 @@ It should boot up into that operating system, and you can continue in step 3B
 Plug the SD card into the RPI, along with a power supply, HDMI display, keyboard and mouse.
 If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps. 
 
-It should boot up with a rainbow screen and prompt you for some getting started things.
+It should boot up (after as much as a minute or two) with a rainbow screen 
+and prompt you for some getting started things.
 * Follow the menus to Select country, language, WiFi etc,
 * in particular make sure to change the password as RPIs with default passwords are frequently hacked.
-* Select Menu (globe at top Left); `Preferences` then `Configuration` then `Interface` and make sure `SSH` is enabled. 
-* It should reboot (as part of saving these changes)
+* Select Menu (Raspberry at top Left); `Preferences` then `Raspberry Pi Configuration` 
+  then `Interfaces` and make sure `SSH` is enabled (by default it is Disabled). 
+* It should reboot at least once (as part of saving these changes)
 
 You can now open a Terminal window, or from your laptop `ssh raspberrypi`, 
 login as `pi` with the password you set above.
@@ -183,10 +197,28 @@ Skip to Step 4
 * Login as `pi` with password `rachel`
 
 Skip to Step 4
+
+#### Step 3D: Intel Nuc
+
+THe standard install is missing a few packages.
+```
+sudo apt update && sudo apt-get install curl net-tools ssh
+```
+Try `node --version` if it reports 8.x.x then you maybe running Ubuntu
+which still seems stuck on old versions, version 10 or 12 are fine. 
+```
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt-cache policy nodejs # Should show v12.x.x,  v10.x.x is fine, anything less is going to be a problem.
+sudo apt-get install -y nodejs
+```
+Skip to step 4
   
 ## Step 4 Run the installer to install dweb-mirror
 
-The easiest way is to run the installation script
+By this point, the operating systems should be similar enough for our installation
+script to work out any differences, so the easiest way to finish the install
+is to run the installation script.
+
 In a terminal window, or via `ssh raspberrypi` 
 
 We normally install it as a standard node_module under your home directory, 
@@ -247,7 +279,7 @@ cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc &
   the archive's servers (on `dweb.me`) so it won't be able to crawl or cache initial material until you 
   connect to the WiFi or Ethernet. 
 
-Without any other arguments, `crawl` will read a set of files into into the first (already existing) directory
+Without any other arguments, the crawl will read a set of files into into the first (already existing) directory
 configured in `~/dweb-mirror.config.yaml` 
 or if there are none there, it will look in its installation directory for `configDefaults.yaml`. 
 If you haven't changed anything this will be `~/archiveorg`

@@ -100,14 +100,15 @@ then
   # source ~/.bashrc # Fix path
   set +e
   step XXX "Trying to install libsecret which may fail" # Failed on rachel
-  sudo apt-get install -y libsecret-1-dev # Allow libsecret-1-dev to fail , we migth not need it
+  sudo apt-get install -y libsecret-1-dev # Allow libsecret-1-dev to fail , we might not need it
   set -e
-else
+  sudo apt-get install -y net-tools # Make debugging so much easier
+else # Its darwin (Mac OSX)
   step XXX "Installing wget nodejs yarn"
   wget --version >>/dev/null || brew install wget
   # The brew installer for node is broken (fails to run the npx line in bookreader/package.json), use the line below as found on https://nodejs.org/en/download/package-manager/#macos
   #node --version >>/dev/null || brew install nodejs
-  node --version >>/dev/null || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
+  node --version >>/dev/null || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest-v12.x/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
   yarn --version >>/dev/null || curl -o- -L https://yarnpkg.com/install.sh | bash
   source ~/.bashrc # Fix up path
 fi
@@ -142,7 +143,7 @@ step XXX "Setup service to autostart at boot and start server"
 # Note its clear we need to edit the service but then its unclear that the armbian and rachel strategies are different, cross-try them.
 cat internetarchive.service \
 | sed -e "s:{{ internetarchive_dir }}:${INSTALLDIR}:" | sed -e "s:User=root:User=${USER}:" >/tmp/internetarchive.service
-if [ "${OPERATINGSYSTEM}" = "armbian" -o "${PLATFORM}" = "rachel" -o "${OPERATINGSYSTEM}" = "raspbian" ]
+if [ "${OPERATINGSYSTEM}" = "armbian" -o "${PLATFORM}" = "rachel" -o "${OPERATINGSYSTEM}" = "raspbian" -o "${OPERATINGSYSTEM}" = "linux" ]
 then
   diff /tmp/internetarchive.service /lib/systemd/system || sudo cp /tmp/internetarchive.service /lib/systemd/system
   sudo systemctl enable internetarchive.service # Links /etc/systemd/system/multi-user.targets.wants/internetarchive.service to /lib/systemd/system/internetarchiveservice
