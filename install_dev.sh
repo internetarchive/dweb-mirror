@@ -135,9 +135,9 @@ do
   fi
 done
 
-echo "Selecting mitra-i18n branch of iaux"
+echo "Selecting mitra--release branch of iaux"
 pushd iaux
-git checkout mitra-i18n # Normally mitra--release
+git checkout mitra--release
 popd
 
 for REPO in ${REPOS}
