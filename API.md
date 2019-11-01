@@ -50,6 +50,7 @@ Metadata is stored in specially named files.
 |----|----|
 |<IDENTIFIER>.meta.json|ArchiveItem.metadata|
 |<IDENTIFIER>.reviews.json|ArchiveItem.reviews|On disk is format returned by API
+|<IDENTIFIER>.speech_vs_music_asr.json|ArchiveItem.speech_vs_music_asr.json|Format as returned by metadata API
 |<IDENTIFIER>.files.json|ArchiveItem.files|
 |<IDENTIFIER>.extra.json|ArchiveItem.{collection_titles, collection_sort_order, files_count, is_dark, dir, server}|
 |<IDENTIFIER>.member.json|ArchiveMember|As retrieved in a search
@@ -120,7 +121,7 @@ If `.bookreader` is undefined it will attempt to retrieve first.
 
 Read metadata, playlist, reviews, files and extra from corresponding files - see `Files on disk`
 ```
-cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, server})  data structure suitable for "item" field of ArchiveItem
+cb(err, {files, files_count, metadata, reviews, collection_titles, collection_sort_order, is_dark, dir, speect_vs_music_asr, server})  data structure suitable for "item" field of ArchiveItem
 ```
 
 ##### read_bookreader({copyDirectory}}, cb)

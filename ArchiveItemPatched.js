@@ -69,12 +69,13 @@ function _save1file(key, obj, namepart, {copyDirectory=undefined}, cb) {
 
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
-    /*
+    /* SEE-OTHER-ADD-METADATA-API-TOP-LEVEL in dweb-mirror and dweb-archivecontroller
         Save metadata for this file as JSON in multiple files.
-        .metadata -> <IDENTIFIER>.meta.json
-        .members -> <IDENTIFIER>.members.json
-        .reviews -> <IDENTIFIER>.reviews.json
-        .files -> <IDENTIFIER>.files.json
+        .metadata -> <IDENTIFIER>_meta.json
+        .members -> <IDENTIFIER>_members.json
+        .reviews -> <IDENTIFIER>_reviews.json
+        .speech_vs_music_asr => <IDENTIFIER>_speech_vs_music_asr.json
+        .files -> <IDENTIFIER>_files.json
         {collection_titles, collection_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
         and .member_cached.json is saved from ArchiveMember not from ArchiveItems
 
@@ -89,6 +90,7 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         const namepart = this._namepart();
         // Note all these files should be in MirrorFS.isSpecialFile
         each(
+          // SEE-OTHER-ADD-METADATA-API-TOP-LEVEL in dweb-mirror and dweb-archivecontroller
             [
                 ["meta", this.metadata],    // Maybe empty if is_dark
                 ["members", this.membersFav], // Only save Favorited members
@@ -97,6 +99,7 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
                   ArchiveItem.extraFields.map(k => [k, this[k]])
                     .filter(kv=>!!kv[1]))], // NOTE DUPLICATE OF LINE IN fetch_query and save
                 ["reviews", this.reviews],
+                ["speech_vs_music_asr", this.speech_vs_music_asr],
                 ["playlist", this.playlist], // Not this is a cooked playlist, but all cooking is additive
             ],
             (i, cbInner) => { // [ part, obj ]
@@ -168,8 +171,8 @@ function _parse_common(namepart, part, {copyDirectory=undefined}, cb) {
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
 ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
     /*
-        Read metadata, reviews, files and extra from corresponding files
-        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, is_dark, server})  data structure fields of ArchiveItem
+        Read metadata, reviews, files and extra etc from corresponding files
+        cb(err, {files, files_count, metadata, reviews, collection_titles, dir, speech_vs_music_asr, is_dark, server})  data structure fields of ArchiveItem
     */
     if (typeof opts === "function") { cb = opts; opts = {}; } // Allow opts parameter to be skipped
     const namepart = this.itemid;
@@ -177,6 +180,7 @@ ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
     function _parse(part, cb) { _parse_common(namepart, part, {copyDirectory}, cb); }
     // This is a set of parallel reads, failure of some cause the whole thing to fail; some require postprocessing; and playlist occurs after metadata&files succeed
     parallel([
+        // SEE-OTHER-ADD-METADATA-API-TOP-LEVEL in dweb-mirror and dweb-archivecontroller
         cb => _parse("meta",(err, o) => {
             res.metadata = o;
             if (err) {
@@ -198,6 +202,9 @@ ArchiveItem.prototype.read = function({copyDirectory=undefined}, cb) {
         cb => _parse("reviews", (err, o) => {
             res.reviews = o; // Undefined if failed but not an error
             cb(null); }),
+        cb => _parse("speech_vs_music_asr", (err, o) => {
+          res.speech_vs_music_asr = o; // Undefined if failed but not an error
+          cb(null); }),
         cb => _parse("members", (err, o) => {
             res.membersFav = o; // Undefined if failed but not an error
             cb(null); }),
@@ -269,7 +276,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
       if (err) {
         this._fetch_bookreader(opts, (err, unusedRes)=>cb(err, true)); // Will process and add to this.bookreader, but want to save as came from net
       } else {
-        this.loadFromBookreaderAPI(bookapi);  // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
+        this.loadFromBookreaderAPI(bookapi);
         cb(null, !!copyDirectory);   // If copyDirectory explicitly specified then save to it, otherwise its from file so no need to save.
       }
     });
