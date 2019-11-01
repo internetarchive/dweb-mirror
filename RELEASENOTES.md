@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.58: Support radio player and speech_vs_music_asr.json
 * 0.2.57: support metadata/local
 * 0.2.56: Dockerfile; Refactor Installers; Save on collections/local/search; Epub partial; I18n dynamic files; remove wrtc dependency; EDGE CASES: local, specialidentifiers, related; BUGS: contenthash; deleting bad hashes; 
 * 0.2.55: Fix path to archiveui, Dockerfile rework
