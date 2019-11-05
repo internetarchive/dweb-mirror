@@ -11,13 +11,13 @@ const waterfall = require('async/waterfall');
 const each = require('async/each'); // https://caolan.github.io/async/docs.html#each
 const parallel = require('async/parallel'); //https://caolan.github.io/async/docs.html#parallel
 const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
-const parseTorrent = require('parse-torrent'); // TODO-MAGNETLINKS may move to DwebTransports
 
 // Other IA repos
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
-const {gateway, gatewayServer, parmsFrom, ObjectFromEntries, specialidentifiers} = require('@internetarchive/dweb-archivecontroller/Util');
+const { gateway, gatewayServer, parmsFrom, ObjectFromEntries, specialidentifiers } = require('@internetarchive/dweb-archivecontroller/Util');
+const { dwebMagnetLinkFrom } = require('@internetarchive/dweb-archivecontroller/mungeTorrent');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 
@@ -991,29 +991,25 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
  * TODO remove XXX
  */
 ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=undefined}={}, cb) {
-  cb()
+  cb();
   /*
   if (this.metadata && !this.metadata.XXXmagnetlink && !this.metadata.noarchivetorrent) {
     const torrentFileName = this.itemid + "_archive.torrent";
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
+    const torrentUrl = torrentFile.httpUrl(); // For Webtorrent etc to find torrent file
     if (torrentFile) {
-      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buff) => {
-        debug("XXX Got buff");
-        const torrentObj = parseTorrent(buff);
-        torrentObj["announce"] = (torrentObj["announce-list"] || [])
-        config.connect.webtorrent.trackers.map(m => [m]).forEach(w => torrentObj["announce-list"].push(w)); //TODO whats javascript like push but for arrays - its not append
-        const magnetURI = parseTorrent.toMagnetURI(torrentObj);
+      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buffer) => { // TODO make sure this uses dweb-torrent not dweb.me or archive.org
+        this.metadata.magnetlink = [ dwebMagnetLinkFrom({archiveBuffer: buffer, dwebTorrentUrl: `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`}) ];
         // TODO DM ISSUE#242 next install parse-torrent then encode as magnet link then modify
-        // TODO make sure to save item in consumer
         cb();
       });
     } else {
       cb();
     }
   } else {
-
     cb();
   }
+
    */
 }
 
