@@ -1020,8 +1020,6 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
  * TODO remove XXX
  */
 ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=undefined}={}, cb) {
-  cb();
-  /*
   if (this.metadata && !this.metadata.XXXmagnetlink && !this.metadata.noarchivetorrent) {
     const torrentFileName = this.itemid + "_archive.torrent";
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
@@ -1038,8 +1036,6 @@ ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=
   } else {
     cb();
   }
-
-   */
 }
 
 exports = module.exports = ArchiveItem;
