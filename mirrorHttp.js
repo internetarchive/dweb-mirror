@@ -92,22 +92,33 @@ function mirrorHttp(config, cb) {
 // Serving static (e.g. UI) files
 //app.use('/arc/archive.org/download/', express.static(dir)); // Simplistic, better ...
 
-    function _sendFileFromDir(req, res, next, dir) {
-        /* send a file, dropping through to next if it fails,
-           dir: Directory path, not ending in /
-         */
-        const filepath = path.join(dir, req.params[0]); //TODO-WINDOWS will need to split and re-join params[0]
-        res.sendFile(filepath, function (err) {
-            if (err) {
-                debug('No file in: %s %s', filepath, err.message);
-                next(); // Drop through to next attempt - will probably fail
-            } else {
-                debug("sent file %s", filepath);
-            }
-        });
-    }
-
-
+  function _sendFileOrError(req, res, next, filepath) {
+    // Note filepaths are going to be unix/OSX style TODO-WINDOWS will need to split and re-join params[0]
+    res.sendFile(filepath, function (err) {
+      if (err) {
+        debug('No file in: %s %s', filepath, err.message);
+        next(); // Drop through to next attempt - will probably fail
+      } else {
+        debug("sent file %s", filepath);
+      }
+    });
+  }
+  function _sendFileUrlArchive(req, res, next) {
+      // dir: Directory path, not starting or ending in /
+        _sendFileOrError(req, res, next, path.join(config.archiveui.directory, req.params[0]));
+  }
+  function _sendFileFromBookreader(req, res, next) {
+    // Urls like /archive/bookreader/BookReader/*
+    _sendFileOrError(req, res, next, path.join(config.bookreader.directory, req.params[0]));
+  }
+  function _staticFileUrlArcArchive(req, res, next) {
+    // url like /arc/archive.org/SUBDIR/DIR specifically app.get like "/arc/archive.org/images/*"
+    _sendFileOrError(req, res, next, path.join(config.archiveui.directory, req.path.split('/')[3], req.params[0]));
+  }
+  function _sendFileUrlSubdir(req, res, next) {
+    // req.path like '/images/...'
+    _sendFileOrError(req, res, next, config.archiveui.directory + req.path);
+  }
     function sendRelated(req, res, next) {
         // req.opts = { noCache, copyDirectory}
         const identifier = req.params[0];
@@ -477,22 +488,17 @@ function mirrorHttp(config, cb) {
             query: reqQuery(req, {identifier: req.params['identifier'], page: req.params['page']})
         })); // Move itemid into query and redirect to the html file
     });
-// noinspection JSUnresolvedFunction
-    app.get(gateway.urlDownload + '/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-    app.get(gateway.urlDownload + '/:identifier/page/:page', sendBookReaderImages);
-    app.get(gateway.urlDownload + '/:identifier', (req, res) => {
-      res.redirect(url.format({
-        pathname: "/archive/archive.html",
-        query: reqQuery(req, {identifier: req.params['identifier'], download: 1})
-      }));
-    });
-    app.get(gateway.urlDownload + '/:itemid/*', streamArchiveFile);
-
-// noinspection JSUnresolvedFunction
-    // This is used by bookreader
-    app.get('/arc/archive.org/images/*', function (req, res, next) { // noinspection JSUnresolvedVariable
-        _sendFileFromDir(req, res, next, config.archiveui.directory + "/images");
-    });
+  // Note '/arc/archive.org/download' is gateway.urlDownload
+  app.get('/arc/archive.org/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get('/arc/archive.org/download/:identifier/page/:page', sendBookReaderImages);
+  app.get('/arc/archive.org/download/:identifier', (req, res) => {
+    res.redirect(url.format({
+      pathname: "/archive/archive.html",
+      query: reqQuery(req, {identifier: req.params['identifier'], download: 1})
+    }));
+  });
+  app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
+  app.get('/arc/archive.org/images/*', _staticFileUrlArcArchive);
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
@@ -537,24 +543,17 @@ function mirrorHttp(config, cb) {
       query: reqQuery(req)
     })); // redirect to archive.html with same query
   });
-// noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
-// noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/services/img/:itemid', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-// noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/thumbnail/:itemid', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-// noinspection JSUnresolvedFunction
-    app.get('/archive/bookreader/BookReader/*', function (req, res, next) {
-        _sendFileFromDir(req, res, next, config.bookreader.directory);
-    });
-    app.get('/archive/*', function (req, res, next) { // noinspection JSUnresolvedVariable
-        _sendFileFromDir(req, res, next, config.archiveui.directory);
-    });
+  app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
+  app.get('/arc/archive.org/services/img/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get('/arc/archive.org/thumbnail/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get('/archive/bookreader/BookReader/*', _sendFileFromBookreader);
+  app.get('/archive/*', _sendFileUrlArchive);
 //TODO add generic fallback to use Domain.js for name lookup
 
-//e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
-    app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
-    app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
+  app.get('/bookreader/BookReader/*', _sendFileFromBookreader);
+  //e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
+  app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
+  app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
 
 // noinspection JSUnresolvedVariable
     app.get('/contenthash/:contenthash', (req, res, next) =>
@@ -575,16 +574,21 @@ function mirrorHttp(config, cb) {
             }));
     app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
 
-  app.get('/includes/*', (req, res) => { res.redirect("/archive" + req.originalUrl); }); // Matches archive.org and dweb.me
+  app.get('/includes/*',  _sendFileUrlSubdir); // matches archive.org but not dweb.me
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'ipfs:' + req.url)); // Will go to next if IPFS transport not running
   //app.get('/ipfs/*', proxyUpstream); //TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'https://ipfs.io' + req.url)); // Will go to next if IPFS transport not running
-  // Recognize unmodified archive URLs, these shouldnt be generated by any code in dweb-archive or dweb-mirror
+  // Recognize unmodified archive URLs
+  // TODO-EMP dweb.me gateway needs to handle them OR code needs to go to archive.org for them
+  app.get('/jw/*', _sendFileUrlSubdir); // matches archive.org but not dweb.me
+
+  // TODO gradually make these the canonical urls and replace
   app.get('/metadata*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
   app.get('/search*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
   app.get('/services/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
   app.get('/details/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
   app.get('/download/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
+  app.get('/serve/:itemid/*', streamArchiveFile);
 
 // noinspection JSUnresolvedVariable
     app.get('/favicon.ico', (req, res, unusedNext) => res.sendFile(config.archiveui.directory + "/favicon.ico", {
@@ -592,12 +596,9 @@ function mirrorHttp(config, cb) {
         immutable: true
     }, (err) => err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico'))); // Dont go to Error, favicons often aborted
 
-    app.get('/images/*', function (req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
-        _sendFileFromDir(req, res, next, config.archiveui.directory + "/images");
-    });
-  app.get('/languages/*', function (req, res, next) { // noinspection JSUnresolvedVariable - used in archive.js for /images/footer.png
-    _sendFileFromDir(req, res, next, config.archiveui.directory + "/languages");
-  });
+  app.get('/components/*', _sendFileUrlSubdir); // Web components - linked from places we have no control over
+  app.get('/images/*', _sendFileUrlSubdir);
+  app.get('/languages/*', _sendFileUrlSubdir);
 // noinspection JSUnresolvedFunction
     app.get('/info', sendInfo);
 
