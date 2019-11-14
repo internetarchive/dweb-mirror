@@ -138,7 +138,7 @@ class ConfigController {
             } else {
                 try {
                     const o = yaml.safeLoad(yamlstr);
-                    try { cb(null, o); } catch(err) { console.error("Uncaught err in readYaml cb ", err); }
+                    try { cb(null, o); } catch(err) { debug('ERROR: Uncaught err in readYaml cb %o', err); }
                 } catch(err) {
                     debug("Unable to pass yaml: %s", err.message);
                     cb(err, {});

@@ -36,6 +36,7 @@ const path = require('path');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 //const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
+const parallel = require('async/parallel');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
 
 // IA packages
@@ -105,7 +106,7 @@ function mirrorHttp(config, cb) {
   }
   function _sendFileUrlArchive(req, res, next) {
       // dir: Directory path, not starting or ending in /
-        _sendFileOrError(req, res, next, path.join(config.archiveui.directory, req.params[0]));
+    _sendFileOrError(req, res, next, path.join(config.archiveui.directory, req.params[0]));
   }
   function _sendFileFromBookreader(req, res, next) {
     // Urls like /archive/bookreader/BookReader/*
@@ -138,15 +139,17 @@ function mirrorHttp(config, cb) {
         );
     }
 
-    function sendPlaylist(req, res, next) {
-        // req.opts = { noCache}
-        const ai = new ArchiveItem({identifier: req.params[0]});
-        waterfall([
-                (cb) => ai.fetch_metadata(req.opts, cb),
-                (ai, cb) => ai.fetch_playlist({copyDirectory: req.opts.copyDirectory, wantStream: true, noCache: req.opts.noCache}, cb)
-            ], (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "application/json"})
-        );
-    }
+  function sendPlaylist(req, res, next) {
+    // req.opts = { noCache}
+    new ArchiveItem({identifier: req.params[0]})
+      .fetch_metadata(req.opts, (err, ai) => {  // Note this will get playlist, (fetch_playlist requires this first anyway)
+        if (!err) {
+          res.json(ai.playlist); // Will be a cooked playlist, but all cooking of playlists is additive.
+        } else {
+          next(err);  // Will 500 error
+        }
+      });
+  }
 
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
     function proxyUpstream(req, res, next, headers = {}) {
@@ -351,7 +354,6 @@ function mirrorHttp(config, cb) {
     });
   }
 
-
     function sendBookReaderJSIA(req, res, unusedNext) {
         waterfall([
             (cb) => new ArchiveItem({identifier: req.query.id})
@@ -474,8 +476,8 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/details', (req, res) => {
         res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
     });
-// noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/details/:identifier', (req, res) => {
+  app.get('/arc/archive.org/details/:identifier', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
+  app.get('/details/:identifier', (req, res) => {
         res.redirect(url.format({
             pathname: "/archive/archive.html",
             query:  reqQuery(req, {identifier: req.params['identifier']})
@@ -498,7 +500,7 @@ function mirrorHttp(config, cb) {
     }));
   });
   app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
-  app.get('/arc/archive.org/images/*', _staticFileUrlArcArchive);
+  app.get('/arc/archive.org/images/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
@@ -509,13 +511,19 @@ function mirrorHttp(config, cb) {
         if (err) {
           res.status(404).send(err.message); // Its neither local, nor from server nor special
         } else {
-          ai.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr) => {
-            ai.addMagnetLink({copyDirectory: req.opts.copyDirectory, config}, (unusederr) => {
-              res.json(ai.exportMetadataAPI());
-            });
-          })
+          parallel([
+            cb => ai.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, cb),
+            cb => ai.addMagnetLink({copyDirectory: req.opts.copyDirectory, config}, cb)
+            ],
+            (err, unusedArr) => {
+              if (err) {
+                res.status(500).send(err.message)
+              } else {
+                res.json(ai.exportMetadataAPI());
+              }
+          });
         }
-      });
+      })
     });
     app.get('/arc/archive.org/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
         // noinspection JSUnresolvedVariable
@@ -527,7 +535,8 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         proxyUrl(req, res, next, [gateway.mds, req.params[0]].join('/'), {"Content-Type": "application/json"})
     });
-    app.get('/arc/archive.org/playlist/*', sendPlaylist);
+  app.get('/arc/archive.org/playlist/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
+
   // noinspection JSUnresolvedFunction
   app.get('/arc/archive.org/search', (req, res) => {
     res.redirect(url.format({
@@ -579,7 +588,6 @@ function mirrorHttp(config, cb) {
   //app.get('/ipfs/*', proxyUpstream); //TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'https://ipfs.io' + req.url)); // Will go to next if IPFS transport not running
   // Recognize unmodified archive URLs
-  // TODO-EMP dweb.me gateway needs to handle them OR code needs to go to archive.org for them
   app.get('/jw/*', _sendFileUrlSubdir); // matches archive.org but not dweb.me
 
   // TODO gradually make these the canonical urls and replace
@@ -598,11 +606,12 @@ function mirrorHttp(config, cb) {
 
   app.get('/components/*', _sendFileUrlSubdir); // Web components - linked from places we have no control over
   app.get('/images/*', _sendFileUrlSubdir);
+  app.get('/info', sendInfo);
   app.get('/languages/*', _sendFileUrlSubdir);
-// noinspection JSUnresolvedFunction
-    app.get('/info', sendInfo);
+  app.get('/playlist/*', sendPlaylist);
 
-    app.use((req, res, next) => {
+
+  app.use((req, res, next) => {
         // See errAndNext() above which builds req.errs
         debug("FAILING: %s", req.url);
         if (req.errs && req.errs.length === 1) {

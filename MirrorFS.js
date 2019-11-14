@@ -415,19 +415,40 @@ class MirrorFS {
         */
         const cacheDirectory = copyDirectory || this.directories[0]; // Where the file should be put if creating it
         let cbCalledOnFirstData = false;
+        if (noCache) {
+          tryNetThenCache.call(this, cb);
+        } else {
+          tryCacheThenNet.call(this, cb);
+        }
+      function tryNetThenCache(cb) {
+        _notcached.call(this, (err, s) => {
+          if (!err) { // Great - read it
+            cb(null, s);
+          } else {
+            this.checkWhereValidFile(relFilePath, {existingFilePath, noCache: false, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory},
+              (err, existingFilePath) => {
+                if (err) {
+                  cb(err); // Not on net, and not in cache either, so fail
+                } else {
+                  haveExistingFile.call(this, existingFilePath, sha1, cb)
+                }
+              });
+          }
+        });
+      }
+
+      function tryCacheThenNet(cb) {
         this.checkWhereValidFile(relFilePath, {existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory},
           (err, existingFilePath) => {
-            if (err) {  //Doesn't match
-                if (!urls || (Array.isArray(urls) && !urls.length) || skipNet) {
-                    cb(err); // Dont have it (which is reasonable, as caller such as AF.cacheOrStream might then find URLS and try again)
-                } else { // Have urls, retrieve and cache
-                    _notcached.call(this);
-                }
+            if (err) {  //Doesn't match cache
+              // retrieve and cache (will fail if no urls, which is readable as consumer such as AF.cacheOrStream might then find URLS and try again
+                _notcached.call(this, cb);
             } else { // sha1 matched, skip fetching, just stream from saved
-                haveExistingFile.call(this, existingFilePath, sha1)
+              haveExistingFile.call(this, existingFilePath, sha1, cb)
             }
-        });
-        function haveExistingFile(existingFilePath, sha1) {
+          });
+      }
+        function haveExistingFile(existingFilePath, sha1, cb) {
             if (copyDirectory && !existingFilePath.startsWith(copyDirectory)) {
                 // We have the right file, but in the wrong place
                 const copyFilePath = path.join(copyDirectory, relFilePath);
@@ -436,16 +457,16 @@ class MirrorFS {
                         debug("ERROR: MirrorFS.cacheAndOrStream of %s failed %s", relFilePath, err.message);
                     } else {
                         debug("Copied existing file %sfrom %s to %s", sha1 ? "with matching sha1 " : "", existingFilePath, copyFilePath);
-                        callbackEmptyOrDataOrStream(existingFilePath, sha1);
+                        callbackEmptyOrDataOrStream(existingFilePath, sha1, cb);
                     }
                 })
             } else {
                 // Write file and either right place, or we dont care where
                 debug("Already cached existing file %s%s %s", sha1 ? "with matching sha1 " : "", existingFilePath);
-                callbackEmptyOrDataOrStream(existingFilePath, sha1);
+                callbackEmptyOrDataOrStream(existingFilePath, sha1, cb);
             }
         }
-       function callbackEmptyOrData(existingFilePath) {
+       function callbackEmptyOrData(existingFilePath, cb) {
             if (wantBuff) {
                 fs.readFile(existingFilePath, cb); //TODO check if its a string or a buffer or what
             } else if (wantSize) {
@@ -456,12 +477,12 @@ class MirrorFS {
                 cb();
             }
         }
-        function callbackEmptyOrDataOrStream(existingFilePath, sha1) {
+        function callbackEmptyOrDataOrStream(existingFilePath, sha1, cb) {
             if (wantStream) {
                 debug("streaming %s from cache", existingFilePath);
                 cb(null, fs.createReadStream(existingFilePath, {start, end}));   // Already cached and want stream - read from file
             } else {
-                callbackEmptyOrData(existingFilePath);
+                callbackEmptyOrData(existingFilePath, cb);
             }
         }
         function _cleanupOnFail(filepathTemp, mess, cb) {
@@ -487,7 +508,7 @@ class MirrorFS {
         } else {
           fs.rename(filepathTemp, newFilePath, (err) => {
             if (err) {
-              console.error(`Failed to rename ${filepathTemp} to ${newFilePath}`); // Shouldnt happen
+              debug('ERROR: Failed to rename %s to %s', filepathTemp, newFilePath); // Shouldnt happen
               if (!wantStream) cb(err); // If wantStream then already called cb
             } else {
               this._hashstore(cacheDirectory).put("sha1.relfilepath", multihash58sha1(hashstreamActual), relFilePath, (err) => {
@@ -501,7 +522,7 @@ class MirrorFS {
                 // Also - its running background, we are not making caller wait for it to complete
                 // noinspection JSUnresolvedVariable
                 if (!wantStream) {  // If wantStream then already called cb, otherwise cb signifies file is written
-                  callbackEmptyOrData(newFilePath);
+                  callbackEmptyOrData(newFilePath, cb);
                 }
               });
             }
@@ -509,14 +530,16 @@ class MirrorFS {
         }
       }
 
-      function _notcached() {
+      function _notcached(cb) {
             /*
             Four possibilities - wantstream &&|| partialrange
             ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; unsupported, though could be in callbackEmptyOrData; !ws&!p caching
              */
             if (skipFetchFile) {
-                debug("skipFetchFile set (testing) would fetch: %s", debugname);
-                cb();
+              debug("skipFetchFile set (testing) would fetch: %s", debugname);
+              cb();
+            } else if (!urls || (Array.isArray(urls) && !urls.length) || skipNet) {
+              cb(new Error("No urls or skipNet specified to cacheAndOrStream")); // This might be totally normal, if looking for only local
             } else {
                 const partial = (start>0 || end<Infinity);
                 console.assert(wantStream || !partial,"ArchiveFile.cacheAndOrStream - it makes no sense to request a partial fetch without a stream output");
@@ -524,7 +547,7 @@ class MirrorFS {
                     debug("Not caching %s because specifying a range %s:%s and wantStream", debugname, start, end);
                     DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, cb); // Dont cache a byte range, just return it
                 } else {
-                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, (err, s) => {
+                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports, silentFinalError: true}, (err, s) => {
                         //Returns a promise, but not waiting for it
                         // For HTTP s is result of piping .body from fetch (a stream) to a through stream
                         if (err) {
@@ -551,8 +574,8 @@ class MirrorFS {
                                       _closeWriteToCache.call(this, {hashstreamActual: hashstream.actual, writable, newFilePath, filepathTemp}, cb)
                                     });
                                     try {
-                                        const s1 = new ReadableStreamClone(s);
-                                        const s2 = new ReadableStreamClone(s);
+                                        const s1 = new ReadableStreamClone(s); // Will be stream to file
+                                        const s2 = new ReadableStreamClone(s); // Will be stream for consumer
                                         //TODO consider only opening hashstream and writable if the stream starts (i.e. 'readable')
                                         s1.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                                         s1.once('error', (err) => {
@@ -571,7 +594,7 @@ class MirrorFS {
                                           if (wantStream && !cbCalledOnFirstData)  { cbCalledOnFirstData = true; debug('XXX'); cb(null, s2); }
                                         })
                                     } catch(err) {
-                                        console.error("ArchiveFilePatched.cacheAndOrStream failed ",err);
+                                        debug('ERROR: ArchiveFilePatched.cacheAndOrStream failed %o',err);
                                         if (wantStream) cb(err);
                                     }
                                 }

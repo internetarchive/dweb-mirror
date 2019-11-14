@@ -56,7 +56,7 @@ function _save1file(key, obj, namepart, {copyDirectory=undefined}, cb) {
     } else {
         MirrorFS.writeFile({relFilePath, copyDirectory}, canonicaljson.stringify(obj), (err) => {
             if (err) {
-                console.error(`Unable to write ${key} to ${relFilePath}`);
+                debug("ERROR Unable to write %s to %s", key, relFilePath);
                 cb(err);
             } else {
                 cb(null);
@@ -76,11 +76,11 @@ ArchiveItem.prototype.save = function({copyDirectory=undefined}={}, cb) {
         .reviews -> <IDENTIFIER>_reviews.json
         .speech_vs_music_asr => <IDENTIFIER>_speech_vs_music_asr.json
         .files -> <IDENTIFIER>_files.json
+        .playlist -> <IDENTIFIER>_playlist.json
         {collection_titles, collection_sort_order, dir, files_count, is_dark, server} -> <IDENTIFIER>.extra.json
         and .member_cached.json is saved from ArchiveMember not from ArchiveItems
 
         If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
-
     */
     if (!this.itemid) {
         // Must be a Search so dont try and save files - might save members
@@ -126,7 +126,7 @@ ArchiveItem.prototype.saveBookReader = function({copyDirectory=undefined}={}, cb
             // noinspection JSUnusedLocalSymbols
             this.fetch_bookreader({copyDirectory}, (err, ai) => {
                 if (err) {
-                    console.error(`Cant save because could not fetch bookreader for %s: %s`, this.itemid, err.message);
+                    debug('ERROR: Cant save because could not fetch bookreader for %s: %s', this.itemid, err.message);
                     cb(err);
                 } else {
                     f.call(this); // Need the call because it loses track of "this"
@@ -263,23 +263,39 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
   if (cb) { try { f.call(this, cb) } catch(err) {
       cb(err)}}
   else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
-  function tryRead(cb) { // Read if allowed
-    //TODO-CACHE-AGING need timing of how long use old metadata
-    if (noCache) {
-      cb(new Error("no-cache"));
-    } else {
-      this.read_bookreader({copyDirectory}, cb); // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
-    }
+
+  function readAndLoad(cb) {
+    this.read_bookreader({copyDirectory}, (err, bookReaderApi) => { // RawBookReaderResponse = { data: { data, brOptions, lendingInfo }}
+      if (bookReaderApi) {
+        this.loadFromBookreaderAPI(bookReaderApi);
+      }
+      cb(err, !!copyDirectory);
+    });
   }
-  function tryReadOrNet(cb) { // Try both files and net, cb(err, doSave)
-    tryRead.call(this, (err, bookapi) => {
+  function tryReadThenNet(cb) {
+    readAndLoad.call(this, (err) => {
       if (err) {
         this._fetch_bookreader(opts, (err, unusedRes)=>cb(err, true)); // Will process and add to this.bookreader, but want to save as came from net
       } else {
-        this.loadFromBookreaderAPI(bookapi);
         cb(null, !!copyDirectory);   // If copyDirectory explicitly specified then save to it, otherwise its from file so no need to save.
       }
     });
+  }
+  function tryNetThenRead(cb) {
+    this._fetch_bookreader(opts, (err, unusedRes) => {
+      if (err) {
+        readAndLoad.call(this, cb);
+      } else {
+        cb(err, true); // Will process and add to this.bookreader, but want to save as came from net
+      }
+    });
+  }
+  function tryReadOrNet(cb) { // Try both files and net, cb(err, doSave)
+    if (noCache) {
+      tryNetThenRead.call(this, cb);
+    } else {
+      tryReadThenNet.call(this, cb);
+    }
   }
   function trySave(doSave, cb) {
     if (!noStore && doSave) {
@@ -392,20 +408,18 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     if (cb) { try { f.call(this, cb) } catch(err) {
         cb(err)}}
     else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
-    function tryRead(cb) { // Try and read from disk, obeying options
-        if (opts.noCache) {
-            cb(new Error("NoCache"));
+
+  function tryRead(cb) { // Try and read from disk, obeying options
+    this.read({copyDirectory}, (err, metadata) => {
+        if (err) {
+            cb(err);
         } else {
-            this.read({copyDirectory}, (err, metadata) => {
-                if (err) {
-                    cb(err);
-                } else {
-                    this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
-                    cb(null)
-                }
-            });
+            this.loadFromMetadataAPI(metadata); // Saved Metadata will have processed Fjords and includes the reviews, files, and other fields of _fetch_metadata()
+            cb(null)
         }
-    }
+    });
+  }
+
     function tryNet(cb) {  // Try and read from net, obeying options
         if (opts.skipNet) {
             cb(new Error("skipNet set"));
@@ -417,23 +431,37 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         }
     }
 
-    // Try and Read and if not, then get from net, obeying options cb(err, doSave)
-    function tryReadOrNet(cb) {
-          if (this.itemid && !(this.metadata || this.is_dark)) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
-            tryRead.call(this, (err) => {
-              if (err) { // noCache, or not cached
-                tryNet.call(this, (err) => {
-                  cb(err, true); // If net succeeded then save
-                });
-              } else { // cached
-                cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid))); // cached but check for explicit requirement to copy
-              }
-            })
+  // Try Read or Net - order depends on noCache
+  function tryReadOrNet(cb) {
+    if (!this.itemid || this.metadata || this.is_dark) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
+      cb(null, false); // Didnt fetch so nothing to save
+    } else {
+      if (opts.noCache) { // Can remove that check in tryRead
+        tryNet.call(this, (err) => {
+          if (!err) {
+            cb(null, true);
           } else {
-            cb(null, false); // Didn't fetch so dont save, but not an error
+            tryRead.call(this, (err) => {
+              // cached but check for explicit requirement to copy
+              cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid)));
+            });
           }
+        });
+      } else { // Try the cache, then the net
+        tryRead.call(this, (err) => {
+          if (err) { // noCache, or not cached
+            tryNet.call(this, (err) => {
+              cb(err, true); // If net succeeded then save
+            });
+          } else {
+            // cached but check for explicit requirement to copy
+            cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid)));
+          }
+        })
+      }
     }
-    function trySave(doSave, cb) { // If requested, try and save, obeying options
+  }
+   function trySave(doSave, cb) { // If requested, try and save, obeying options
         if (!doSave || opts.noStore) {
             cb(null);
         } else {
@@ -680,6 +708,7 @@ ArchiveItem.prototype.fetch_playlist = function({wantStream=false, noCache=false
                     cb(null, this.processPlaylist(canonicaljson.parse(res)));
                 } catch (err) { cb(err); } // Catch bad JSON
             } else {
+                if (err) debug("fetch_playlist failed for item %s %s", identifier, err.message);``
                 cb(err, res);
             }
         });
