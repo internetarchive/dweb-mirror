@@ -1016,24 +1016,26 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
 
 /**
  * Parse a torrent file, turn into a magnet link and add
- * TODO candidate to move back ot ArchiveItem
- * TODO remove XXX
+ * TODO-TORRENT candidate to move back to ArchiveItem
  */
 ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=undefined}={}, cb) {
-  if (this.metadata && !this.metadata.XXXmagnetlink && !this.metadata.noarchivetorrent) {
+  if (!(this.magnetlink || this.is_dark || (this.metadata &&  this.metadata.noarchivetorrent))) {
     const torrentFileName = this.itemid + "_archive.torrent";
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
-    const torrentUrl = torrentFile.httpUrl(); // For Webtorrent etc to find torrent file
     if (torrentFile) {
-      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buffer) => { // TODO make sure this uses dweb-torrent not dweb.me or archive.org
-        this.metadata.magnetlink = [ dwebMagnetLinkFrom({archiveBuffer: buffer, dwebTorrentUrl: `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`}) ];
-        // TODO DM ISSUE#242 next install parse-torrent then encode as magnet link then modify
-        cb();
+      const dwebTorrentUrl = `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`; // For Webtorrent etc to find torrent file
+      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buffer) => { // TODO-TORRENT TODO-2SC make sure this uses dweb-torrent not dweb.me or archive.org
+        if (err) {
+          debug("ERROR: %o", err); // Not expecting any ...
+        } else {
+          this.magnetlink = dwebMagnetLinkFrom({dwebTorrentUrl, archiveBuffer: buffer});
+        }
+        cb(); // Dont pass error up, as failure to add Magnet isn't fatal
       });
-    } else {
+    } else { // No torrent file
       cb();
     }
-  } else {
+  } else { // Already loaded, or know it wont be loaded.
     cb();
   }
 }
