@@ -35,7 +35,7 @@ archiveui: # Anything relating to display of the Archive UI
   apps: # Each application can have its own configuration
     http: # Relating to serving
     crawl: # Relating to crawling 
-  upstream: "dweb.me" # Where to find an upstream server, typically "dweb.me"
+  upstream: "dweb.archive.org" # Where to find an upstream server, typically "dweb.archive.org"
 ```
 
 
@@ -711,7 +711,7 @@ expectsize: If defined, the result must match this size or will be rejected (it 
 file:       Name of file
 filepath:   Absolute path to file, normally must be in "directory"
 format:     Format of result or submitted digest, defaults to 'hex', alternative is 'multihash58'
-httpServer: Server to use for http (for seeding)
+httpServer: Server to use for http (for seeding e.g. IPFS)
 ipfs:           IPFS hash if known
 noCache:    If true will skip reading cache, but will write back to it and not trash it if unable to read file
 preferredStreamTransports:  Array of transport names to use in order of preference for streaming
@@ -737,7 +737,7 @@ Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz
 ##### static init(directories, httpServer, preferredStreamTransports)
 
 Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find or get things
-httpServer:  start of URL of server to get files from typically http://dweb.me
+httpServer:  start of URL of server to tell IPFS to get files from typically http://dweb.me
 
 ##### static setState({directories})
 Indicate to MirrorFS that state has changed, specifically causes it to set its directories property.

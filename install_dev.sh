@@ -202,7 +202,7 @@ All the repos are installed
 
 You can access it for testing on two different servers.
 
-a) dweb-archive, loads the UI locally, but accesses the content via the common dweb.me
+a) dweb-archive, loads the UI locally, but accesses the content via the common dweb.archive.org
 
   cd dweb-archive/dist
   http-server

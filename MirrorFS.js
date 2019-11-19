@@ -71,7 +71,7 @@ class MirrorFS {
     static init({directories, httpServer, preferredStreamTransports=[] }) {
         /**
          * Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find or get things
-         * httpServer:  start of URL of server to get files from typically http://dweb.me
+         * httpServer:  start of URL of server to tell IPFS to get files from typically localhost
          * See top of this file for other parameters
          */
         // Not a constructor, all methods are static
@@ -468,7 +468,7 @@ class MirrorFS {
         }
        function callbackEmptyOrData(existingFilePath, cb) {
             if (wantBuff) {
-                fs.readFile(existingFilePath, cb); //TODO check if its a string or a buffer or what
+                fs.readFile(existingFilePath, cb); // No encoding specified so cb(err, buffer)
             } else if (wantSize) {
                 fs.stat(existingFilePath, (err, stats) => {
                     cb(err, stats && stats.size);
@@ -583,7 +583,7 @@ class MirrorFS {
                                             s1.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
                                         })
                                         s2.once('error', (err) => {
-                                          const message = `Failed to read ${urls} from net err=${err.message} wantStream=${wantStream}`;
+                                          const message = `Failed to read ${urls} from net err=${err.message}`;
                                           debug("ERROR %s", message);
                                           _cleanupOnFail(filepathTemp, message, cb);
                                           s2.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
@@ -774,7 +774,7 @@ class MirrorFS {
             directoryPath: path.join(directory, pp[0]), // e.g. /Volumes/x/archiveorg/<IDENTIFIER>
             fileRelativePath: path.join(...pp.slice(1)),    // e.g. <FILENAME> or thumbs/image001.jpg
             ipfsHash: ipfs,
-            urlToFile: [this.httpServer + gateway.urlDownload, relFilePath].join('/'), // Normally http://localhost:4244/arc/archive.org/download/IDENTIFIER/FILE
+            urlToFile: [this.httpServer + "/download", relFilePath].join('/'), // Normally http://localhost:4244/download/IDENTIFIER/FILE
         }, (unusederr, res) => {
             cb(null, res);
         });

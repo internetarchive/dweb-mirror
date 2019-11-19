@@ -150,7 +150,7 @@ function _parse_common(namepart, part, {copyDirectory=undefined}, cb) {
           cb(err);    // Not logging as not really an err for there to be no file, as will read
         } else if (jsonstring.length === 0) { // Zero length files shouldnt occur, but seem to especially if crawler exits prematurely. ignore them.
           const err = new Error(`File %{relFilePath} is empty so ignoring it`);
-          debug("ERROR %s", err.message);
+          debug("ERROR in parsing %s %s", namepart, err.message);
           cb(err);
         } else {
             let o;
@@ -663,22 +663,17 @@ ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=fa
             recursable(null, null);
         } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
             // noinspection JSUnresolvedVariable
-            const servicesurl = `${gatewayServer()}${gateway.url_servicesimg}${this.itemid}`; // Direct to Archive server not via gateway
-            // Include direct link to services
-            if (!this.metadata.thumbnaillinks) this.metadata.thumbnaillinks = [];
-            if (!this.metadata.thumbnaillinks.includes(servicesurl)) this.metadata.thumbnaillinks.push(servicesurl);
+            const urls = `${gatewayServer()}/services/img/${this.itemid}`; // Direct to Archive server not via gateway
             const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = relFilePath;
-            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname, copyDirectory,
-                urls: this.metadata.thumbnaillinks,
-            }, (err, streamOrUndefined) => {
+            MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname, copyDirectory, urls},
+              (err, streamOrUndefined) => {
                 if (err) {
                     debug("Unable to cacheOrStream %s", debugname);
                     cb(err);
                 } else {
                     cb(null, wantStream ? streamOrUndefined : this);
                 }
-
             });
         }
     }
@@ -733,7 +728,7 @@ ArchiveItem.prototype.relatedItems = function({ wantStream=false, wantMembers=fa
         // noinspection JSUnresolvedVariable
         MirrorFS.cacheAndOrStream({wantStream, relFilePath, noCache, copyDirectory,
             wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
-            urls: gateway.url_related + identifier, //url_related currently ends in /
+            urls: 'https://be-api.us.archive.org/mds/v1/get_related/all/' + this.itemid,
             debugname: identifier + "/" + identifier + "_related.json"
         }, (err, res) => {
             // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
@@ -858,7 +853,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
               cb1 => this.fetch_page({
                 copyDirectory,
                 wantSize: true,
-                reqUrl: `/arc/archive.org/download/${this.itemid}/cover_t.jpg`,
+                reqUrl: `/download/${this.itemid}/cover_t.jpg`,
                 page: 'cover_t.jpg',
                 skipNet: true
               }, cb1),  // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
@@ -1024,9 +1019,9 @@ ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
     if (torrentFile) {
       const dwebTorrentUrl = `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`; // For Webtorrent etc to find torrent file
-      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buffer) => { // TODO-TORRENT TODO-2SC make sure this uses dweb-torrent not dweb.me or archive.org
+      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buffer) => {
         if (err) {
-          debug("ERROR: %o", err); // Not expecting any ...
+          debug("ERROR in addMagnetLink: %s", err.message); // For exmample becaue forbidden
         } else {
           this.magnetlink = dwebMagnetLinkFrom({dwebTorrentUrl, archiveBuffer: buffer});
         }

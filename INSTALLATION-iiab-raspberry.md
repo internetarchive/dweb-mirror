@@ -132,8 +132,8 @@ cd /opt/iiab/internetarchive//node_modules/@internetarchive/dweb-mirror && sudo 
 * If it reports `ERROR: Directory for the cache is not defined or doesnt exist`
   * then it means you didn't create a directory for it to use as a cache
   * the server wants you to do this, so that it doesn't fill a disk somewhere you don't want it to happen
-* If you see a message like `Requeued fetch of https://dweb.me/info failed` then it means it cannot see 
-  the archive's servers (on `dweb.me`) so it won't be able to crawl or cache initial material until you 
+* If you see a message like `Requeued fetch of https://dweb.archive.org/info failed` then it means it cannot see 
+  the archive's servers (on `dweb.archive.org`) so it won't be able to crawl or cache initial material until you 
   connect to the WiFi or Ethernet. 
 
 Without any other arguments, `crawl` will read a set of files into into the first (already existing) directory
@@ -147,7 +147,7 @@ You can safely delete any of the crawled material and it will be re-fetched if n
 #### Browsing
 * In a browser try going to `http://localhost:4244` 
 * Or from another machine: `http://archive.local:4244` or `http://<IP of your machine>:4244`
-* open http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244
+* open http://localhost:4244/details/prelinger?transport=HTTP&mirror=localhost:4244
 to see the test crawl.
 
 If you don’t get a Archive UI then look at the server log 

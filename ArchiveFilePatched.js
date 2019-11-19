@@ -51,7 +51,7 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
                             cb(err);
                         } else {
                             if (!wantStream && !(start || end)) { this.downloaded = true; }; // No error, and not streaming so must have downloaded
-                            cb(null, (wantStream || wantSize) ? streamOrUndefinedOrSizeOrBuff : this);
+                            cb(null, (wantStream || wantSize || wantBuff) ? streamOrUndefinedOrSizeOrBuff : this);
                         }
                     });
                 }

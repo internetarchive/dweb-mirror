@@ -125,27 +125,30 @@
   dependencies:
     jquery "^3.4.1"
 
-"@internetarchive/dweb-archive-dist@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.0.tgz#7866f8fab19ad381325aa1c7e68fc5d9a136e3ec"
-  integrity sha512-Pv+GSmuPHak6CHIVBU6gvOHoaqJXS3/J7A4+91ykPcjYZqygmTgUMckduP+pQrxWcXAV0Wth+Jh/pkvceb3pIQ==
+"@internetarchive/dweb-archive-dist@^0.2.4":
+  version "0.2.4"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.4.tgz#85dcd94aca8d3854441ccb018a910f1b653a94db"
+  integrity sha512-V2GH2SkXCbKcgSVNCDzeznxHLRmP6vmLp4SNWodkO5vRTvPRq1ZYGc2sRvySAPM28dcGPpsdKOcvNHQf9oUD4g==
 
-"@internetarchive/dweb-archivecontroller@^0.1.79":
-  version "0.1.79"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archivecontroller/-/dweb-archivecontroller-0.1.79.tgz#9e4bb7c3248c1d0cc1f6a9b9a55b2bf5502f0a94"
-  integrity sha512-K0Uke+TX7KfvhEWgYJMtK8+kTPUZ8+p8DB+dgddBoDi7IShPN0QOCHikonONOaEy7DIX9X4FtD/1/nGWl7jjDQ==
+"@internetarchive/dweb-archivecontroller@^0.1.83":
+  version "0.1.84"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archivecontroller/-/dweb-archivecontroller-0.1.84.tgz#9dd73bea2711233ebf81aa9092f6cff8c79e7d47"
+  integrity sha512-d2gmdGlc0gOdVWjTN72dlS7HGfG7LIN3Rrr+MJSj3kf+JV2KtAODPlBylidZ+Xwo4Uir64nwFHXRFEvQEsHUiw==
   dependencies:
     "@babel/core" "^7.2.2"
     "@stratumn/canonicaljson" "^1.0.2"
     async "^2.6.2"
+    bencode "^2.0.1"
     debug "^4.1.1"
     es2015 "^0.0.0"
+    magnet-uri "^5.2.4"
     prettier-bytes "^1.0.4"
+    simple-sha1 "^3.0.1"
 
-"@internetarchive/dweb-transports@^0.2.5":
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.5.tgz#6b418a52359c2f30e2b9b0f904f6584c34476ee6"
-  integrity sha512-1nejdfRKVlBNYrxUL48piJBoGxeEOPLQRa5vEDIsoS312mQ/Vd9rHde2PvQT9hpNjqe4X7ccLyg3se2BU0UD0Q==
+"@internetarchive/dweb-transports@^0.2.8":
+  version "0.2.8"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.8.tgz#8114fc42957c8d4728dec77745e0a2064d8125f5"
+  integrity sha512-a7UNEEKQKLklQA6enS//eNWMTjZc7JLDZOFIxONMiOk0uVHmmAnc6Larc84Y4I56uWgxMxQukhTZDg84sdMshw==
   dependencies:
     "@stratumn/canonicaljson" "^1.0.3"
     debug "^4.1.1"
@@ -220,7 +223,7 @@ basic-auth@~2.0.0:
   dependencies:
     safe-buffer "5.1.2"
 
-bencode@^2.0.0:
+bencode@^2.0.0, bencode@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/bencode/-/bencode-2.0.1.tgz#667a6a31c5e038d558608333da6b7c94e836c85b"
   integrity sha512-2uhEl8FdjSBUyb69qDTgOEeeqDTa+n3yMQzLW0cOzNf1Ow5bwcg3idf+qsWisIKRH8Bk8oC7UXL8irRcPA8ZEQ==
@@ -729,7 +732,7 @@ ltgt@^2.1.2:
   resolved "https://registry.yarnpkg.com/ltgt/-/ltgt-2.2.1.tgz#f35ca91c493f7b73da0e07495304f17b31f87ee5"
   integrity sha1-81ypHEk/e3PaDgdJUwTxezH4fuU=
 
-magnet-uri@^5.1.3:
+magnet-uri@^5.1.3, magnet-uri@^5.2.4:
   version "5.2.4"
   resolved "https://registry.yarnpkg.com/magnet-uri/-/magnet-uri-5.2.4.tgz#7afe5b736af04445aff744c93a890a3710077688"
   integrity sha512-VYaJMxhr8B9BrCiNINUsuhaEe40YnG+AQBwcqUKO66lSVaI9I3A1iH/6EmEwRI8OYUg5Gt+4lLE7achg676lrg==
@@ -1080,7 +1083,7 @@ simple-get@^3.0.1:
     once "^1.3.1"
     simple-concat "^1.0.0"
 
-simple-sha1@^3.0.0:
+simple-sha1@^3.0.0, simple-sha1@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/simple-sha1/-/simple-sha1-3.0.1.tgz#b34c3c978d74ac4baf99b6555c1e6736e0d6e700"
   integrity sha512-q7ehqWfHc1VhOm7sW099YDZ4I0yYX7rqyhqqhHV1IYeUTjPOhHyD3mXvv8k2P+rO7+7c8R4/D+8ffzC9BE7Cqg==

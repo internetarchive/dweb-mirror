@@ -71,7 +71,7 @@ cd ~/git/dweb-mirror && ./internetarchive --server &
 * the startup is a little slow but you'll see some debugging when its live.
 * Try going to `http://localhost:4244` 
 * Or from another machine: `http://archive.local:4244` or `http://<IP of your machine>:4244`
-* open http://localhost:4244/arc/archive.org/details/prelinger?transport=HTTP&mirror=localhost:4244
+* open http://localhost:4244/details/prelinger?transport=HTTP&mirror=localhost:4244
 to see the test crawl.
 If you don’t get a Archive UI then look at the server log (in console) 
 to see for any “FAILING” log lines which indicate a problem
@@ -174,7 +174,7 @@ This will run a local server that can be accessed at
 ```
 http://localhost:8080/archive.html 
 ```
-The code will be run from your local server, but will access content at dweb.me
+The code will be run from your local server, but will access content at dweb.archive.org
 
 ## FUTURE: Updating dweb-mirror for a developer
 

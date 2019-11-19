@@ -85,7 +85,8 @@ apps:
     # copyDirectory: /Volumes/Transcend/test2 # Overrides where to store data, normally this is a command-line parameter if used.
 #============== Dont edit anything from here on down ============================
 # Information about specific URLs for services at archive.org, - should not need changing
+# TODO there are some hard coded URIs that could go here usefully
 archiveorg:
   mds: 'https://be-api.us.archive.org/mds'
-# Generic upstream server, should be able to parse urls like /arc or /contenthash - should not need changing
-upstream: 'https://dweb.me'
+# Generic upstream server, should be able to parse urls like /metadata /download or /contenthash - should not need changing
+upstream: 'https://dweb.archive.org'

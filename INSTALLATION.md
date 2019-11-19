@@ -275,8 +275,8 @@ cd ~/node_modules/@internetarchive/dweb-mirror && ./internetarchive -sc &
 * It might take 10-15 seconds to start, be patient
 * It should start crawling, and get just a minimal set of icons for the home page.
 * the startup is a little slow but you'll see some debugging when its live.
-* If you see a message like `Requeued fetch of https://dweb.me/info failed` then it means it cannot see 
-  the archive's servers (on `dweb.me`) so it won't be able to crawl or cache initial material until you 
+* If you see a message like `Requeued fetch of https://dweb.archive.org/info failed` then it means it cannot see 
+  the archive's servers (on `dweb.archive.org`) so it won't be able to crawl or cache initial material until you 
   connect to the WiFi or Ethernet. 
 
 Without any other arguments, the crawl will read a set of files into into the first (already existing) directory

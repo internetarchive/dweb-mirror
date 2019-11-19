@@ -436,7 +436,7 @@ class CrawlItem extends Crawlable {
                 archiveitem: this.item,
                 pageParms: {
                   page: "cover_t.jpg",
-                  reqUrl: `/arc/archive.org/download/${this.identifier}/page/cover_t.jpg`
+                  reqUrl: `/download/${this.identifier}/page/cover_t.jpg`
                 }
             }, asParent));
             this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(pageManifest => {

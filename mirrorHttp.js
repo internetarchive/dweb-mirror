@@ -3,20 +3,9 @@
 
 This is intended as a fairly generic server for a number of cases, with some configuration to allow for different situations,
 
-See: https://github.com/mitra42/dweb-universal/blob/master/uri%20structure%20for%20http%20server.md
+See: https://github.com/mitra42/dweb-universal/blob/master/uri%20structure%20for%20http%20server.md (TODO which may be out of date)
 
-From that doc ...
-/arc/archive.org/metadata/:itemid|$ROOT/:itemid/:itemid_meta.json<br/>Domain($URI)|Check disk mirror<br/>then gun (which should fallback)<br/>then http
-DONE file, need pass on
-/gun/$PATH|transports.get("gun:/gun/$PATH")|GUN client > local peer > Remote peers
-/ipfs/$PATH|transports.get("ipfs:/ipfs/$PATH")|IPFS which should fallback to https://ipfs.io
-/arc/archive.org/download/:itemid/:filename|$ROOT/:itemid/:filename<br/>Domain($URI)|Look locally then try all dweb locations
-/arc/*|Domain($URI)|Should resolve name, load and return or redirect
-
-See URL_MAPPING.md for summary of below rules plus what they call.
-
-TODO-GATEWAY - special case for both metadata and download when already on dweb.me will need from archive.org and then replicate stuff gateway does
-TODO move /arc/archive.org/foo to /foo then change in all code here dweb-archive dweb-archivecontroller etc
+See URL_MAPPING.md (TODO which may be out of date) for summary of below rules plus what they call
 */
 // External packages
 //Not debugging: express:*
@@ -91,7 +80,7 @@ function mirrorHttp(config, cb) {
 
 
 // Serving static (e.g. UI) files
-//app.use('/arc/archive.org/download/', express.static(dir)); // Simplistic, better ...
+//app.use('/download/', express.static(dir)); // Simplistic, better ...
 
   function _sendFileOrError(req, res, next, filepath) {
     // Note filepaths are going to be unix/OSX style TODO-WINDOWS will need to split and re-join params[0]
@@ -111,10 +100,6 @@ function mirrorHttp(config, cb) {
   function _sendFileFromBookreader(req, res, next) {
     // Urls like /archive/bookreader/BookReader/*
     _sendFileOrError(req, res, next, path.join(config.bookreader.directory, req.params[0]));
-  }
-  function _staticFileUrlArcArchive(req, res, next) {
-    // url like /arc/archive.org/SUBDIR/DIR specifically app.get like "/arc/archive.org/images/*"
-    _sendFileOrError(req, res, next, path.join(config.archiveui.directory, req.path.split('/')[3], req.params[0]));
   }
   function _sendFileUrlSubdir(req, res, next) {
     // req.path like '/images/...'
@@ -141,7 +126,7 @@ function mirrorHttp(config, cb) {
 
   function sendPlaylist(req, res, next) {
     // req.opts = { noCache}
-    new ArchiveItem({identifier: req.params[0]})
+    new ArchiveItem({identifier: req.params['identifier']})
       .fetch_metadata(req.opts, (err, ai) => {  // Note this will get playlist, (fetch_playlist requires this first anyway)
         if (!err) {
           res.json(ai.playlist); // Will be a cooked playlist, but all cooking of playlists is additive.
@@ -239,7 +224,7 @@ function mirrorHttp(config, cb) {
         // req.opts = { noCache}
         let wantCrawlInfo;
         let o;
-        // especially: `${Util.gatewayServer()}${Util.gateway.url_advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
+        // especially: `/advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
         if (req.query.q && req.query.q.startsWith("collection:") && req.query.q.includes('simplelists__items:')) { // Only interested in standardised q=collection:ITEMID..
           //TODO when Aaron has built entry point e.g. members/COLLECTION then rebuild this and dweb-archivecontroller.ArchiveItem._fetch_query to use it
           // Special case: query just looking for members of a collection
@@ -472,40 +457,39 @@ function mirrorHttp(config, cb) {
     app.get('/arc/archive.org', (req, res) => {
         res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
     });
-    app.get('/arc/archive.org/advancedsearch', streamQuery);
-    app.get('/arc/archive.org/details', (req, res) => {
+  app.get('/arc/archive.org/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
+  app.get('/advancedsearch', streamQuery);
+  app.get('/details', (req, res) => {
         res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
-    });
-  app.get('/arc/archive.org/details/:identifier', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
+  });
   app.get('/details/:identifier', (req, res) => {
         res.redirect(url.format({
             pathname: "/archive/archive.html",
             query:  reqQuery(req, {identifier: req.params['identifier']})
         })); // Move itemid into query and redirect to the html file
     });
-//TODO-BOOK this will be needed on dweb.me as well OR make archive.html handle /arc/archive.org/details/foo
-    app.get('/arc/archive.org/details/:identifier/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
-        res.redirect(url.format({
-            pathname: "/archive/archive.html",
-            query: reqQuery(req, {identifier: req.params['identifier'], page: req.params['page']})
-        })); // Move itemid into query and redirect to the html file
-    });
-  // Note '/arc/archive.org/download' is gateway.urlDownload
-  app.get('/arc/archive.org/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-  app.get('/arc/archive.org/download/:identifier/page/:page', sendBookReaderImages);
-  app.get('/arc/archive.org/download/:identifier', (req, res) => {
+  app.get('/details/:identifier/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
+    res.redirect(url.format({
+      pathname: "/archive/archive.html",
+      query: reqQuery(req, {identifier: req.params['identifier'], page: req.params['page']})
+    })); // Move itemid into query and redirect to the html file
+  });
+  app.get('/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get('/download/:identifier/page/:page', sendBookReaderImages);
+  app.get('/download/:identifier', (req, res) => {
     res.redirect(url.format({
       pathname: "/archive/archive.html",
       query: reqQuery(req, {identifier: req.params['identifier'], download: 1})
     }));
   });
-  app.get('/arc/archive.org/download/:itemid/*', streamArchiveFile);
-  app.get('/arc/archive.org/images/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
+  app.get('/download/:itemid/*', streamArchiveFile);
+
+  app.get('/images/*', _sendFileUrlSubdir);
 
 // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
 // noinspection JSUnresolvedFunction
-//TODO complete as part of https://github.com/internetarchive/dweb-mirror/issues/211
-    app.get('/arc/archive.org/metadata/:identifier', function (req, res, unusedNext) {
+// TODO complete as part of https://github.com/internetarchive/dweb-mirror/issues/211
+  app.get('/metadata/:identifier', function (req, res, unusedNext) {
       const identifier = req.params.identifier;
       _newArchiveItem(identifier, config, req.opts, (err, ai) => {
         if (err) {
@@ -525,20 +509,25 @@ function mirrorHttp(config, cb) {
         }
       })
     });
-    app.get('/arc/archive.org/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
-        // noinspection JSUnresolvedVariable
-        proxyUpstream(req, res, next, {"Content-Type": "application/json"})
-    }); //TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
+  app.get('/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
+    // noinspection JSUnresolvedVariable
+    proxyUpstream(req, res, next, {"Content-Type": "application/json"})
+  }); //TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
+  app.get('/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/mds/v1/get_related/all/*', sendRelated);
-// noinspection JSUnresolvedFunction
-    app.get('/arc/archive.org/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
+    app.get('/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         proxyUrl(req, res, next, [gateway.mds, req.params[0]].join('/'), {"Content-Type": "application/json"})
     });
-  app.get('/arc/archive.org/playlist/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
+  app.get('/embed/:identifier', (req, res, next) => {
+    if (req.query.output === "json") {
+      sendPlaylist(req, res, next);
+    } else {
+      next();
+    }
+  });
+  app.get('/playlist/:identifier', sendPlaylist);
 
-  // noinspection JSUnresolvedFunction
-  app.get('/arc/archive.org/search', (req, res) => {
+  app.get('/search', (req, res) => {
     res.redirect(url.format({
       pathname: "/archive/archive.html",
       query: reqQuery(req)
@@ -546,18 +535,18 @@ function mirrorHttp(config, cb) {
   });
   // noinspection JSUnresolvedFunction
   // Also catch search.php
-  app.get('/arc/archive.org/search.php', (req, res) => {
+  app.get('/search.php', (req, res) => {
     res.redirect(url.format({
       pathname: "/archive/archive.html",
       query: reqQuery(req)
     })); // redirect to archive.html with same query
   });
-  app.get('/arc/archive.org/serve/:itemid/*', streamArchiveFile);
-  app.get('/arc/archive.org/services/img/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-  app.get('/arc/archive.org/thumbnail/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get('/serve/:itemid/*', streamArchiveFile);
+  app.get('/thumbnail/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails (Deprecated in favor of services/img)
+  app.get('/services/img/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
   app.get('/archive/bookreader/BookReader/*', _sendFileFromBookreader);
   app.get('/archive/*', _sendFileUrlArchive);
-//TODO add generic fallback to use Domain.js for name lookup
+  // TODO add generic fallback to use Transports.js to lookup name and forward - but might auto-fix things that should really be caught and thought about
 
   app.get('/bookreader/BookReader/*', _sendFileFromBookreader);
   //e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
@@ -582,21 +571,13 @@ function mirrorHttp(config, cb) {
               }
             }));
     app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
-
-  app.get('/includes/*',  _sendFileUrlSubdir); // matches archive.org but not dweb.me
+  app.get('')
+  app.get('/includes/*',  _sendFileUrlSubdir); // matches archive.org & dweb.archive.org but not dweb.me
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'ipfs:' + req.url)); // Will go to next if IPFS transport not running
   //app.get('/ipfs/*', proxyUpstream); //TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'https://ipfs.io' + req.url)); // Will go to next if IPFS transport not running
   // Recognize unmodified archive URLs
   app.get('/jw/*', _sendFileUrlSubdir); // matches archive.org but not dweb.me
-
-  // TODO gradually make these the canonical urls and replace
-  app.get('/metadata*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
-  app.get('/search*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
-  app.get('/services/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
-  app.get('/details/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
-  app.get('/download/*', (req, res) => { res.redirect("/arc/archive.org" + req.originalUrl); });
-  app.get('/serve/:itemid/*', streamArchiveFile);
 
 // noinspection JSUnresolvedVariable
     app.get('/favicon.ico', (req, res, unusedNext) => res.sendFile(config.archiveui.directory + "/favicon.ico", {
@@ -605,10 +586,8 @@ function mirrorHttp(config, cb) {
     }, (err) => err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico'))); // Dont go to Error, favicons often aborted
 
   app.get('/components/*', _sendFileUrlSubdir); // Web components - linked from places we have no control over
-  app.get('/images/*', _sendFileUrlSubdir);
   app.get('/info', sendInfo);
   app.get('/languages/*', _sendFileUrlSubdir);
-  app.get('/playlist/*', sendPlaylist);
 
 
   app.use((req, res, next) => {

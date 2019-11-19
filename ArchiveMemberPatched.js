@@ -108,8 +108,6 @@ ArchiveMember.prototype.saveThumbnail = function({skipFetchFile=false, noCache=f
             cb(null,this);
         } else {
             //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
-            // DONT Include direct link to services as have https://dweb.me/arc/archive.org/thumbnail/IDENTIFIER which is same
-            // noinspection JSUnresolvedVariable
             const relFilePath = path.join(this.identifier, "__ia_thumb.jpg"); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
             const debugname = namepart + "/__ia_thumb.jpg";
             MirrorFS.cacheAndOrStream({
