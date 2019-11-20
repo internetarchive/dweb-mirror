@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.60: Major naming refactor; support magnet links
 * 0.2.59: Support for enhanced media player and better offline support, refactor sendFileFromDir
 * 0.2.58: Support radio player and speech_vs_music_asr.json
 * 0.2.57: support metadata/local
