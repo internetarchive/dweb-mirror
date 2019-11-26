@@ -458,7 +458,7 @@ class CrawlItem extends Crawlable {
             const copyDirectory = crawlmanager.copyDirectory;
             waterfall([
                 (cb2) => { // Get metadata
-                    if (["metadata", "details", "all"].includes(this.level) || (this.level === "tile" && !(this.member && this.member.thumbnaillinks) )) {
+                    if (["metadata", "details", "all"].includes(this.level) ) {
                         this.item.fetch_metadata({copyDirectory}, cb2);
                     } else {
                         cb2(null, this.item);
@@ -473,11 +473,7 @@ class CrawlItem extends Crawlable {
                 },
                 (ai, cb3) => { // Save tile if level is set.
                     if (["tile", "metadata", "details", "all"].includes(this.level)) {
-                        if (this.member && this.member.thumbnaillinks) {
-                            this.member.saveThumbnail({skipFetchFile, copyDirectory, wantStream: false}, cb3);
-                        } else {
-                            this.item.saveThumbnail({skipFetchFile, copyDirectory, wantStream: false}, cb3);
-                        }
+                        (this.member || this.item).saveThumbnail({skipFetchFile, copyDirectory, wantStream: false}, cb3);
                     } else {
                         cb3(null, this.item);
                     }

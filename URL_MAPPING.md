@@ -40,7 +40,7 @@ mirrorHttp|ArchiveItem(Patched).relatedItems|MirrorFS.cacheAndOrStream(CACHEDIRS
 dweb-archivecontroller|ArchiveItem._fetch_metadata|www-dweb-metadata.dev.archive.org:/metadata/IDENTIFIER|
 mirrorHttp|ArchiveItem.fetch_query .members unexpanded|CACHEDIR/IDENTIFIER_member_cached.json|
 dweb-archivecontroller|ArchiveItem.fetch_query .members unexpanded|dweb.archive.org/advancedsearch|
-mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_itemimage.jpg}) or MirrorFS.cacheAndOrStream(item.metadata.thumbnaillinks)
+mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_itemimage.jpg}) or MirrorFS.cacheAndOrStream(/services/img/IDENTIFIER)
 mirrorHttp|MirrorFS.cacheAndOrStream|CACHEDIRS or urls|
 mirrorHttp|streamArchiveFile|loadedA;ArchiveFile(patched).cacheAndOrStream|
 mirrorHttp|streamThumbnail|loadedAI;ArchiveItem(patched).saveThumbnail|

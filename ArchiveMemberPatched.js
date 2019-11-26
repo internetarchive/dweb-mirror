@@ -112,7 +112,7 @@ ArchiveMember.prototype.saveThumbnail = function({skipFetchFile=false, noCache=f
             const debugname = namepart + "/__ia_thumb.jpg";
             MirrorFS.cacheAndOrStream({
                 relFilePath, skipFetchFile, wantStream, debugname, noCache, copyDirectory,
-                urls: this.thumbnaillinks,
+                urls: this.urls(),
             }, (err, streamOrUndefined) => {
                 if (err) {
                     debug("Unable to cacheOrStream %s", debugname);
