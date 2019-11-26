@@ -181,8 +181,7 @@ the `/info` call.
 
 In the Repo is a
 [default YAML file](https://github.com/internetarchive/dweb-mirror/blob/master/configDefaults.yaml)
-which is commented. It would be a bad idea to edit this, so I'm not going to
-tell you where it is on your installation! But anything from this file can be
+which is commented. You really should never need to edit this file, as anything in it can be
 overridden by lines in `~/dweb-mirror.config.yaml`. Make sure you
 understand how yaml works before editing this file, if you break it, you can
 copy a new default from

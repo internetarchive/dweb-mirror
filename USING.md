@@ -2,7 +2,7 @@
 
 ## Summary
 
-*Note: This aspect of the system is currently (October 2019) in rapid evolution, 
+*Note: This aspect of the system is currently (Novemver 2019) in rapid evolution, 
 updating your system is likely to improve it: see [./INSTALLATION.md]*
 
 This file is intended to compliment the [README](./README.md) and [INSTALLATION](INSTALLATION.md) documents. 
@@ -51,10 +51,7 @@ First are health indicators.
   this will only happen if the gateway goes offline part way through a process.
 * Normally you'll see an indicator for GATEWAY, which is Green when the gateway can talk to the Archive, 
   and Red when you are offline.
-* Next to that might be indicators for WebTorrent or IPFS if they have been enabled. 
-
-[issue#183](https://github.com/internetarchive/dweb-mirror/issues/183) These buttons should control whether IPFS/WebTorrent are enabled
-
+* Next to that might be indicators for WebTorrent or IPFS if they have been enabled (usually they aren't). 
 * Then comes an indicator for this page, whether it is being crawled, and if so approximately how much has been stored. 
 * If the mirror is online to the Internet Archive (GATEWAY shows Green), then next comes a "Reload" button, 
   you can click this to force it to check with the Archive for an up to date list. 
@@ -67,7 +64,7 @@ Each tile on this page represents an item that your server will check for when i
 The first time you access the server this will depend on what was installed on the server, and it might be empty. 
 
 Notice that most of the tiles should have a White, Green or Blue dot in the top right to indicate that you are crawling them. 
-* A White dot means the item has been downloaded and enough of it has been downloaded to be viewed offline. 
+* A White dot means that enough of this item has been downloaded to be viewed offline. 
 * The Green dot indicates that we are checking this item each time we crawl and getting enough to display offline. 
 * A Blue dot indicates we are crawling all the content of the item, this could be a lot of data, 
   for example a full resolution version of the video. Its rare that you’ll use this. 
@@ -100,19 +97,19 @@ Click on the Crawl button till it turns Green and it will download a full copy o
 It waits about 30 seconds to do this, allowing time to cycle back to the desired level of crawling.
 These items will also appear on your Local page.  
 See the note above, usually you won’t want to leave it at blue (all) as this will usually try
-(there are some size limits) to download all the files.
+to download all the files, though there are some size limits.
 
 There is a Reload button which will force the server to try archive.org, 
 this is useful if you think the item has changed, or for debugging.
 
 If you want to Save this item to a specific disk, for example to put it on a USB-drive then click the Save button.  
 This button brings up a dialogue with a list of the available destinations. 
-These should include any inserted drive with "archiveorg" as a directory at its top level. 
+These should include any inserted drive with `archiveorg` as a directory at its top level. 
 The content will be copied to that drive, which can then be removed and inserted into a different server.
 
 The server checks whether these disks are present every 15 seconds, so to use a new USB disk:
 
-* Insert the USB 
+* Insert the USB into the server.
 * Create a folder at its top level called `archiveorg`
 * Wait about 15 seconds
 * Reload the page you are on
@@ -136,14 +133,15 @@ but can be selected for crawling as for any other item.
 ## Managing crawling
 
 If you click on the "Settings" button, it should bring up a page of settings to control Crawling.
-This page is still under development (as of June 2019). 
+This page is still under development (as of November 2019). 
 
 On here you will see a list of crawls.
 You should get useful information about status, any errors etc. 
 Hitting `<<` will restart the crawl and `||` or `>` pause and resume,
 but note that any file already being downloaded will continue to do so when you hit pause. 
 Hitting `||` `<<` `<` will stop the current crawl, reset and retry, which is a good way to try again if,
-for example, you lost connection to the server part way through.   
+for example, you lost connection to the server part way through. 
+It won't waste bandwidth re-downloading anything you already have.
 
 ### Advanced crawling
 
