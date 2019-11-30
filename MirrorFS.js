@@ -548,58 +548,79 @@ class MirrorFS {
                     DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, cb); // Dont cache a byte range, just return it
                 } else {
                     DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports, silentFinalError: true}, (err, s) => {
-                        //Returns a promise, but not waiting for it
-                        // For HTTP s is result of piping .body from fetch (a stream) to a through stream
-                        if (err) {
-                            debug("cacheAndOrStream had error reading", debugname, err.message);
-                            cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream
-                            // Dont try and write it
+                      //Returns a promise, but not waiting for it
+                      // For HTTP s is result of piping .body from fetch (a stream) to a through stream
+                      if (err) {
+                          debug("cacheAndOrStream had error reading", debugname, err.message);
+                          cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream
+                          // Dont try and write it
+                      } else {
+                        if (!cacheDirectory) {
+                          // Note - hard to see how this makes sense if !wantStream
+                          if (!wantStream) {
+                            cb(new Error("No Cache Directory, dont want a stream so fail in MirrorFScacheAndOrStream"))
+                          } else {
+                            debug("WARNING: No Cache Directory but still returning stream");
+                            if (wantStream && !cbCalledOnFirstData) {
+                              cbCalledOnFirstData = true;
+                              cb(null, s);
+                            }
+                          }
                         } else {
-                            // Now create a stream to the file
-                            const newFilePath = path.join(cacheDirectory, relFilePath);
-                            const relFilePathTemp = relFilePath + ".part";
-                            const filepathTemp = path.join(cacheDirectory, relFilePathTemp);
+                          // Now create a stream to the file
+                          const newFilePath = path.join(cacheDirectory, relFilePath);
+                          const relFilePathTemp = relFilePath + ".part";
+                          const filepathTemp = path.join(cacheDirectory, relFilePathTemp);
 
-                              MirrorFS._fileopenwrite({ relFilePath: relFilePathTemp, cacheDirectory }, (err, fd) => { // Will make directory if reqd
-                                if (err) {
-                                    debug("ERROR MirrorFS.cacheAndOrStream: Unable to write to %s: %s", filepathTemp, err.message);
-                                    cb(err);
-                                } else {
-                                    // fd is the file descriptor of the newly opened file;
-                                    const hashstream = this._hashstream();
-                                    const writable = fs.createWriteStream(null, {fd: fd});
-                                    // Note at this point file is neither finished, nor closed, its a stream open for writing.
-                                    writable.on('close', () => {
-                                      //fs.close(fd); Should be auto closed when stream to it finishes
-                                      _closeWriteToCache.call(this, {hashstreamActual: hashstream.actual, writable, newFilePath, filepathTemp}, cb)
-                                    });
-                                    try {
-                                        const s1 = new ReadableStreamClone(s); // Will be stream to file
-                                        const s2 = new ReadableStreamClone(s); // Will be stream for consumer
-                                        //TODO consider only opening hashstream and writable if the stream starts (i.e. 'readable')
-                                        s1.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                                        s1.once('error', (err) => {
-                                            // Dont report error - its already reported
-                                            s1.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
-                                        })
-                                        s2.once('error', (err) => {
-                                          const message = `Failed to read ${urls} from net err=${err.message}`;
-                                          debug("ERROR %s", message);
-                                          _cleanupOnFail(filepathTemp, message, cb);
-                                          s2.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
-                                        })
-                                        s2.once('readable', () => {
-                                          // If !wantStream the callback happens when the file is completely read
-                                          // If !wantStream the callback happens when the file is completely read
-                                          if (wantStream && !cbCalledOnFirstData)  { cbCalledOnFirstData = true; debug('XXX'); cb(null, s2); }
-                                        })
-                                    } catch(err) {
-                                        debug('ERROR: ArchiveFilePatched.cacheAndOrStream failed %o',err);
-                                        if (wantStream) cb(err);
-                                    }
-                                }
+                          MirrorFS._fileopenwrite({relFilePath: relFilePathTemp, cacheDirectory}, (err, fd) => { // Will make directory if reqd
+                            if (err) {
+                              debug("ERROR MirrorFS.cacheAndOrStream: Unable to write to %s: %s", filepathTemp, err.message);
+                              cb(err);
+                            } else {
+                              // fd is the file descriptor of the newly opened file;
+                              const hashstream = this._hashstream();
+                              const writable = fs.createWriteStream(null, {fd: fd});
+                              // Note at this point file is neither finished, nor closed, its a stream open for writing.
+                              writable.on('close', () => {
+                                //fs.close(fd); Should be auto closed when stream to it finishes
+                                _closeWriteToCache.call(this, {
+                                  hashstreamActual: hashstream.actual,
+                                  writable,
+                                  newFilePath,
+                                  filepathTemp
+                                }, cb)
                               });
+                              try {
+                                const s1 = new ReadableStreamClone(s); // Will be stream to file
+                                const s2 = new ReadableStreamClone(s); // Will be stream for consumer
+                                //TODO consider only opening hashstream and writable if the stream starts (i.e. 'readable')
+                                s1.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
+                                s1.once('error', (err) => {
+                                  // Dont report error - its already reported
+                                  s1.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
+                                })
+                                s2.once('error', (err) => {
+                                  const message = `Failed to read ${urls} from net err=${err.message}`;
+                                  debug("ERROR %s", message);
+                                  _cleanupOnFail(filepathTemp, message, cb);
+                                  s2.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
+                                })
+                                s2.once('readable', () => {
+                                  // If !wantStream the callback happens when the file is completely read
+                                  // If !wantStream the callback happens when the file is completely read
+                                  if (wantStream && !cbCalledOnFirstData) {
+                                    cbCalledOnFirstData = true;
+                                    cb(null, s2);
+                                  }
+                                })
+                              } catch (err) {
+                                debug('ERROR: ArchiveFilePatched.cacheAndOrStream failed %o', err);
+                                if (wantStream) cb(err);
+                              }
+                            }
+                          });
                         }
+                      }
                     });
                 }
             }

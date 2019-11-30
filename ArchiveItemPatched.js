@@ -32,6 +32,15 @@ const MirrorFS = require('./MirrorFS');
  * copyDirectory Where to cache it
  */
 
+function traceStream(s, {name="", func=""}={}) {
+  if (s) {  // Only trace if its a stream (simplifies calling)
+    // Note there is a sideeffect of this, to cancel the unhandled error exception in core-modules/events.js/EventEmitter.prototype.emit
+    s.once('error', err => {
+      debug("Tracing error on stream %s %s %o", name, func, err); //TODO change to %s err.message when solid
+    });
+  }
+}
+
 //SEE ALMOST-SAME-CODE-NAMEPART in ArchiveMember._namepart and ArchiveItem._namepart
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function() {
@@ -380,7 +389,10 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
                     }
                 )
             } }
-    ], cb);
+    ],
+      (err, res) => {debug("XXX fetch_page %s %s %s", this.itemId, file || page, err ? err.message : ""); cb(err, res); }
+    //cb
+    );
 };
 
 
@@ -411,6 +423,7 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
 
   function tryRead(cb) { // Try and read from disk, obeying options
     this.read({copyDirectory}, (err, metadata) => {
+      debug("XXX FM after read %s", this.itemid);
         if (err) {
             cb(err);
         } else {
@@ -425,7 +438,9 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
             cb(new Error("skipNet set"));
         } else {
           // Note _fetch_metadata will expand specialidentifiers
+          debug("XXX FM pre _fm %s", this.itemid);
           this._fetch_metadata(Object.assign({}, opts, {darkOk: true}), (err, unusedAI) => { // Process Fjords and load .metadata and .files etc - allow is_dark just throw before caller
+            debug("XXX FM after _fm %s", this.itemid);
             cb(err); // Maybe or maybe not err
           });
         }
@@ -438,10 +453,12 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
     } else {
       if (opts.noCache) { // Can remove that check in tryRead
         tryNet.call(this, (err) => {
+          debug("XXX FM after tryNet %s", this.itemid);
           if (!err) {
             cb(null, true);
           } else {
             tryRead.call(this, (err) => {
+              debug("XXX FM after tryRead a %s", this.itemid);
               // cached but check for explicit requirement to copy
               cb(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid)));
             });
@@ -449,8 +466,10 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         });
       } else { // Try the cache, then the net
         tryRead.call(this, (err) => {
+          debug("XXX FM after tryRead b %s", this.itemid);
           if (err) { // noCache, or not cached
             tryNet.call(this, (err) => {
+              debug("XXX FM after tryNet b %s", this.itemid);
               cb(err, true); // If net succeeded then save
             });
           } else {
@@ -465,7 +484,8 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
         if (!doSave || opts.noStore) {
             cb(null);
         } else {
-            this.save({copyDirectory}, cb);
+          debug("XXX FM before save %s", this.itemid);
+          this.save({copyDirectory}, cb);
         }
     }
     function f(cb) {
@@ -474,10 +494,12 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
                 tryReadOrNet.bind(this), // passes doStore to cb
                 trySave.bind(this),
             ], (err) => {
-                cb(err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+              debug("XXX FM ed of f b %s", this.itemid);
+              cb(err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
             });
         } else {
-            cb(null, this);
+          debug("XXX FM after f else %s", this.itemid);
+          cb(null, this);
         }
     }
 };
@@ -630,7 +652,9 @@ ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=fa
     } else {
         //TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
         const self = this; // this not available inside recursable or probably in writable('on)
-        const thumbnailFiles = this.files.filter(af =>
+        const thumbnailFiles = ! this.files
+          ? []
+          : this.files.filter(af =>
             af.metadata.name === "__ia_thumb.jpg"
             || af.metadata.name.endsWith("_itemimage.jpg")
         );
@@ -668,6 +692,7 @@ ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=fa
             const debugname = relFilePath;
             MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname, copyDirectory, urls},
               (err, streamOrUndefined) => {
+                if (wantStream) traceStream(streamOrUndefined, {func: "saveThumbnail#679", name: relFilePath });
                 if (err) {
                     debug("Unable to cacheOrStream %s", debugname);
                     cb(err);
@@ -786,7 +811,8 @@ ArchiveItem.addCrawlInfoRelated = function(rels, {copyDirectory, config=undefine
 ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
   // Add .downloaded info on all files, and summary on Item
   // Note ArchiveItem might not yet have metadata.
-    waterfall([
+  debug("XXX addDownloadedInfoFiles start %s", this.itemid);
+  waterfall([
       // Add info on files if not there already - this can be done in parallel
       cb1 => this.fetch_metadata({skipNet: true, copyDirectory}, cb1),
       (unusedThis, cb1) => {
@@ -812,6 +838,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
       // Done Report error because it could just be because havent downlodaed files info via metadata API,
       // if (err) debug("Failure in addDownloadedInfoFiles for %s %O", this.itemid, err);
       // Also dont block
+      debug("XXX addDownloadedInfoFiles end %s", this.itemid);
       cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
     });
 };
@@ -839,12 +866,15 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
   // For texts, Add .downloaded info on all pages, and summary on Item
   // Note ArchiveItem might not yet have bookreader field loaded when this is called.
   // cb(err)
+  debug("XXX addDownloadedInfoPages infopages %s",this.itemid);
   this.fetch_metadata({skipNet: true, copyDirectory}, (err, ai) => {
     if (err || !ai || !ai.metadata || (ai.metadata.mediatype !== "texts") || (this.subtype() !== "bookreader")) {
+      debug("XXX addDownloadedInfoPages nreq %s", this.itemid);
       cb(null); // Not a book - dont consider when checking if downloaded
     } else {
       this.fetch_bookreader({copyDirectory, skipNet: true}, (err, ai) => {
         if (err || !ai.bookreader) {
+          debug("XXX addDownloadedInfoPages nobook");
           cb(null); // No book info, presume not downloaded
         } else {
           if ((typeof this.downloaded !== "object") || (this.downloaded === null)) this.downloaded = {}; // Could be undefined (legacy boolean or null as called for each member
@@ -881,6 +911,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
               this.downloaded.pages_count = downloadedPages.length;
               this.downloaded.pages_details = downloadedPages.length === [].concat(...this.bookreader.brOptions.data).length;
               _save1file("bookreader", this.bookreader, this._namepart(), {copyDirectory}, cb0);
+              debug("XXX addDownloadedInfoPages done %s", this.itemid);
             },
           ], cb);
         }
@@ -892,25 +923,29 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
 ArchiveItem.prototype.addDownloadedInfoToMembers = function({copyDirectory=undefined}, cb) {
   // Add data to all members - which can be done in parallel
   each((this.membersFav || []).concat(this.membersSearch || []),
-    // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
+    // On each member, just adding info on files and pages, as dont want to recurse down (and possibly loop) on members that are collections
     (member, cb1) => {
       const ai =  new ArchiveItem({identifier: member.identifier});
-      parallel([
-        cb2 => ai.addDownloadedInfoFiles({copyDirectory}, cb2),
-        cb2 => ai.addDownloadedInfoPages({copyDirectory}, cb2),
-      ], (err, res) => {
-        if (err) {
-          // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
-          debug("ERROR: addDownloadedInfoMembers strangely failed for %s in %s: %o", this.itemid, member.identifier, err);
-        } else {
-          if ((typeof member.downloaded !== "object" || member.downloaded === null)) member.downloaded = {};
-          Object.assign(member.downloaded, ai.downloaded); // Works even if ai.downloaded undefined or null
-          member.downloaded.details = (member.mediatype === "texts")
-            ? (member.downloaded.files_details && member.downloaded.pages_details)
-            : member.downloaded.files_details
-        }
-        cb1(null);
-      })},
+      waterfall([
+        // Fetch Metadata here first, and wait for it, otherwise will fetch in paralel in addDownloadedInfoFiles and addDownloadedInfoPages
+        cb3 => this.fetch_metadata({skipNet: true, copyDirectory}, cb3),
+        (ai, cb3) => parallel([
+          cb2 => ai.addDownloadedInfoFiles({copyDirectory}, cb2),
+          cb2 => ai.addDownloadedInfoPages({copyDirectory}, cb2),
+        ], (err, res) => {
+          if (err) {
+            // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
+            debug("ERROR: addDownloadedInfoMembers strangely failed for %s in %s: %o", this.itemid, member.identifier, err);
+          } else {
+            if ((typeof member.downloaded !== "object" || member.downloaded === null)) member.downloaded = {};
+            Object.assign(member.downloaded, ai.downloaded); // Works even if ai.downloaded undefined or null
+            member.downloaded.details = (member.mediatype === "texts")
+              ? (member.downloaded.files_details && member.downloaded.pages_details)
+              : member.downloaded.files_details
+          }
+          cb3(null);
+        })
+      ], cb1); },
     cb);
 };
 
@@ -965,8 +1000,9 @@ ArchiveItem.prototype.addDownloadedInfoMembers = function({copyDirectory=undefin
     (unusedArr, cb1) =>
       this.addDownloadedInfoToMembers({copyDirectory}, cb1),
     cb1 =>
-      this.summarizeMembers(cb1)
-    ],cb);
+      this.summarizeMembers(cb1),
+    cb1 => { debug("XXX addDownloadedInfoMembers done"); cb1(); }
+  ],cb);
 };
 
 ArchiveItem.prototype.addCrawlInfoMembers = function({config, copyDirectory=undefined }, cb) {
@@ -978,7 +1014,9 @@ ArchiveItem.prototype.addCrawlInfoMembers = function({config, copyDirectory=unde
   each((this.membersFav || []).concat(this.membersSearch || [] ),
     // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
     (member, cb1) => member.addCrawlInfo({config, copyDirectory}, cb1),
-    cb);
+    (err, res ) => { debug("XXX addCrawlInfoMembers done"); cb(err, res);}
+    //cb
+  );
 };
 
 // noinspection JSUnresolvedVariable
@@ -1014,7 +1052,7 @@ ArchiveItem.prototype.addCrawlInfo = function({config, copyDirectory=undefined}=
  * TODO-TORRENT candidate to move back to ArchiveItem
  */
 ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=undefined}={}, cb) {
-  if (!(this.magnetlink || this.is_dark || (this.metadata &&  this.metadata.noarchivetorrent))) {
+  if (!this.magnetlink && !this.is_dark && !(this.metadata &&  this.metadata.noarchivetorrent) && this.files) {
     const torrentFileName = this.itemid + "_archive.torrent";
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
     if (torrentFile) {
