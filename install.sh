@@ -92,16 +92,16 @@ fi
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  step XXX "Installing nodejs yarn git npm"
-  sudo apt-get install -y nodejs yarn git npm
+  step XXX "Installing nodejs yarn git"
+  sudo apt-get install -y nodejs yarn git
+  step XXX "Installing npm which sometimes fails if its part of the OS"
+  sudo apt-get install -y npm || npm --version
   # Note previously installing "npm" but no longer using
   # Note yarn alternative can skip the apt-key & sources steps above and ...
   # curl -o- -L https://yarnpkg.com/install.sh | bash
   # source ~/.bashrc # Fix path
-  set +e
   step XXX "Trying to install libsecret which may fail" # Failed on rachel
-  sudo apt-get install -y libsecret-1-dev # Allow libsecret-1-dev to fail , we might not need it
-  set -e
+  sudo apt-get install -y libsecret-1-dev || echo "Libsecret failed to install, but that is ok"
   sudo apt-get install -y net-tools # Make debugging so much easier
 else # Its darwin (Mac OSX)
   step XXX "Installing wget nodejs yarn"
