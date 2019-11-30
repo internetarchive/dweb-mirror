@@ -116,8 +116,8 @@ function mirrorHttp(config, cb) {
                 (res, cb) => ArchiveItem.addCrawlInfoRelated(res, {config, copyDirectory: req.opts.copyDirectory}, (err) => cb(err, res)),
             ], (err, obj) => {
               if (err) {
-                next(err);
-//                res.status(404).send(err.message);
+                //next(err);
+                res.status(404).send(err.message);
               } else {
                 res.json(obj)
             }}
