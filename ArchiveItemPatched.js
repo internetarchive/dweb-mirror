@@ -608,9 +608,9 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       // In parallel Read members (if !noCache); extras and expand membersFav
       (cb2) => parallel([
         // Read from members_cached.json files and expand
-        (cb3) => { if (!namepart || noCache) { cb2(); } else { readAndExpandMembersSearch.call(this, cb3); }},
+        (cb3) => { if (!namepart || noCache) { cb3(); } else { readAndExpandMembersSearch.call(this, cb3); }},
         // Read extras unless its a search (!namepart)
-        (cb3) => { if (!namepart) { cb2(); } else { readExtras.call(this, cb3); } },
+        (cb3) => { if (!namepart) { cb3(); } else { readExtras.call(this, cb3); } },
         // expand membersFav
         (cb3) => expandLocally.call(this, this.membersFav, (neverErr, arrAM) => {
           this.membersFav = arrAM; cb3(null); }),
