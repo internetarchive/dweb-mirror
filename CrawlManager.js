@@ -198,8 +198,12 @@ class CrawlManager {
         const crawlmanager = copyDirectory
           ? this.findOrCreateCrawlManager({config, copyDirectory})
           : this.crawls[0];
-        crawlmanager._push(new CrawlItem({identifier, query, level: "details", crawlmanager}, []));
         // Note this wont restart a paused crawl, if crawl has finished then pushing a task will make it continue
+        if (identifier === "local") {
+          crawlmanager.pushTask(config.apps.crawl.tasks); // Push the default tasks, these might or might not be the crawlmanger.initialTaskList
+        } else {
+            crawlmanager._push(new CrawlItem({identifier, query, level: "details", crawlmanager}, []));
+        }
         cb(null); // No errors currently
     }
 }
