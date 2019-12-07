@@ -9,6 +9,7 @@
   },
   "name": "@internetarchive/dweb-mirror",
   "dependencies": {
+    "@futurepress/epubjs-reader": "git+https://github.com/futurepress/epubjs-reader.git",
     "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
     "@internetarchive/dweb-archive-dist": "^0.2.4",
     "@internetarchive/dweb-archivecontroller": "^0.1.83",

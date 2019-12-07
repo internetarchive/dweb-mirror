@@ -17,6 +17,7 @@ set -e # Break on error
 
 # Define a parent directory they will sit under
 PARENTDIRECTORY=git
+#TODO-EPUB - add install of epubreader (see package.json)
 REPOS="dweb-transports dweb-archivecontroller bookreader dweb-archive dweb-mirror iaux"
 # Note that dweb-transport and dweb-gatewahy are not installed they are only useful when running as a gateway server at the archive.
 
@@ -123,7 +124,10 @@ cd ${PARENTDIRECTORY}
 echo "==== Getting repositories from Git ========================="
 for REPO in ${REPOS}
 do
-  GITREPO="https://github.com/internetarchive/${REPO}"
+  if [ ${REPO} eq "epubjs-reader"]
+  then GITREPO="https://github.com/futurepress/${REPO}"
+  else GITREPO="https://github.com/internetarchive/${REPO}"
+  fi
   if [ -d ${REPO} ]
   then
     pushd ${REPO}
@@ -191,7 +195,12 @@ do
   webpack --mode development
   popd
 done
-
+for i in epubjs-reader
+do
+  pushd $i
+  grunt
+  popd
+done
 echo "==== installing http-server ====="
 yarn global add http-server
 

@@ -101,6 +101,10 @@ function mirrorHttp(config, cb) {
     // Urls like /archive/bookreader/BookReader/*
     _sendFileOrError(req, res, next, path.join(config.bookreader.directory, req.params[0]));
   }
+  function _sendFileFromEpubreader(req, res, next) {
+    // Urls like /archive/epubreader/*
+    _sendFileOrError(req, res, next, path.join(config.epubreader.directory, req.params[0]));
+  }
   function _sendFileUrlSubdir(req, res, next) {
     // req.path like '/images/...'
     _sendFileOrError(req, res, next, config.archiveui.directory + req.path);
@@ -558,7 +562,10 @@ function mirrorHttp(config, cb) {
   app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
   app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
 
-// noinspection JSUnresolvedVariable
+  app.get('/archive/epubreader/*', _sendFileFromEpubreader);
+  app.get('/epubreader/*', _sendFileFromEpubreader);
+
+  // noinspection JSUnresolvedVariable
     app.get('/contenthash/:contenthash', (req, res, next) =>
         MirrorFS.checkWhereValidFile(undefined, {
                 digest: req.params['contenthash'],

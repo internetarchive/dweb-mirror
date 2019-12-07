@@ -21,9 +21,13 @@ archiveui:
     - ../dweb-archive-dist # Dist repo cloned parallel to us (this is the most common config)
     - node_modules/@internetarchive/dweb-archive-dist # Dist repo as a dependency
 bookreader:
-  directories: # Note the code uses the first of these found to exist - note this should match the list in install.sh (which will be deprecated)
+  directories: # Note the code uses the first of these found to exist
     - ../bookreader/BookReader # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
     - node_modules/@internetarchive/bookreader/BookReader # Or a repo installed as a dependency via 'yarn install'
+epubreader:
+  directories: # Note the code uses the first of these found to exist
+    - ../epubreader/reader # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
+    - node_modules/@futurepress/epubjs-reader/reader # Or a repo installed as a dependency via 'yarn install'
 # How to connect to the net, for dweb-mirror HTTP directly to the gateway is usually the best way
 # especially for low CPU/low bandwidth environments.
 connect:

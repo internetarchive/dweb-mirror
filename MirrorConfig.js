@@ -54,8 +54,9 @@ class MirrorConfig extends ConfigController {
         // Remove first so that resolveDirectories will report what its actually using
         this.directories = oldDirectories; // and restore as actually want only resolv
         this.resolveDirectories(); // Handle ~/ ./ ../ and expand * or ?? etc
-        this.archiveui.directory = ConfigController.firstExisting(this.archiveui.directories); // Handle ~/ ./ ../ * ?? and find first match
-        this.bookreader.directory = ConfigController.firstExisting(this.bookreader.directories); // Handle ~/ ./ ../ * ?? and find first match
+        ["archiveui", "bookreader", "epubreader"]
+          .map(d => this[d])
+          .forEach(o => o.directory = ConfigController.firstExisting(o.directories));  // Handle ~/ ./ ../ * ?? and find first match
     }
 
     setupPeriodically(setState) {
