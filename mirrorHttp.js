@@ -637,7 +637,7 @@ function _newArchiveItem(identifier, config, opts, cb) {
           .map(t => new ArchiveMember({
             identifier: t.identifier,
             query: t.query,
-            sort: t.sort || ["-downloads"],
+            sort: t.sort, // Maybe undefined in which case specified in ArchiveItem.defaultSortStr
             mediatype: t.query ? "search" : undefined
           }, {unexpanded: true})),
         (err,res) => {

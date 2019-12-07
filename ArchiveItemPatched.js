@@ -599,7 +599,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
     //TODO - this is wrong, this.sort can sometimes be an array
     const sortString = (this.sort.length === 0) ? undefined : !Array.isArray(this.sort) ? this.sort : this.sort.join("_");
     const defaultSort = (!sortString  // Unspecified
-      || (sortString === ((this.metadata && this.metadata.collection_sort_order) || "-downloads"))); // Check if its non-default sort
+      || (sortString === this.defaultSortArr().join('_'))); // Check if its non-default sort
     const part = "members_" +   (defaultSort ? "cached" : (sortString+"_cached"));
     if (!Array.isArray(this.membersFav)) this.membersFav = [];
     //TODO-SEARCHORDER check what happens when switch tabs, at this point membersSearch should be empty
