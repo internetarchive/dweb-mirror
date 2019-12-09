@@ -16,7 +16,7 @@ const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
 const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
 const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
 const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
-const { gateway, gatewayServer, parmsFrom, ObjectFromEntries, specialidentifiers } = require('@internetarchive/dweb-archivecontroller/Util');
+const { gateway, parmsFrom, ObjectFromEntries, specialidentifiers } = require('@internetarchive/dweb-archivecontroller/Util');
 const { dwebMagnetLinkFrom } = require('@internetarchive/dweb-archivecontroller/mungeTorrent');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
@@ -697,7 +697,7 @@ ArchiveItem.prototype.saveThumbnail = function({ skipFetchFile=false, noCache=fa
       recursable(null, null);
     } else {  // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
       // noinspection JSUnresolvedVariable
-      const urls = `${gatewayServer()}/services/img/${this.itemid}`; // Direct to Archive server not via gateway
+      const urls = `https://archive.org/services/img/${this.itemid}`;
       const relFilePath = path.join(this._namepart(), "__ia_thumb.jpg"); //TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
       const debugname = relFilePath;
       MirrorFS.cacheAndOrStream({relFilePath, skipFetchFile, wantStream, noCache, debugname, copyDirectory, urls},

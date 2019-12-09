@@ -737,7 +737,7 @@ Also see [https://nodejs.org/api/fs.html] for documentation of underlying fs.xyz
 ##### static init(directories, httpServer, preferredStreamTransports)
 
 Initialize MirrorFS, should be called before using any other function to tell MirrorFS where to find or get things
-httpServer:  start of URL of server to tell IPFS to get files from typically http://dweb.me
+httpServer:  start of URL of server to tell IPFS to get files from typically http://dweb.archive.org
 
 ##### static setState({directories})
 Indicate to MirrorFS that state has changed, specifically causes it to set its directories property.

@@ -137,12 +137,13 @@ function mirrorHttp(config, cb) {
   }
 
 // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
-    function proxyUpstream(req, res, next, headers = {}) {
-        // Note req.url will start with "/"
-        // req.opts = { start, end, noCache}
-        // noinspection JSUnresolvedVariable
-        proxyUrl(req, res, next, [config.upstream, req.url].join(''), headers);
-    }
+  // Note req.url will start with "/"
+  // proxyUrl goes through DTS name mapping, so normally can be a raw URL to archive.org
+  // req.opts = { start, end, noCache}
+  // noinspection JSUnresolvedVariable
+  function proxyArchiveOrg(req, res, next, headers = {}) {
+    proxyUrl(req, res, next, "https://archive.org" + req.url, headers);
+  }
 
     function proxyUrl(req, res, next, url, headers = {}) {
         // Proxy a request to somewhere under urlbase, which should NOT end with /
@@ -511,12 +512,16 @@ function mirrorHttp(config, cb) {
     });
   app.get('/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
     // noinspection JSUnresolvedVariable
-    proxyUpstream(req, res, next, {"Content-Type": "application/json"})
+    // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-transports/Naming.js yet
+    // this will be diverted to dweb-metadata which cant handle this pattern yet - TODO-DM242
+    proxyUrl(req, res, next, "https://dweb.archive.org" + req.url, {"Content-Type": "application/json"})
   }); //TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
   app.get('/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
     app.get('/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
-        proxyUrl(req, res, next, [gateway.mds, req.params[0]].join('/'), {"Content-Type": "application/json"})
+        proxyUrl(req, res, next,
+          "https://be-api.us.archive.org/mds/v1/get_related/all/" + req.params[0],
+          {"Content-Type": "application/json"})
     });
   app.get('/embed/:identifier', (req, res, next) => {
     if (req.query.output === "json") {
@@ -542,8 +547,8 @@ function mirrorHttp(config, cb) {
     })); // redirect to archive.html with same query
   });
   app.get('/serve/:itemid/*', streamArchiveFile);
-  app.get('/thumbnail/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails (Deprecated in favor of services/img)
   app.get('/services/img/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get('/thumbnail/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails (Deprecated in favor of services/img)
   app.get('/archive/bookreader/BookReader/*', _sendFileFromBookreader);
   app.get('/archive/*', _sendFileUrlArchive);
   // TODO add generic fallback to use Transports.js to lookup name and forward - but might auto-fix things that should really be caught and thought about
@@ -570,7 +575,7 @@ function mirrorHttp(config, cb) {
                 next(); // Not found by contenthash.
               }
             }));
-    app.get('/contenthash/*', proxyUpstream); // If we dont have a local copy, try the server
+    app.get('/contenthash/*', proxyArchiveOrg); // If we dont have a local copy, try the server
   app.get('')
   app.get('/includes/*',  _sendFileUrlSubdir); // matches archive.org & dweb.archive.org but not dweb.me
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'ipfs:' + req.url)); // Will go to next if IPFS transport not running
