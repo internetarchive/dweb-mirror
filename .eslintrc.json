@@ -1,0 +1,34 @@
+{
+    "env": {
+        "browser": true,
+        "jest/globals": true
+    },
+    "extends": "airbnb",
+    "plugins": [
+        "babel",
+        "eslint-plugin-import",
+        "eslint-plugin-react",
+        "jest",
+        "jsx-a11y"
+    ],
+    "rules": {
+        "babel/semi": 2,
+        "comma-dangle": 0,
+        "import/no-extraneous-dependencies": [
+            "error", {
+                "devDependencies": ["**/*.test.js", "**/*.stories.js"],
+                "optionalDependencies": false,
+                "peerDependencies": false
+            }
+        ],
+        "jsx-a11y/label-has-for": 0,
+        "jsx-a11y/label-has-associated-control": 2,
+        "react/jsx-filename-extension": [
+            1, {
+                "extensions": [".js", ".jsx"]
+            }
+        ],
+        "react/prefer-stateless-function": 1,
+        "semi": 2
+    }
+}
