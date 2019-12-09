@@ -6,6 +6,8 @@
 
 ## Release 0.2.0
 
+* 0.2.61: Remove dweb.archive.org dependencies and major naming refactor; stream error; installation if npm protected; 
+* 0.2.61: fetch_query cache fallback; Save on Local
 * 0.2.60: Major naming refactor; support magnet links
 * 0.2.59: Support for enhanced media player and better offline support, refactor sendFileFromDir
 * 0.2.58: Support radio player and speech_vs_music_asr.json
