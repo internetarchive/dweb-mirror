@@ -337,7 +337,8 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
   /* Fetch a page from the item, caching it
 
       page      usually "cover_t.jpg" to get the page
-      scale     factor to shrink raw image by (2 is about right for a full screen)
+                or leaf1_w2000
+      scale     factor to shrink raw image by (2 is about right for a full screen) floats will be quantized
       rotate    0 for normal, unsure what other values are
       zip       Name of file holding the image
       file      file within zip
@@ -346,12 +347,27 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
       cb(err, data || stream || size) returns either data, or if wantStream then a stream
    */
   let zipfile;
-  if (zip) zipfile = zip.split('/')[4];
+  // page from dweb-archive is only used for cover_t.jpg but mediawiki uses it based on size of image it wants, specifically
+  // leaf1_w2000 meaning page 1, with ideal width 2000 pixels.
   waterfall([
       (cbw) =>
         this.fetch_metadata({copyDirectory}, cbw),
+      (ai, cbw) =>
+        this.fetch_bookreader({copyDirectory}, cbw),
       (ai, cbw) => {
+        if (page && page.startsWith('leaf')) {
+          [l, w] = page.split('_w');
+          const pageManifest = this.pageManifestFrom({leafNum: parseInt(l.slice(4))});
+          const pageParms = this.pageParms(pageManifest, {idealWidth: parseInt(w)});
+          zip = pageParms.zip;
+          file = pageParms.file;
+          scale = pageParms.scale;
+          reqUrl = pageParms.reqUrl;
+          page = undefined;
+        }
+        if (zip) zipfile = zip.split('/')[4];
         // request URLs dont have server, and need to add data node anyway - note passes scale & rotate
+        // TODO this could be wrong, url could refer to a non-quantized scale e.g. request scale=1.2 but store as if its 1
         const urls = page
           ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
           : "https://" + ai.server + reqUrl;
@@ -852,14 +868,15 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
 };
 
 /**
- * Return an object suitable for passing to fetch_page
+ * Return an object suitable for passing to fetch_page to check size
  * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
+ * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage
  * @returns { parameters for fetch_page }
  */
 ArchiveItem.prototype.pageParms = function( pageManifest, fetchPageOpts) {
   const url = new URL(pageManifest.uri);
-  const idealScale = pageManifest.height / 800;
-  const quantizedScale = [32,16,8,4,2,1].find(x => x <= idealScale);
+  const idealScale = pageManifest.width / (fetchPageOpts.idealWidth || 800);
+  const quantizedScale = [32,16,8,4,2,1].find(x => x <= idealScale); // SEE also checkWhereValidFileRotatedScaled
   url.searchParams.append("scale", quantizedScale);
   url.searchParams.append("rotate", 0);
   return Object.assign({}, fetchPageOpts, {
@@ -911,10 +928,10 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
             ], (err, res) => cb0(null)),
             cb0 => {
               // Note .flat isnt valid till node 11.x
-              const downloadedPages = [].concat(...this.bookreader.brOptions.data).filter(pg => pg.downloaded);
+              const downloadedPages = this.pageManifests().filter(pg => pg.downloaded);
               this.downloaded.pages_size = downloadedPages.reduce((sum, pg) => sum + pg.size, 0);
               this.downloaded.pages_count = downloadedPages.length;
-              this.downloaded.pages_details = downloadedPages.length === [].concat(...this.bookreader.brOptions.data).length;
+              this.downloaded.pages_details = downloadedPages.length === this.pageManifests().length;
               _save1file("bookreader", this.bookreader, this._namepart(), {copyDirectory}, cb0);
             },
           ], cb);

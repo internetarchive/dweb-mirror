@@ -367,6 +367,7 @@ function mirrorHttp(config, cb) {
         //debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
         // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
         // or http://localhost:4244/download/IDENTIFIER/page/cover_t.jpg
+        // or http://localhost:4244/download/tutur-smara-bhuwana/page/leaf1_w2000.jpg from mediawiki/ArchiveLeaf
         // req.opts = { noCache}
         const identifier = req.params['identifier'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
         new ArchiveItem({identifier})

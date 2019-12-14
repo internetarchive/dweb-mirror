@@ -443,12 +443,12 @@ class CrawlItem extends Crawlable {
                   reqUrl: `/download/${this.identifier}/page/cover_t.jpg`
                 }
             }, asParent));
-            this.item.bookreader.brOptions.data.forEach(dd=>dd.forEach(pageManifest => {
+            this.item.pageManifests().forEach(pageManifest => {
                 crawlmanager._push(new CrawlPage( {
                   pageParms: this.item.pageParms(pageManifest, { skipNet: false }),
                   identifier: this.item.itemid,
                   archiveitem: this.item}, asParent));
-            }));
+            });
         }
         cb();
     }

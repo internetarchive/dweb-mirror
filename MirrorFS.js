@@ -294,6 +294,7 @@ class MirrorFS {
          */
         const scales = [];
         const idealScale = Math.floor(scale);
+        // See also ArchiveItemPatched.pageParms
         for(let i=idealScale; i>0; i--) { scales.push(i); }  // A = e.g. [ 8...1 ]
         if (bestEffort) { //typically this is the test to do if fails
             for(let i=idealScale+1; i<=32; i++) { scales.push(i); } // A = e.g. [ 9..32 ]
