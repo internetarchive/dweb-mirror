@@ -181,14 +181,15 @@ class MirrorFS {
             else fs.readFile(existingFilePath, cb);
         });
     }
-    static writeFile({copyDirectory=undefined, relFilePath}, data, cb) {
-      /**
-       * like fs.writeFile but will mkdir the directory before writing the file
-       * checks where to put the file, first choice copyDirectory, 2nd somewhere the item is already stored, 3rd first of config.directories
-       */
-      // See https://github.com/internetarchive/dweb-mirror/issues/193
-      if (!(copyDirectory || MirrorFS.directories.length))
-          cb(new Error(`writeFile: Nowhere to write ${relFilePath} to`));
+  static writeFile({copyDirectory=undefined, relFilePath}, data, cb) {
+    /**
+     * like fs.writeFile but will mkdir the directory before writing the file
+     * checks where to put the file, first choice copyDirectory, 2nd somewhere the item is already stored, 3rd first of config.directories
+     */
+    // See https://github.com/internetarchive/dweb-mirror/issues/193
+    if (!(copyDirectory || MirrorFS.directories.length)) {
+      cb(new Error(`writeFile: Nowhere to write ${relFilePath} to`));
+    } else {
       waterfall([
         cb1 => {
           if (copyDirectory) {
@@ -197,8 +198,8 @@ class MirrorFS {
             this.checkWhereValidFile(relFilePath.split('/')[0], {},
               (err, res) =>
                 cb1(null, err
-                ? this.directories[0]  // Didn't find it, use first directory.
-                :  path.dirname(res))) ;  //Found a path, return directory its in
+                  ? this.directories[0]  // Didn't find it, use first directory.
+                  : path.dirname(res)));  //Found a path, return directory its in
           }
         },
         (dir, cb2) => {
@@ -207,12 +208,13 @@ class MirrorFS {
         },
         (filepath, cb3) => fs.writeFile(filepath, data, cb3)
       ], err => {
-          if (err) {
-            debug("ERROR: MirrorFS.writeFile failed to write %s %s: %s", copyDirectory, relFilePath, err.message);
-          }
-          cb(err); // May be null
-        });
+        if (err) {
+          debug("ERROR: MirrorFS.writeFile failed to write %s %s: %s", copyDirectory, relFilePath, err.message);
+        }
+        cb(err); // May be null
+      });
     }
+  }
 
     static _copyFile(sourcePath, destnPath, cb) {
         /*

@@ -495,11 +495,15 @@ ArchiveItem.prototype.fetch_metadata = function(opts={}, cb) { //TODO-API opts:c
   }
   function f(cb) {
     if (this.itemid && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
-      waterfall([
-        tryReadOrNet.bind(this), // passes doStore to cb
-        trySave.bind(this),
-      ], (err) => {
-        cb(err ? err : (this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+      tryReadOrNet.call(this, (err, doSave) => {
+        if (err) {
+          cb(err, this);
+        } else {
+          trySave.call(this, doSave, (unusedErr) => {
+            // ignore errors - on saving (for example if no disk), they will or should have been reported.
+            cb((this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+          });
+        }
       });
     } else {
       cb(null, this);
