@@ -474,11 +474,11 @@ function mirrorHttp(config, cb) {
             query:  reqQuery(req, {identifier: req.params['identifier']})
         })); // Move itemid into query and redirect to the html file
     });
-  app.get('/details/:identifier/page/:page', (req, res) => {  // Bookreader passes page in a strange place in the URL - we can ignore it
+  app.get('/details/:identifier/page/*', (req, res) => {  // Bookreader passes page in a strange place in the URL e.g. page/n1/mode/2up
     res.redirect(url.format({
       pathname: "/archive/archive.html",
-      query: reqQuery(req, {identifier: req.params['identifier'], page: req.params['page']})
-    })); // Move itemid into query and redirect to the html file
+      query: reqQuery(req, {identifier: req.params['identifier'], page: req.params[0]})
+    })); // Move itemid and pageinto query and redirect to the html file
   });
   app.get('/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
   app.get('/download/:identifier/page/:page', sendBookReaderImages);
