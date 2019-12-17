@@ -1,46 +1,52 @@
 # An overview of mapping of URLs in dweb
 
-NOTE THIS IS OUT OF DATE, NEEDS A MAINTENANCE PASS, DONT RELY ON IT BEING ACCURATE
+Last update 2019-12-17
 
 #### Abbreviations and explanations
 
 * In express (HTTP server in dweb-mirror) parameters are :xyz 
 
-
-context|from|to|notes
--------|----|-----|-----|
-mirrorHttp|/|/archive/html?mirror:localhost:4244&transport=HTTP|
-mirrorHttp|/arc/archive.org/*|/*|Handle legacy /arc/archive.org urls
-mirrorHttp|/arc/archive.org|/archive/archive.html|
-mirrorHttp|/advancedsearch?q=collection::COLL&sort=:SORT|ArchiveItem > fetch_metadata & fetch_query|
-mirrorHttp|/advancedsearch?q=identifier::ID1 OR ID2|ArchiveItem > fetch_metadata & fetch_query (expand)|
-mirrorHttp|/advancedsearch?q=:QUERY"|ArchiveItem > fetch_metadata & fetch_query|
-mirrorHttp|/details|/archive/archive.html|
-mirrorHttp|/details/:itemid|/archive/archive.html?item=:itemid|
-mirrorHttp|/download/:itemid/__ia_thumb.jpg|streamThumbnail|
-mirrorHttp|/download/:itemid/*|streamArchiveFile|
-mirrorHttp|/images/*|CACHE/images/*|
-mirrorHttp|/metadata/:itemid|loadedAI|
-mirrorHttp|loadedAI(itemid)|ArchiveItem(patched).fetch_metadata
-mirrorHttp|/metadata/:itemid/:filepath|https://dweb.archive.org/metadata/:itemid/:filepath|
-mirrorHttp|/mds/v1/get_related/all/*|sendRelated > loadedAI & ArchiveItem.relatedItems|
-mirrorHttp|/mds/*|https://be-api.us.archive.org/mds/*|
-mirrorHttp|/serve/:itemid/*|streamArchiveFile|
-mirrorHttp|/services/img/:itemid'|streamThumbnail|
-mirrorHttp|/thumbnail/:itemid|streamThumbnail|
-mirrorHttp|/archive/*|ARCHIVEUIDIR/*|
-mirrorHttp & config.upstream|/contenthash/:contenthash|hashstore('sha1.filepath',:contenthash) or dweb.me/contenthash/:contenthash
-mirrorHttp|/favicon.ico|ARCHIVEUIDIR/favicon.ico|
-mirrorHttp|/images/*|ARCHIVEUIDIR/images|
-mirrorHttp|/info|{config: CONFIG}|
-DwebTransports & p_resolveNames|dweb:/arc/archive.org/metadata/IDENTIFIER|gun:/gun/arc/archive.org/metadata/IDENTIFIER & https://dweb.archive.org/metadata/IDENTIFIER|
-mirrorHttp|ArchiveFile(Patched).cacheAndOrStream|MirrorFS(CACHEDIRS/IDENTIFIER/FILE, urls)|
-mirrorHttp|ArchiveItem(Patched).fetch_metadata|CACHEDIR/IDENTIFIER/{_meta.json, _reviews.json, _files.json etc} or ArchiveItem._fetch_metadata|
-mirrorHttp|ArchiveItem(Patched).relatedItems|MirrorFS.cacheAndOrStream(CACHEDIRS/IDENTIFIER/IDENTIFIER_related.json, https://be-api.us.archive.org/mds/v1/get_related/all/IDENTIFIER| 
-dweb-archivecontroller|ArchiveItem._fetch_metadata|www-dweb-metadata.dev.archive.org:/metadata/IDENTIFIER|
-mirrorHttp|ArchiveItem.fetch_query .members unexpanded|CACHEDIR/IDENTIFIER_member_cached.json|
-dweb-archivecontroller|ArchiveItem.fetch_query .members unexpanded|dweb.archive.org/advancedsearch|
-mirrorHttp|ArchiveItem(patched).saveThumbnail|ArchiveFile.cacheAndOrStream(files.find(__ia_thumb.jpg or IDENTIFIER_itemimage.jpg}) or MirrorFS.cacheAndOrStream(/services/img/IDENTIFIER)
-mirrorHttp|MirrorFS.cacheAndOrStream|CACHEDIRS or urls|
-mirrorHttp|streamArchiveFile|loadedA;ArchiveFile(patched).cacheAndOrStream|
-mirrorHttp|streamThumbnail|loadedAI;ArchiveItem(patched).saveThumbnail|
+|from|via|to|notes|
+|-------|----|---|--|-----|
+|/|redirect|/archive/archive.html|
+|/admin/setconfig/IDENTIFIER/LEVEL|config.writeUserTaskLevel|info
+|/admin/crawl/*/CRAWLID|CrawlManager|crawl status or info
+|/arc/archive.org|redirect|/|Legacy
+|/arc/archive.org/*|redirect|/*|Legacy
+|/archive/bookreader/BookReader/*|_sendFileFromBookreader|config.bookreader.directory/*
+|/archive/epubreader/*|_sendFileFromEpubreader|config.epubreader.directory/*
+|/archive/*|_sendFileUrlArchive|config.archiveui.directory/*
+|/advancedsearch?*|streamQuery, fetch_query, Naming|https://www-dweb-cors.dweb.archive.org/advancedsearch.php?*
+|/bookreader/BookReader/*|_sendFileFromBookreader|config.bookreader.directory/*
+|/BookReader/BookReaderJSIA.php?*|sendBookReaderJSIA fetch_bookreader|DATANODE/Bookreader/BookreaderJSIA.php?*
+|/BookReader/BookReaderJSON.php?*|sendBookReaderJSON fetch_bookreader|DATANODE/Bookreader/BookreaderJSIA.php?*|converts JSIA to JSON format
+|/books/IDENTIFIER/ia_manifest|sendBookReaderJSON fetch_bookreader|DATANODE/Bookreader/BookreaderJSIA.php?*|converts JSIA to JSON format (api.ArchiveLab.org)
+|/BookReader/BookReaderImages.php|sendBookReaderImages fetchPage|https://DATANODE/BookReader/BookReaderPreview.php or /BookReader/BookReaderImages.php
+|/components/*|_sendFileUrlSubdir|config.archiveui.directory/component/*
+|/contenthash/HASH|proxyUrl Naming|https://dweb.archive.org/contenthash/HASH|legacy
+|/details|redirect|/archive/archive.html|
+|/details/IDENTIFIER|redirect|/archive/archive.html?identifier=IDENTIFIER
+|/details/IDENTIFIER/page/PAGE|redirect|/archive/archive.html?identifier=IDENTIFIER&page=PAGE|bookreader
+|/download/IDENTIFIER/__ia_thumb.jpg|streamThumbnail, Naming|https://archive.org/services/img/IDENTIFIER
+|/download/IDENTIFIER/page/PAGE|sendBookReaderImages fetchPage|https://DATANODE/BookReader/BookReaderPreview.php or /BookReader/BookReaderImages.php
+|/download/IDENTIFIER|redirect|/archive/archive.html?identifier=IDENTIFIER
+|/download/IDENTIFIER/*|streamArchiveFile Naming|https://archive.org/cors/IDENTIFIER/*
+|/embed/IDENTIFIER?output=json|sendPlaylist Naming|https://www-dweb-cors.dev.archive.org/embed/IDENTIFIER?output=json
+|/epubreader/*|_sendFileFromEpubreader|config.epubreader.directory/*
+|/favicon.ico|sendFile|config.archiveui.directory/favicon.ico
+|/images/*|sendFileUrlSubdir|config.archiveui.directory/images/*
+|/includes/*|sendFileUrlSubdir|config.archiveui.directory/includes/*
+|/info|sendInfo|{info}
+|/ipfs/CID|proxyUrl|ipfs:/ipfs/CID
+|/jw/*|sendFIleUrlSubdir|config.archiveui.directory/jw/*
+|/langages/*|sendFileUrlSubdir|config.archiveui.directory/langages/*
+|/mds/v1/get_related/all/*|sendRelated Naming|https://be-api.us.archive.org/mds|
+|/metadata/IDENTIFIER|fetch_metadata Naming|https://www-dweb-metadata.dev.archive.org/metadata/IDENTIFIER
+|/metadata/*|proxyUrl, Naming|https://dweb.archive.org/metadata/*|this is ID/FILENAME and probably broken TODO
+|/playlist/IDENTIFIER|sendPlaylist Naming|https://www-dweb-cors.dev.archive.org/embed/IDENTIFIER?output=json
+|/search?*|redirect|/archive/archive.html?*
+|/search.php|redirect|/archive/archive.html?*
+|/serve/IDENTIFIER/FILENAME|streamArchiveFile AF.cacheAndOrStream this.urls|https://archive.org/download/IDENTIFIER/FILENAME, http://www-dweb-torrent.dev.archive.org/IDENTIFIER/IDENTIFIER_archive.torrent etc
+|/services/img/IDENTIFIER|streamThumbnail Naming|https://archive.org/services/img/IDENTIFIER
+|/stream/IDENTIFIER/UNUSED|redirect|/archive/archive.html?identifier=IDENTIFIER|palmleaf wiki
+|/thumbnail/IDENTIFIER|streamThumbnail Naming|https://archive.org/services/img/IDENTIFIER|Legacy
