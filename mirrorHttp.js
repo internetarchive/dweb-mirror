@@ -374,11 +374,10 @@ function mirrorHttp(config, cb) {
             .fetch_page({
                     copyDirectory: req.opts.copyDirectory,
                     wantStream: true,
-                    reqUrl: req.url,
                     zip: req.query.zip,
                     page: req.params['page'],
                     file: req.query.file,
-                    scale: req.query.scale,
+                    scale: req.query.scale,     // Note this will be quantized
                     rotate: req.query.rotate,
                     noCache: req.opts.cache
                 },
@@ -474,6 +473,14 @@ function mirrorHttp(config, cb) {
             query:  reqQuery(req, {identifier: req.params['identifier']})
         })); // Move itemid into query and redirect to the html file
     });
+  // Special URL from mediawiki e.g. https://archive.org/stream/bdrc-W1FPL497/bdrc-W1FPL497#page/n2/mode/1up
+  // see https://github.com/internetarchive/dweb-mirror/issues/289 as this might be temporary
+  app.get('/stream/:identifier/:unusedPrefix', (req, res) => {
+    res.redirect(url.format({
+      pathname: "/archive/archive.html",
+      query:  reqQuery(req, {identifier: req.params['identifier']})
+    })); // Move itemid into query and redirect to the html file
+  });
   app.get('/details/:identifier/page/*', (req, res) => {  // Bookreader passes page in a strange place in the URL e.g. page/n1/mode/2up
     res.redirect(url.format({
       pathname: "/archive/archive.html",
@@ -528,6 +535,7 @@ function mirrorHttp(config, cb) {
           "https://be-api.us.archive.org/mds/v1/get_related/all/" + req.params[0],
           {"Content-Type": "application/json"})
     });
+  // Playlists are on a weird URL distinguished only by output=json
   app.get('/embed/:identifier', (req, res, next) => {
     if (req.query.output === "json") {
       sendPlaylist(req, res, next);

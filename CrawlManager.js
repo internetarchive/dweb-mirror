@@ -309,7 +309,6 @@ class CrawlPage extends Crawlable {
               rotate  int usually 0
               zip     name of directory
               file    file inside zip
-              reqUrl
             }
             parent  [str*] see Crawlable
          */
@@ -440,7 +439,6 @@ class CrawlItem extends Crawlable {
                 archiveitem: this.item,
                 pageParms: {
                   page: "cover_t.jpg",
-                  reqUrl: `/download/${this.identifier}/page/cover_t.jpg`
                 }
             }, asParent));
             this.item.pageManifests().forEach(pageManifest => {

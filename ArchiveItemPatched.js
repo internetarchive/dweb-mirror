@@ -330,7 +330,7 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
 };
 
 // noinspection JSUnresolvedVariable
-ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, noCache=false, reqUrl=undefined,
+ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, noCache=false,
                                               zip=undefined, file=undefined, scale=undefined, rotate=undefined,
                                               page=undefined, skipNet=false, skipFetchFile=undefined,
                                               copyDirectory=undefined }={}, cb) { //TODO-API noCache
@@ -343,7 +343,6 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
       zip       Name of file holding the image
       file      file within zip
       noCache, wantStream, wantSize, skipNet, skipFetchFile, copyDirectory see common arguments
-      reqUrl    string as in brOptions.data ... uri from /BookReader.. (path and query, (original note said no scale & rotate, but looks like passed now)
       cb(err, data || stream || size) returns either data, or if wantStream then a stream
    */
   let zipfile;
@@ -355,27 +354,29 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
       (ai, cbw) =>
         this.fetch_bookreader({copyDirectory}, cbw),
       (ai, cbw) => {
-        if (page && page.startsWith('leaf')) {
-          [l, w] = page.split('_w');
-          const pageManifest = this.pageManifestFrom({leafNum: parseInt(l.slice(4))});
-          const pageParms = this.pageParms(pageManifest, {idealWidth: parseInt(w)});
-          zip = pageParms.zip;
-          file = pageParms.file;
-          scale = pageParms.scale;
-          reqUrl = pageParms.reqUrl;
-          page = undefined;
+        if (page) {
+          if (page.startsWith('leaf')) {
+            [l, w] = page.split('_w');
+            const pageManifest = this.pageManifestFrom({leafNum: parseInt(l.slice(4))});
+            const pageParms = this.pageParms(pageManifest, {idealWidth: parseInt(w)});
+            zip = pageParms.zip;
+            file = pageParms.file;
+            scale = pageParms.scale; // quantized to 2^n by pageQuantizedScale()
+            page = undefined;
+          }
+        } else { // There is no scale if page & !"leaf..."
+          scale = this.pageQuantizedScale(scale); // // quantized to 2^n by pageQuantizedScale()
         }
         if (zip) zipfile = zip.split('/')[4];
-        // request URLs dont have server, and need to add data node anyway - note passes scale & rotate
-        // TODO this could be wrong, url could refer to a non-quantized scale e.g. request scale=1.2 but store as if its 1
         const urls = page
           ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
-          : "https://" + ai.server + reqUrl;
+          // Reconstruct url as we will quantize the scale
+          : `https://${ai.server}/BookReader/BookReaderImages.php?${parmsFrom({zip, file, scale, rotate})}`;
         const debugname = `${this.itemid}_${file}`;
         const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
         if (page) { // This is the cover , its not scaled or rotated
           MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory }, cbw);
-        } else { // Looking for page by number with scale and rotation
+        } else { // Looking for page by file name with scale and rotation
           //Strategy is complex:
           // First check for a file of the scale or larger -> reFilePath2
           // Try Streaming - either from relFilePath2 or urls
@@ -872,6 +873,15 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
 };
 
 /**
+ *
+ * @param idealScale calculated scale but real number
+ * @returns {number} as power of 2
+ */
+ArchiveItem.prototype.pageQuantizedScale = function(idealScale) {
+  return [32, 16, 8, 4, 2, 1].find(x => x <= idealScale);
+}
+
+/**
  * Return an object suitable for passing to fetch_page to check size
  * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
  * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage
@@ -880,16 +890,16 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function({copyDirectory}, cb) {
 ArchiveItem.prototype.pageParms = function( pageManifest, fetchPageOpts) {
   const url = new URL(pageManifest.uri);
   const idealScale = pageManifest.width / (fetchPageOpts.idealWidth || 800);
-  const quantizedScale = [32,16,8,4,2,1].find(x => x <= idealScale); // SEE also checkWhereValidFileRotatedScaled
+  const quantizedScale = this.pageQuantizedScale(idealScale); // SEE also checkWhereValidFileRotatedScaled
   url.searchParams.append("scale", quantizedScale);
   url.searchParams.append("rotate", 0);
-  return Object.assign({}, fetchPageOpts, {
+  const res = Object.assign({}, fetchPageOpts, {
     zip: url.searchParams.get("zip"),
     file: url.searchParams.get("file"),
     scale: quantizedScale,
     rotate: 0,
-    reqUrl: url.pathname + url.search
   });
+  return res;
 }
 ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined}, cb) {
   // For texts, Add .downloaded info on all pages, and summary on Item
@@ -909,7 +919,6 @@ ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined
               cb1 => this.fetch_page({
                 copyDirectory,
                 wantSize: true,
-                reqUrl: `/download/${this.itemid}/cover_t.jpg`,
                 page: 'cover_t.jpg',
                 skipNet: true
               }, cb1),  // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway

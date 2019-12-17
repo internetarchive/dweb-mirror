@@ -158,14 +158,12 @@ Strategy:
 Result is `ai.bookreader` set to `{ brOptions, data, lendingInfo}`
 
 
-#### fetch_page ({reqUrl, zip, file, scale rotate, page, wantStream, wantSize, copyDirectory, noCache, skipNet, copyDirectory }, cb)
+#### fetch_page ({zip, file, scale rotate, page, wantStream, wantSize, copyDirectory, noCache, skipNet, copyDirectory }, cb)
 
 Fetch a page from the item, caching it
 ```
-reqUrl  Can override automatically generated URL, this is typically for cover pages etc
-OR
 page    (int) page number within file
-
+OR
 zip     path to file from which to extract page, as returned by bookreader API - 4th segment is the filename
 file    The name of the file within the zip
 scale   float sppecifying scale wanted  (high numbers are smaller) 
