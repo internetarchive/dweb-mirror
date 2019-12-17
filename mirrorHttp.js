@@ -26,7 +26,7 @@ const fs = require('fs');   // See https://nodejs.org/api/fs.html
 //const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
 const parallel = require('async/parallel');
-const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
+const { RawBookReaderResponse, RawBookReaderJSONResponse } = require('@internetarchive/dweb-archivecontroller');
 
 // IA packages
 const {gateway, specialidentifiers, homeQuery} = require('@internetarchive/dweb-archivecontroller/Util');
@@ -362,8 +362,24 @@ function mirrorHttp(config, cb) {
             }
         });
     }
-
-    function sendBookReaderImages(req, res, next) {
+  function sendBookReaderJSON(req, res, unusedNext) {
+    waterfall([
+      (cb) => new ArchiveItem({identifier: req.params.identifier || req.query.itemId})
+        .fetch_metadata(req.opts, cb),
+      (ai, cb) => ai.fetch_bookreader(req.opts, cb)
+    ], (err, ai) => {
+      if (err) {
+        res.status(404).send(err.message); // Its neither local, nor from server
+      } else {
+        //TODO need server from req I think
+        res.json(RawBookReaderJSONResponse.fromArchiveItem(ai, {
+            server: req.headers.host,
+            protocol: httpOrHttps
+          }));
+      }
+    });
+  }
+  function  sendBookReaderImages(req, res, next) {
         //debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
         // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
         // or http://localhost:4244/download/IDENTIFIER/page/cover_t.jpg
@@ -395,6 +411,7 @@ function mirrorHttp(config, cb) {
     });
 
     // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
+    /*
     app.post('/admin/setconfig', function (req, res, next) {
         config.setAndWriteUser(req.body, err => {
             if (err) {
@@ -404,6 +421,7 @@ function mirrorHttp(config, cb) {
             }
         });
     });
+    */
     app.get('/admin/setconfig/:identifier/:level', function (req, res, next) {
         const identifier = req.params["identifier"] === "_" ? undefined : req.params["identifier"];
         const delayTillReconsider = 3000; // ms time to wait for another key press before running crawl
@@ -569,6 +587,10 @@ function mirrorHttp(config, cb) {
   app.get('/bookreader/BookReader/*', _sendFileFromBookreader);
   //e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
   app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
+  //e.g. http://ia802902.us.archive.org/BookReader/BookReaderJSON.php?itemPath=%2F28%2Fitems%2FArtOfCommunitySecondEdition&itemId=ArtOfCommunitySecondEdition&server=ia802902.us.archive.org
+  app.get('/BookReader/BookReaderJSON.php', sendBookReaderJSON);
+  //e.g. https://api.archivelab.org/books/ArtOfCommunitySecondEdition/ia_manifest
+  app.get('/books/:identifier/ia_manifest', sendBookReaderJSON);
   app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
 
   app.get('/archive/epubreader/*', _sendFileFromEpubreader);
@@ -592,7 +614,6 @@ function mirrorHttp(config, cb) {
               }
             }));
     app.get('/contenthash/*', proxyArchiveOrg); // If we dont have a local copy, try the server
-  app.get('')
   app.get('/includes/*',  _sendFileUrlSubdir); // matches archive.org & dweb.archive.org but not dweb.me
   app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'ipfs:' + req.url)); // Will go to next if IPFS transport not running
   //app.get('/ipfs/*', proxyUpstream); //TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
