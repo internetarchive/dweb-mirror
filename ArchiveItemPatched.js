@@ -884,7 +884,8 @@ ArchiveItem.prototype.pageQuantizedScale = function(idealScale) {
 /**
  * Return an object suitable for passing to fetch_page to check size
  * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
- * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage
+ * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage (override manifet)
+ *  idealWidth if present is used to calculate the optimum quantized scale (next larger file)
  * @returns { parameters for fetch_page }
  */
 ArchiveItem.prototype.pageParms = function( pageManifest, fetchPageOpts) {
@@ -893,12 +894,12 @@ ArchiveItem.prototype.pageParms = function( pageManifest, fetchPageOpts) {
   const quantizedScale = this.pageQuantizedScale(idealScale); // SEE also checkWhereValidFileRotatedScaled
   url.searchParams.append("scale", quantizedScale);
   url.searchParams.append("rotate", 0);
-  const res = Object.assign({}, fetchPageOpts, {
+  const res = Object.assign({}, {
     zip: url.searchParams.get("zip"),
     file: url.searchParams.get("file"),
     scale: quantizedScale,
     rotate: 0,
-  });
+  }, fetchPageOpts);
   return res;
 }
 ArchiveItem.prototype.addDownloadedInfoPages = function({copyDirectory=undefined}, cb) {
