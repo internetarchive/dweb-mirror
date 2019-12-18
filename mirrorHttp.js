@@ -630,7 +630,35 @@ function mirrorHttp(config, cb) {
   app.get('/components/*', _sendFileUrlSubdir); // Web components - linked from places we have no control over
   app.get('/info', sendInfo);
   app.get('/languages/*', _sendFileUrlSubdir);
-
+  const sharp = require('sharp');
+  //IIF support e.g. https://iiif.archivelab.org/iiif/mantra-pangwisesan%240/1026,1245,2316,617/full/0/default.jpg
+  // TODO-IIIF move to a function, probably on ArchiveItem
+  app.get('/iiif/:identifierindex/:ltwh/full/0/default.jpg', (req, res, next) => {
+    res.status(200);
+    const [left,top,width,height] = req.params.ltwh.split(',');
+    const [identifier, index] = req.params.identifierindex.split('$'); //TODO-IIIF check its not split('$')
+    const ai = new ArchiveItem({identifier: identifier});
+    waterfall([
+      (cb) => ai.fetch_metadata(req.opts, cb),
+      (ai, cb) => ai.fetch_bookreader(req.opts, cb),
+      (ai, cb) => {
+        const manifest = ai.pageManifests()[index]
+        ai.fetch_page(ai.pageParms(manifest, {
+          copyDirectory: req.opts.copyDirectory,
+          wantStream: true,
+          scale: 1,
+          noCache: req.opts.cache
+        }), cb)},
+    ],
+      //(err, s) => _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"})
+      //sharp('/Users/mitra/temp/bdrc-W3PD1123_0129.jp2').extract({left, top, width, height}).pipe(res);
+      (err, s) => {
+        const sh = sharp();
+        s.pipe(sh);
+        sh.extract({left: parseInt(left), top: parseInt(top), width: parseInt(width), height: parseInt(height)}).pipe(res)
+      }
+    );
+  });
 
   app.use((req, res, next) => {
         // See errAndNext() above which builds req.errs
