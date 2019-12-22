@@ -10,8 +10,7 @@ const debug = require('debug')('dweb-mirror:ArchiveMemberPatched');
 const each = require('async/each');
 
 // Other IA repos
-const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
-const {gateway, ObjectFilter} = require('@internetarchive/dweb-archivecontroller/Util'); // Note also patches Object.filter
+const {ArchiveMember, gateway, ObjectFilter} = require('@internetarchive/dweb-archivecontroller'); // Note also patches Object.filter
 // Other files in this repo
 const MirrorFS = require('./MirrorFS.js');
 

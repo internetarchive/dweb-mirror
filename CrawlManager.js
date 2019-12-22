@@ -6,7 +6,7 @@ const each = require('async/each');
 const asyncUntil = require('async/until');
 //const eachSeries = require('async/eachSeries');
 const debug = require('debug')('dweb-mirror:CrawlManager');
-const {ObjectFilter, ObjectFromEntries} = require('@internetarchive/dweb-archivecontroller/Util');
+const {ObjectFilter, ObjectFromEntries} = require('@internetarchive/dweb-archivecontroller');
 // Need these patches even if const unused
 const ArchiveItem = require('./ArchiveItemPatched');
 const ArchiveFile = require('./ArchiveFilePatched');

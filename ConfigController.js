@@ -8,7 +8,7 @@ const asyncMap = require('async/map');
 //const canonicaljson = require('@stratumn/canonicaljson');
 const yaml = require('js-yaml'); //https://www.npmjs.com/package/js-yaml
 // noinspection JSUnusedLocalSymbols
-const {ObjectDeeperAssign} = require('@internetarchive/dweb-archivecontroller/Util.js');
+const {ObjectDeeperAssign} = require('@internetarchive/dweb-archivecontroller');
 
 class ConfigController {
     /*

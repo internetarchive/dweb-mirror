@@ -13,7 +13,7 @@ const yaml = require('js-yaml'); //https://www.npmjs.com/package/js-yaml
 // noinspection JSUndefinedPropertyAssignment
 global.DwebTransports = require('@internetarchive/dweb-transports');
 // noinspection JSUnusedLocalSymbols
-const {ObjectFilter} = require('@internetarchive/dweb-archivecontroller/Util');
+const {ObjectFilter} = require('@internetarchive/dweb-archivecontroller');
 //This Repo
 // noinspection JSUnusedLocalSymbols
 const ArchiveItem = require('./ArchiveItemPatched');

@@ -2,7 +2,7 @@ const debug = require('debug')('dweb-mirror:MirrorConfig');
 const forever = require('async/forever');
 const ConfigController = require('./ConfigController');
 const CrawlManager = require('./CrawlManager');
-const {ObjectDeeperAssign} = require('@internetarchive/dweb-archivecontroller/Util');
+const {ObjectDeeperAssign} = require('@internetarchive/dweb-archivecontroller');
 
 class MirrorConfig extends ConfigController {
     /*

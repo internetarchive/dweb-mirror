@@ -6,6 +6,7 @@ This is intended as a fairly generic server for a number of cases, with some con
 See: https://github.com/mitra42/dweb-universal/blob/master/uri%20structure%20for%20http%20server.md (TODO which may be out of date)
 
 See URL_MAPPING.md (TODO which may be out of date) for summary of below rules plus what they call
+//TODO remove /archive/ forwards, work directly with those files as on archive.org and www-dweb.dev.archive.org
 */
 // External packages
 //Not debugging: express:*
@@ -26,10 +27,10 @@ const fs = require('fs');   // See https://nodejs.org/api/fs.html
 //const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
 const parallel = require('async/parallel');
-const { RawBookReaderResponse, RawBookReaderJSONResponse } = require('@internetarchive/dweb-archivecontroller');
 
 // IA packages
-const {gateway, specialidentifiers, homeQuery} = require('@internetarchive/dweb-archivecontroller/Util');
+const { RawBookReaderResponse, RawBookReaderJSONResponse, gateway, specialidentifiers, homeQuery } = require('@internetarchive/dweb-archivecontroller');
+
 // Local files
 const MirrorFS = require('./MirrorFS');
 const CrawlManager = require('./CrawlManager');
@@ -152,7 +153,7 @@ function mirrorHttp(config, cb) {
     function proxyUrl(req, res, next, url, headers = {}) {
         // Proxy a request to somewhere under urlbase, which should NOT end with /
         // req.opts = { start, end, noCache}
-        DwebTransports.createReadStream(url, Object.assign({}, req.opts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
+        DwebTransports.createReadStream(routed(url), Object.assign({}, req.opts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
             _proxy(req, res, next, err, s, headers);
         })
     }
@@ -542,13 +543,13 @@ function mirrorHttp(config, cb) {
     });
   app.get('/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
     // noinspection JSUnresolvedVariable
-    // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-transports/Naming.js yet
+    // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-archivecontroller/Routing yet
     // this will be diverted to dweb-metadata which cant handle this pattern yet - TODO-DM242
-    proxyUrl(req, res, next, "https://dweb.archive.org" + req.url, {"Content-Type": "application/json"})
+    proxyUrl(req, res, next, "https://archive.org" + req.url, {"Content-Type": "application/json"})
   }); //TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
   app.get('/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
-    app.get('/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
+  app.get('/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
         proxyUrl(req, res, next,
           "https://be-api.us.archive.org/mds/v1/get_related/all/" + req.params[0],
           {"Content-Type": "application/json"})
@@ -642,7 +643,7 @@ function mirrorHttp(config, cb) {
       (cb) => ai.fetch_metadata(req.opts, cb),
       (ai, cb) => ai.fetch_bookreader(req.opts, cb),
       (ai, cb) => {
-        const manifest = ai.pageManifests()[index]
+        const manifest = ai.pageManifests()[index];
         ai.fetch_page(ai.pageParms(manifest, {
           copyDirectory: req.opts.copyDirectory,
           wantStream: true,
@@ -650,8 +651,6 @@ function mirrorHttp(config, cb) {
           noCache: req.opts.cache
         }), cb)},
     ],
-      //(err, s) => _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"})
-      //sharp('/Users/mitra/temp/bdrc-W3PD1123_0129.jp2').extract({left, top, width, height}).pipe(res);
       (err, s) => {
         const sh = sharp();
         s.pipe(sh);
@@ -659,6 +658,10 @@ function mirrorHttp(config, cb) {
       }
     );
   });
+
+
+  // Lastly try a file - this will get archive.html, dweb-archive-bundle.js, favicon.ico, dweb-archive-styles.css
+  app.get('/*', _sendFileUrlArchive);
 
   app.use((req, res, next) => {
         // See errAndNext() above which builds req.errs

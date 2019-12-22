@@ -20,7 +20,7 @@ var ReadableStreamClone = require("readable-stream-clone"); // Allow safe duplic
 
 // other packages of ours
 const ParallelStream = require('parallel-streams');
-const {gateway, ObjectFromEntries} = require("@internetarchive/dweb-archivecontroller/Util.js"); // for Object.fromEntries
+const {gateway, ObjectFromEntries, routed} = require("@internetarchive/dweb-archivecontroller"); // for Object.fromEntries
 
 // other packages in this repo - note it is intentional that this does not depend on config
 const HashStore = require('./HashStore');
@@ -538,19 +538,20 @@ class MirrorFS {
             Four possibilities - wantstream &&|| partialrange
             ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; unsupported, though could be in callbackEmptyOrData; !ws&!p caching
              */
+            const routedUrls = routed(urls);
             if (skipFetchFile) {
               debug("skipFetchFile set (testing) would fetch: %s", debugname);
               cb();
-            } else if (!urls || (Array.isArray(urls) && !urls.length) || skipNet) {
+            } else if (!routedUrls.length || skipNet) {
               cb(new Error("No urls or skipNet specified to cacheAndOrStream")); // This might be totally normal, if looking for only local
             } else {
                 const partial = (start>0 || end<Infinity);
                 console.assert(wantStream || !partial,"ArchiveFile.cacheAndOrStream - it makes no sense to request a partial fetch without a stream output");
                 if (partial) {  // start or end undefined dont satisfy this test
                     debug("Not caching %s because specifying a range %s:%s and wantStream", debugname, start, end);
-                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports}, cb); // Dont cache a byte range, just return it
+                    DwebTransports.createReadStream(routedUrls, {start, end, preferredTransports: this.preferredStreamTransports}, cb); // Dont cache a byte range, just return it
                 } else {
-                    DwebTransports.createReadStream(urls, {start, end, preferredTransports: this.preferredStreamTransports, silentFinalError: true}, (err, s) => {
+                    DwebTransports.createReadStream(routedUrls, {start, end, preferredTransports: this.preferredStreamTransports, silentFinalError: true}, (err, s) => {
                       //Returns a promise, but not waiting for it
                       // For HTTP s is result of piping .body from fetch (a stream) to a through stream
                       if (err) {
@@ -603,7 +604,7 @@ class MirrorFS {
                                   s1.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
                                 })
                                 s2.once('error', (err) => {
-                                  const message = `Failed to read ${urls} from net err=${err.message}`;
+                                  const message = `Failed to read ${routedUrls} from net err=${err.message}`;
                                   debug("ERROR %s", message);
                                   _cleanupOnFail(filepathTemp, message, cb);
                                   s2.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream

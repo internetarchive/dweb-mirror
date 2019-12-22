@@ -7,7 +7,7 @@
 const debug = require('debug')('dweb-mirror:ArchiveFile');
 const path = require('path');
 // Other Archive repos
-const ArchiveFile = require('@internetarchive/dweb-archivecontroller/ArchiveFile');
+const {ArchiveFile, routed} = require('@internetarchive/dweb-archivecontroller');
 // Local files
 const MirrorFS = require('./MirrorFS');
 
@@ -39,8 +39,9 @@ ArchiveFile.prototype.cacheAndOrStream = function({skipFetchFile=false, skipNet=
                     cb(err);
                 } else {
                     MirrorFS.cacheAndOrStream({
-                        urls, skipFetchFile, wantStream, wantSize, wantBuff,
+                        skipFetchFile, wantStream, wantSize, wantBuff,
                         start, end, debugname, noCache, copyDirectory,
+                        urls: routed(urls),
                         sha1: this.metadata.sha1,
                         relFilePath: path.join(itemid, filename),
                         expectsize: this.metadata.size,

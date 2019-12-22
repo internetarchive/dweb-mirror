@@ -13,11 +13,7 @@ const parallel = require('async/parallel'); //https://caolan.github.io/async/doc
 const map = require('async/map'); //https://caolan.github.io/async/docs.html#map
 
 // Other IA repos
-const ArchiveItem = require('@internetarchive/dweb-archivecontroller/ArchiveItem');
-const ArchiveMember = require('@internetarchive/dweb-archivecontroller/ArchiveMember');
-const RawBookReaderResponse = require('@internetarchive/dweb-archivecontroller/RawBookReaderResponse');
-const { gateway, parmsFrom, ObjectFromEntries, specialidentifiers } = require('@internetarchive/dweb-archivecontroller/Util');
-const { dwebMagnetLinkFrom } = require('@internetarchive/dweb-archivecontroller/mungeTorrent');
+const {ArchiveItem, ArchiveMember, dwebMagnetLinkFrom, RawBookReaderResponse, gateway, parmsFrom, ObjectFromEntries, specialidentifiers } = require('@internetarchive/dweb-archivecontroller');
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 
