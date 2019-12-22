@@ -6,6 +6,7 @@
 
 ## Release 0.2.0
 
+* 0.2.62: Use routed instead of Naming; support epub, book urls and iiif subset; error handling on no disk; 
 * 0.2.61: Remove dweb.archive.org dependencies and major naming refactor; stream error; installation if npm protected; 
 * 0.2.61: fetch_query cache fallback; Save on Local
 * 0.2.60: Major naming refactor; support magnet links
