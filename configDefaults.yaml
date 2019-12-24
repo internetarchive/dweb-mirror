@@ -85,6 +85,7 @@ apps:
         sort: '-downloads'  # And choose related based on downloads
         rows: 6             # 6 related items
         level: tile         # sufficiently to show a tile
-      startOnChange: true # True if should start crawling any item that changes its level of crawing
+      startOnChange: true   # True if should start crawling any item that changes its level of crawing
+      crawlEpubs: true      # Set to false, or comment out to skip crawling epubs
     # copyDirectory: /Volumes/Transcend/test2 # Overrides where to store data, normally this is a command-line parameter if used.
 #============== Dont edit anything from here on down ============================

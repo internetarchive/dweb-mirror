@@ -112,11 +112,11 @@ class CrawlManager {
         //if (opts.copyDirectory) { } // If Crawling to a directory - no action reqd any more since MirrorFS now creates hashstore lazily
         if (opts.concurrency && this._taskQ) this._taskQ.concurrency = opts.concurrency; // _tasQ already started, but can modify it
     }
-    static startCrawl(initialItemTaskList, {copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, noCache=false,
+    static startCrawl(initialItemTaskList, { copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, noCache=false,
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined,
-        callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined}={},  cb) {
+        callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined, crawlEpubs=false }={},  cb) {
         const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache,
-            maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name});
+            maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name, crawlEpubs});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             ObjectFilter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (copyDirectory) {
