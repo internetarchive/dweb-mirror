@@ -47,7 +47,7 @@ function mirrorHttp(config, cb) {
     app.use(morgan(config.apps.http.morgan)); //TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
     app.use(express.json());
 
-//app.get('*/', (req, res, next) => { req.url = req.params[0]; next(); } // Strip trailing '/'
+  //app.get('*/', (req, res, next) => { req.url = req.params[0]; next(); } // Strip trailing '/'
     app.use((req, res, next) => {
         // Pre Munging - applies to all queries
         /* Turn the range headers on a req into an options parameter can use in streams */
@@ -66,9 +66,23 @@ function mirrorHttp(config, cb) {
           (req.opts.copyDirectory ? req.opts.copyDirectory : "" ));
         next();
     });
-  function reqQuery(req, ...more) {
-    // New query parameters have defaults for mirror and transport which can be overridden and ... more which can't
-    return Object.assign( {mirror: req.headers.host, transport: "HTTP"}, req.query, ...more)
+  /**
+   * Redirect, passes query parameters in order of precedence .... queryParms; those in the query; transport & mirror
+   * @param queryParms { parameters to pass in query, can override {mirror, transport} and in query}
+   * @returns {function(req, res)}
+   */
+  function redirectWithQuery(queryParms) {
+    return function (req, res) {
+      if (req.params.identifier) {queryParms.identifier = req.params.identifier}; // For urls that include identifier pass to queryParms
+      if (queryParms[0]) { queryParms[queryParms[0]] = req.params[queryParms[0]]; delete queryParms["0"]; } // {0:"page"} means take the * in the url and pass as the page=
+      const url = url.format({
+        pathname: "/archive.html",
+        // New query parameters have defaults for mirror and transport which can be overridden and ... more which can't
+        query: Object.assign({mirror: req.headers.host, transport: "HTTP"}, req.query, ...queryParms)
+      });
+      debug("redirecting to: %s",url);
+      res.redirect(url);
+    }
   }
   function errAndNext(req, res, next, err) {
     // There might be an easier way to do this, but this is how to handle something that could fail but want to try for others
@@ -94,21 +108,20 @@ function mirrorHttp(config, cb) {
       }
     });
   }
+  function _sendFileOrErrorPath(req, res, next) {
+    _sendFileOrError(req, res, next, config.archiveui.directory + req.path); // Note req.path starts with /
+  }
   function _sendFileUrlArchive(req, res, next) {
       // dir: Directory path, not starting or ending in /
     _sendFileOrError(req, res, next, path.join(config.archiveui.directory, req.params[0]));
   }
   function _sendFileFromBookreader(req, res, next) {
-    // Urls like /archive/bookreader/BookReader/*
+    // Urls like /bookreader/BookReader/*
     _sendFileOrError(req, res, next, path.join(config.bookreader.directory, req.params[0]));
   }
   function _sendFileFromEpubreader(req, res, next) {
-    // Urls like /archive/epubreader/*
+    // Urls like /epubreader/*
     _sendFileOrError(req, res, next, path.join(config.epubreader.directory, req.params[0]));
-  }
-  function _sendFileUrlSubdir(req, res, next) {
-    // req.path like '/images/...'
-    _sendFileOrError(req, res, next, config.archiveui.directory + req.path);
   }
     function sendRelated(req, res, next) {
         // req.opts = { noCache, copyDirectory}
@@ -141,23 +154,28 @@ function mirrorHttp(config, cb) {
       });
   }
 
-// There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
+  // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
   // Note req.url will start with "/"
   // proxyUrl goes through DTS name mapping, so normally can be a raw URL to archive.org
   // req.opts = { start, end, noCache}
   // noinspection JSUnresolvedVariable
-  function proxyArchiveOrg(req, res, next, headers = {}) {
-    proxyUrl(req, res, next, "https://archive.org" + req.url, headers);
-  }
-
-    function proxyUrl(req, res, next, url, headers = {}) {
-        // Proxy a request to somewhere under urlbase, which should NOT end with /
-        // req.opts = { start, end, noCache}
-        DwebTransports.createReadStream(routed(url), Object.assign({}, req.opts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
-            _proxy(req, res, next, err, s, headers);
-        })
+  function proxyUrl(prefix, headers={}) {
+    return function(req, res, next) {
+      // Proxy a request to somewhere under urlbase, which should NOT end with /
+      // req.opts = { start, end, noCache}
+      const url = routed(prefix + req.url);
+      debug("Proxying from %s", url);
+      DwebTransports.createReadStream(
+        url,
+        Object.assign({}, req.opts, {preferredTransports: config.connect.preferredStreamTransports}), (err, s) => {
+          _proxy(req, res, next, err, s, headers);
+      });
     }
+  }
+  // like proxyUrl but return proxy function that sets JSON content-type header
+  function proxyJson(prefix) { return proxyUrl(prefix, {"Content-Type": "application/json"})}
 
+  // Pass a stream to the result
     function _proxy(req, res, next, err, s, headers) {
         if (err) {
             debug("Failed to proxy", err.message);
@@ -402,14 +420,10 @@ function mirrorHttp(config, cb) {
             )
     }
 
-// Keep these lines in alphabetical order unless there is a reason not to (e.g. because capture specific before generic)
-//app.get('/', (req,res)=>{debug("ROOT URL");});
-    app.get('/', (req, res) => {
-        res.redirect(url.format({
-            pathname: "/archive/archive.html",
-            query: reqQuery(req, {identifier: "local"})
-        }))
-    });
+// Keep these lines in alphabetical order
+// unless there is a reason not to (e.g. because capture specific before generic) in which case document in order!
+  app.get('/', redirectWithQuery({identifier: "local"}));
+  // Note app.get('/*'... is at the end after catch everythig else
 
     // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
     /*
@@ -438,26 +452,20 @@ function mirrorHttp(config, cb) {
             }
         });
     });
+
+  function crawlManager(f) {
+    return function(req, res) {
+     CrawlManager.crawls[req.params["crawlid"]][f]();
+     res.json(CrawlManager.crawls[req.params["crawlid"]].status());
+    }
+  }
     //TODO-CRAWLCTL - see https://github.com/internetarchive/dweb-mirror/issues/132
-    app.get('/admin/crawl/restart/:crawlid', (req, res) => {
-      CrawlManager.crawls[req.params["crawlid"]].restart();
-      res.json(CrawlManager.crawls[req.params["crawlid"]].status());
-    });
-    app.get('/admin/crawl/pause/:crawlid', (req, res) => {
-      CrawlManager.crawls[req.params["crawlid"]].pause();
-        res.json(CrawlManager.crawls[req.params["crawlid"]].status());
-    });
-    app.get('/admin/crawl/resume/:crawlid', (req, res) => {
-      CrawlManager.crawls[req.params["crawlid"]].resume();
-      res.json(CrawlManager.crawls[req.params["crawlid"]].status());
-    });
-    app.get('/admin/crawl/empty/:crawlid', (req, res) => {
-      CrawlManager.crawls[req.params["crawlid"]].empty();
-        res.json(CrawlManager.crawls[req.params["crawlid"]].status());
-    });
-    app.get('/admin/crawl/status', (req, res) => {
-        res.json(CrawlManager.status());
-    });
+    // TODO refactor this to be a single service CrawlManager.app(req,res,next) which takes /admin/crawl/:cmd/:crawlid
+    app.get('/admin/crawl/restart/:crawlid', crawlManager("restart"));
+    app.get('/admin/crawl/pause/:crawlid', crawlManager("pause"));
+    app.get('/admin/crawl/resume/:crawlid', crawlManager("resume"));
+    app.get('/admin/crawl/empty/:crawlid', crawlManager("empty"));
+    app.get('/admin/crawl/status', (req, res) => res.json(CrawlManager.status()) );
   app.get('/admin/crawl/add', (req, res) => {
     // Expect opts identifier, query, copyDirectory, but could be adding search, related, in future
     // Order is significant, config should NOT be overridable by query parameters.
@@ -478,49 +486,30 @@ function mirrorHttp(config, cb) {
         }
       });
     });
-    app.get('/arc/archive.org', (req, res) => {
-        res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
-    });
+  app.get([
+    '/arc/archive.org',
+    '/details',
+    '/details/:identifier',
+    '/search',
+    '/search.php',
+    '/stream/:identifier/:unusedPrefix'
+  ], redirectWithQuery());
   app.get('/arc/archive.org/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
   app.get('/advancedsearch', streamQuery);
-  app.get('/details', (req, res) => {
-        res.redirect(url.format({pathname: "/archive/archive.html", query: reqQuery(req)}));
-  });
-  app.get('/details/:identifier', (req, res) => {
-        res.redirect(url.format({
-            pathname: "/archive/archive.html",
-            query:  reqQuery(req, {identifier: req.params['identifier']})
-        })); // Move itemid into query and redirect to the html file
-    });
-  // Special URL from mediawiki e.g. https://archive.org/stream/bdrc-W1FPL497/bdrc-W1FPL497#page/n2/mode/1up
-  // see https://github.com/internetarchive/dweb-mirror/issues/289 as this might be temporary
-  app.get('/stream/:identifier/:unusedPrefix', (req, res) => {
-    res.redirect(url.format({
-      pathname: "/archive/archive.html",
-      query:  reqQuery(req, {identifier: req.params['identifier']})
-    })); // Move itemid into query and redirect to the html file
-  });
-  app.get('/details/:identifier/page/*', (req, res) => {  // Bookreader passes page in a strange place in the URL e.g. page/n1/mode/2up
-    res.redirect(url.format({
-      pathname: "/archive/archive.html",
-      query: reqQuery(req, {identifier: req.params['identifier'], page: req.params[0]})
-    })); // Move itemid and pageinto query and redirect to the html file
-  });
-  app.get('/download/:itemid/__ia_thumb.jpg', (req, res, next) => streamThumbnail(req, res, next)); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  // Bookreader passes page in a strange place in the URL e.g. page/n1/mode/2up
+  app.get('/details/:identifier/page/*', redirectWithQuery({0: "page"}));
   app.get('/download/:identifier/page/:page', sendBookReaderImages);
-  app.get('/download/:identifier', (req, res) => {
-    res.redirect(url.format({
-      pathname: "/archive/archive.html",
-      query: reqQuery(req, {identifier: req.params['identifier'], download: 1})
-    }));
-  });
-  app.get('/download/:itemid/*', streamArchiveFile);
-
-  app.get('/images/*', _sendFileUrlSubdir);
-
-// metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
-// noinspection JSUnresolvedFunction
-// TODO complete as part of https://github.com/internetarchive/dweb-mirror/issues/211
+  app.get('/download/:identifier', redirectWithQuery({download: 1}));
+  app.get([
+    '/download/:itemid/*',
+    '/serve/:itemid/*'],  streamArchiveFile);
+  app.get(['/images/*',
+    '/includes/*', // matches archive.org & dweb.archive.org but not dweb.me
+    '/jw/*', // matches archive.org but not dweb.me
+    '/components/*', // Web components - linked from places we have no control over
+    '/languages/*'], _sendFileOrErrorPath);
+  // metadata handles two cases - either the metadata exists in the cache, or if not is fetched and stored.
+  // TODO complete as part of https://github.com/internetarchive/dweb-mirror/issues/211
   app.get('/metadata/:identifier', function (req, res, unusedNext) {
       const identifier = req.params.identifier;
       _newArchiveItem(identifier, config, req.opts, (err, ai) => {
@@ -541,19 +530,14 @@ function mirrorHttp(config, cb) {
         }
       })
     });
-  app.get('/metadata/*', function (req, res, next) { // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
-    // noinspection JSUnresolvedVariable
-    // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-archivecontroller/Routing yet
-    // this will be diverted to dweb-metadata which cant handle this pattern yet - TODO-DM242
-    proxyUrl(req, res, next, "https://archive.org" + req.url, {"Content-Type": "application/json"})
-  }); //TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
+  // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
+  // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-archivecontroller/Routing yet
+  // this will be diverted to dweb-metadata which cant handle this pattern yet - TODO-DM242
+  // TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
+  app.get('/metadata/*', proxyJson("https://archive.org"));
   app.get('/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
-  app.get('/mds/*', function (req, res, next) { // noinspection JSUnresolvedVariable
-        proxyUrl(req, res, next,
-          "https://be-api.us.archive.org/mds/v1/get_related/all/" + req.params[0],
-          {"Content-Type": "application/json"})
-    });
+  app.get('/mds/*', proxyJson("https://be-api.us.archive.org/"));
   // Playlists are on a weird URL distinguished only by output=json
   app.get('/embed/:identifier', (req, res, next) => {
     if (req.query.output === "json") {
@@ -563,39 +547,22 @@ function mirrorHttp(config, cb) {
     }
   });
   app.get('/playlist/:identifier', sendPlaylist);
-
-  app.get('/search', (req, res) => {
-    res.redirect(url.format({
-      pathname: "/archive/archive.html",
-      query: reqQuery(req)
-    })); // redirect to archive.html with same query
-  });
-  // noinspection JSUnresolvedFunction
-  // Also catch search.php
-  app.get('/search.php', (req, res) => {
-    res.redirect(url.format({
-      pathname: "/archive/archive.html",
-      query: reqQuery(req)
-    })); // redirect to archive.html with same query
-  });
-  app.get('/serve/:itemid/*', streamArchiveFile);
-  app.get('/services/img/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
-  app.get('/thumbnail/:itemid', streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails (Deprecated in favor of services/img)
-  app.get('/archive/bookreader/BookReader/*', _sendFileFromBookreader);
-  app.get('/archive/*', _sendFileUrlArchive);
-  // TODO add generic fallback to use Transports.js to lookup name and forward - but might auto-fix things that should really be caught and thought about
-
-  app.get('/bookreader/BookReader/*', _sendFileFromBookreader);
+  // Special URL from mediawiki e.g. https://archive.org/stream/bdrc-W1FPL497/bdrc-W1FPL497#page/n2/mode/1up
+  // see https://github.com/internetarchive/dweb-mirror/issues/289 as this might be temporary
+  app.get([
+    '/download/:itemid/__ia_thumb.jpg',
+    '/services/img/:itemid',
+    '/thumbnail/:itemid' // Deprecated in favor of services/img)
+    ], streamThumbnail); //streamThumbnail will try archive.org/services/img/itemid if all else fails
+  app.get(['/bookreader/BookReader/*','/archive/bookreader/BookReader/*'] , _sendFileFromBookreader);
   //e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
   app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
   //e.g. http://ia802902.us.archive.org/BookReader/BookReaderJSON.php?itemPath=%2F28%2Fitems%2FArtOfCommunitySecondEdition&itemId=ArtOfCommunitySecondEdition&server=ia802902.us.archive.org
-  app.get('/BookReader/BookReaderJSON.php', sendBookReaderJSON);
-  //e.g. https://api.archivelab.org/books/ArtOfCommunitySecondEdition/ia_manifest
-  app.get('/books/:identifier/ia_manifest', sendBookReaderJSON);
+  app.get([ '/BookReader/BookReaderJSON.php',
+    '/books/:identifier/ia_manifest' //e.g. https://api.archivelab.org/books/ArtOfCommunitySecondEdition/ia_manifest
+  ], sendBookReaderJSON);
   app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
-
-  app.get('/archive/epubreader/*', _sendFileFromEpubreader);
-  app.get('/epubreader/*', _sendFileFromEpubreader);
+  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
 
   // noinspection JSUnresolvedVariable
     app.get('/contenthash/:contenthash', (req, res, next) =>
@@ -614,13 +581,11 @@ function mirrorHttp(config, cb) {
                 next(); // Not found by contenthash.
               }
             }));
-    app.get('/contenthash/*', proxyArchiveOrg); // If we dont have a local copy, try the server
-  app.get('/includes/*',  _sendFileUrlSubdir); // matches archive.org & dweb.archive.org but not dweb.me
-  app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'ipfs:' + req.url)); // Will go to next if IPFS transport not running
-  //app.get('/ipfs/*', proxyUpstream); //TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
-  app.get('/ipfs/*', (req, res, next) => proxyUrl(req, res, next, 'https://ipfs.io' + req.url)); // Will go to next if IPFS transport not running
+  app.get('/contenthash/*', proxyUrl("https://archive.org")); // If we dont have a local copy, try the server
+  app.get('/ipfs/*', proxyUrl('ipfs:')); // Will go to next if IPFS transport not running
+  //app.get('/ipfs/*', proxyUpstream); // TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
+  app.get('/ipfs/*', proxyUrl('https://ipfs.io')); // Will go to next if IPFS transport not running
   // Recognize unmodified archive URLs
-  app.get('/jw/*', _sendFileUrlSubdir); // matches archive.org but not dweb.me
 
 // noinspection JSUnresolvedVariable
     app.get('/favicon.ico', (req, res, unusedNext) => res.sendFile(config.archiveui.directory + "/favicon.ico", {
@@ -628,9 +593,7 @@ function mirrorHttp(config, cb) {
         immutable: true
     }, (err) => err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico'))); // Dont go to Error, favicons often aborted
 
-  app.get('/components/*', _sendFileUrlSubdir); // Web components - linked from places we have no control over
   app.get('/info', sendInfo);
-  app.get('/languages/*', _sendFileUrlSubdir);
   const sharp = require('sharp');
   //IIF support e.g. https://iiif.archivelab.org/iiif/mantra-pangwisesan%240/1026,1245,2316,617/full/0/default.jpg
   // TODO-IIIF move to a function, probably on ArchiveItem
@@ -659,9 +622,18 @@ function mirrorHttp(config, cb) {
     );
   });
 
+  // For debugging routing
+  app.use('/xyzzy', (req, res, next) => {
+    // Expect for .get /xyzzy/*: /xyzzy/foo url=original=path=/xyzzy/foo baseUrl=undefined
+    // Expect for .use '/xyzzy : /xyzzy/foo url=path=/foo/bar baseUrl=/xyzzy original=/xyzzy/foo/bar
+    debug("xyzzy: .url=%s, .baseUrl=%s, .originalUrl=%s .path=%s .route=%s", req.url, req.baseUrl, req.originalUrl, req.path, req.route);
+    next();
+  })
 
   // Lastly try a file - this will get archive.html, dweb-archive-bundle.js, favicon.ico, dweb-archive-styles.css
+  app.get('/archive/*', _sendFileUrlArchive); // Must be after /archive/bookreader etc and before '/*'
   app.get('/*', _sendFileUrlArchive);
+  // TODO add generic fallback to use Transports.js to lookup name and forward - but might auto-fix things that should really be caught and thought about
 
   app.use((req, res, next) => {
         // See errAndNext() above which builds req.errs
