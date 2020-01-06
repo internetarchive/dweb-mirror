@@ -47,9 +47,12 @@ RUN mkdir -p /root/archiveorg
 # will be sure then to get a release rather than whatever is local
 #Have to run install during the build otherwise will build for different environment and may fail with ELF error
 RUN yarn add @internetarchive/dweb-mirror
+RUN yarn add supervisor
 
 # tell the world we use port 4244, doesnt actually make docker do anything
 EXPOSE 4244
 
+WORKDIR /app/node_modules/@internetarchive/dweb-mirror
+
 # when this container is invoked like "docker exec .." this is what that will run
-CMD [ "./node_modules/.bin/supervisor", ".", "Main.js" ]
+CMD [ "/app/node_modules/.bin/supervisor", "-i", "..", "--", "internetarchive", "-sc" ]
