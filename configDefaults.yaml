@@ -27,6 +27,7 @@ bookreader:
 epubreader:
   directories: # Note the code uses the first of these found to exist
     - ../epubreader/reader # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
+    - ../../@futurepress/epubjs-reader/reader # Try repo installed as dependency at same level
     - node_modules/@futurepress/epubjs-reader/reader # Or a repo installed as a dependency via 'yarn install'
 # How to connect to the net, for dweb-mirror HTTP directly to the gateway is usually the best way
 # especially for low CPU/low bandwidth environments.
@@ -40,7 +41,7 @@ connect:
   webtorrent: # Options to webtorrent
     tracker: 'wrtc'   # May or may not work on different platforms and needs installing
     trackers:
-      - 'wss://dweb.archive.org:6969' # TODO-DM242/torrent
+      - 'wss://dweb.archive.org:6969' # TODO-DM242/round4
       - 'wss://tracker.btorrent.xyz'
       - 'wss://tracker.openwebtorrent.com'
       - 'wss://tracker.fastcast.nz'

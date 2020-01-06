@@ -35,7 +35,7 @@ So this is what I did. (Edits welcome, if your experience differed)
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
   * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
 * On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
-* Inserted into Raspbian 3, and powered up with Kbd and HDMI and Mouse inserted. 
+* Inserted into Raspbian 3 or 4, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
 * Powered up
 * It prompted me for some getting started things, 
@@ -48,6 +48,16 @@ So this is what I did. (Edits welcome, if your experience differed)
       but a restart, after the prompts for password etc, 
       got me to a partially completed download so I did not have to start from scratch
 * You might want to ... Menu/Preferences/Config / Set display to highest resolution
+
+## Workaround for Raspbian bug
+Raspbian has a bug that requires a patch until they push it to a new release. 
+It looks from https://github.com/raspberrypi/linux/issues/3271 like you need to do 
+```
+sudo rpi-update
+```
+This should only be applicable until the Raspbian available at 
+https://www.raspberrypi.org/downloads/raspbian/
+is dated newer than September 2019
 
 ## Install Internet In A Box
 

@@ -1,5 +1,4 @@
-# NOTE THIS FILE IS NOT WORKING YET
-# PRs to update this would be welcome but AFAIK noone is currently using dweb-mirror under Docker.
+# This should work, but AFAIK noone is currently using dweb-mirror under Docker so if not please send post a bug report or PR
 
 # Docker reference: https://docs.docker.com/engine/reference/builder/
 # Building
@@ -18,14 +17,27 @@
 # > docker logs mirrorHttp                                                  # See the logs
 
 
-# Specify node version, alternatives node:8 or node:alpine
+# Specify node version, alternatives node:12 or node:alpine but alpine is missing git, which is needed for dependencies of dweb-archive-dist
 FROM node:12
+MAINTAINER "Mitra Ardron <mitra@archive.org>"
 WORKDIR /app
 
+# Yarn used to need installing, but seems present in alpine docker and node:12 images now
 #Yarn needs npm for the build, but should be happy with the version in the docker base distro
 #RUN npm i npm@latest -g
 # Install yarn which does a better job of de-duplicating etc
-RUN npm i yarn -g
+#RUN npm i yarn -g
+
+# Have to run as root to do the apt steps
+USER root
+# Stole this line from https://github.com/tarampampam/node-docker/blob/master/Dockerfile
+RUN set -x \
+    apt-get update \
+    && apt-get -yq install git \
+    && apt-get -yq clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && git --version && bash --version && ssh -V && npm -v && node -v && yarn -v
+#Alternative if you want bash or ssh:  && apt-get -yq install bash git openssh-server \
 
 # /root/archiveorg is the home directory it will run in, but its not persistent so all data lost between restarts
 #TODO require a persistent location, we can add that to configDefaults.yaml#directories
@@ -39,7 +51,5 @@ RUN yarn add @internetarchive/dweb-mirror
 # tell the world we use port 4244, doesnt actually make docker do anything
 EXPOSE 4244
 
-WORKDIR /app/node_modules/@internetarchive/dweb-mirror
-CMD ["node", "./internetarchive", "-sc"]
-#Replace CMD above with this if want to test on the machine
-#CMD /bin/bash
+# when this container is invoked like "docker exec .." this is what that will run
+CMD [ "./node_modules/.bin/supervisor", ".", "Main.js" ]

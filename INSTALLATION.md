@@ -134,6 +134,18 @@ and prompt you for some getting started things.
 You can now open a Terminal window, or from your laptop `ssh raspberrypi`, 
 login as `pi` with the password you set above.
 
+**Workaround for Raspbian bug**: 
+Raspbian has a bug that requires a patch until they push it to a new release. 
+It looks from https://github.com/raspberrypi/linux/issues/3271 like you need to do 
+```
+sudo rpi-update
+```
+This should only be applicable until the Raspbian available at 
+https://www.raspberrypi.org/downloads/raspbian/
+is dated newer than September 2019
+
+After applying that patch ...
+
 Skip to Step 4
 
 #### Step 3C Orange Pi (Zero) with Armbian
