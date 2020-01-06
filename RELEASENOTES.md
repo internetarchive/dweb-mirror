@@ -1,4 +1,4 @@
-## Release Notes 
+## CHANGELOG
 
 ## Known issues - and features for next release or two
 
@@ -6,6 +6,12 @@
 
 ## Release 0.2.0
 
+* 0.2.64: 
+  * Add eslint dependencies
+  * Routing changes including contenthash obsolescence
+  * Installation including Dockerfile now working
+  * BookReader debugging for mediawiki
+  * Refactor mirrorHttp to combine functions , and remove /archive/ redirects https://github.com/internetarchive/dweb-mirror/issues/242
 * 0.2.63: More epub support
 * 0.2.62: Use routed instead of Naming; support epub, book urls and iiif subset; error handling on no disk; 
 * 0.2.61: Remove dweb.archive.org dependencies and major naming refactor; stream error; installation if npm protected; 
