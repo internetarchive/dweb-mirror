@@ -23,7 +23,6 @@ Last update 2019-12-17
 |/books/IDENTIFIER/ia_manifest|sendBookReaderJSON fetch_bookreader|DATANODE/Bookreader/BookreaderJSIA.php?*|converts JSIA to JSON format (api.ArchiveLab.org)
 |/BookReader/BookReaderImages.php|sendBookReaderImages fetchPage|https://DATANODE/BookReader/BookReaderPreview.php or /BookReader/BookReaderImages.php
 |/components/*|_sendFileUrlSubdir|config.archiveui.directory/component/*
-|/contenthash/HASH|proxyUrl Routing|https://dweb.archive.org/contenthash/HASH|legacy
 |/details|redirect|/archive/archive.html|
 |/details/IDENTIFIER|redirect|/archive/archive.html?identifier=IDENTIFIER
 |/details/IDENTIFIER/page/PAGE|redirect|/archive/archive.html?identifier=IDENTIFIER&page=PAGE|bookreader

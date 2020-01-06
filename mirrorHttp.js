@@ -29,7 +29,7 @@ const waterfall = require('async/waterfall');
 const parallel = require('async/parallel');
 
 // IA packages
-const { RawBookReaderResponse, RawBookReaderJSONResponse, gateway, specialidentifiers, homeQuery } = require('@internetarchive/dweb-archivecontroller');
+const { RawBookReaderResponse, RawBookReaderJSONResponse, gateway, specialidentifiers, homeQuery, routed } = require('@internetarchive/dweb-archivecontroller');
 
 // Local files
 const MirrorFS = require('./MirrorFS');
@@ -70,18 +70,19 @@ function mirrorHttp(config, cb) {
    * Redirect, passes query parameters in order of precedence .... queryParms; those in the query; transport & mirror
    * @param queryParms { parameters to pass in query, can override {mirror, transport} and in query}
    * @returns {function(req, res)}
+   * Identical code in dweb  and dweb-mirror
    */
-  function redirectWithQuery(queryParms) {
+  function redirectWithQuery(queryParms={}) {
     return function (req, res) {
       if (req.params.identifier) {queryParms.identifier = req.params.identifier}; // For urls that include identifier pass to queryParms
       if (queryParms[0]) { queryParms[queryParms[0]] = req.params[queryParms[0]]; delete queryParms["0"]; } // {0:"page"} means take the * in the url and pass as the page=
-      const url = url.format({
+      const redirUrl = url.format({
         pathname: "/archive.html",
         // New query parameters have defaults for mirror and transport which can be overridden and ... more which can't
-        query: Object.assign({mirror: req.headers.host, transport: "HTTP"}, req.query, ...queryParms)
+        query: Object.assign({mirror: req.headers.host, transport: "HTTP"}, req.query, queryParms)
       });
-      debug("redirecting to: %s",url);
-      res.redirect(url);
+      debug("redirecting to: %s",redirUrl);
+      res.redirect(redirUrl);
     }
   }
   function errAndNext(req, res, next, err) {
@@ -400,20 +401,24 @@ function mirrorHttp(config, cb) {
   }
   function  sendBookReaderImages(req, res, next) {
         //debug("sendBookReaderImages: item %s file %s scale %s rotate %s", req.query.zip.split('/')[3], req.query.file, req.query.scale, req.query.rotate)
-        // eg http://localhost:4244/BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
-        // or http://localhost:4244/download/IDENTIFIER/page/cover_t.jpg
-        // or http://localhost:4244/download/tutur-smara-bhuwana/page/leaf1_w2000.jpg from mediawiki/ArchiveLeaf
+        // eg /BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
+        // or /download/IDENTIFIER/page/cover_t.jpg
+        // or /tutur-smara-bhuwana/page/leaf1_w2000.jpg from mediawiki/ArchiveLeaf
+        // or (book preview as e.g. already lent out): /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
+        // Note the urls for Image and Preview are gratuitously different ! so need to capture both sets of parameters
         // req.opts = { noCache}
-        const identifier = req.params['identifier'] || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
+        const identifier = req.params['identifier'] || req.query.id || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
         new ArchiveItem({identifier})
             .fetch_page({
                     copyDirectory: req.opts.copyDirectory,
                     wantStream: true,
-                    zip: req.query.zip,
-                    page: req.params['page'],
-                    file: req.query.file,
+                    zip: req.query.zip, // Images only
+                    page: req.params['page'] || req.query.page,
+                    file: req.query.file, // Images ony
                     scale: req.query.scale,     // Note this will be quantized
                     rotate: req.query.rotate,
+                    itemPath: req.query.itemPath, // Preview only
+                    subPrefix: req.query.subPrefix, // Preview only
                     noCache: req.opts.cache
                 },
                 (err, s) => _proxy(req, res, next, err, s, {"Content-Type": "image/jpeg"})
@@ -496,6 +501,7 @@ function mirrorHttp(config, cb) {
   ], redirectWithQuery());
   app.get('/arc/archive.org/*', (req, res) => { res.redirect(req.originalUrl.slice(16)); }); // Moved to new pattern
   app.get('/advancedsearch', streamQuery);
+  app.get('/advancedsearch.php', streamQuery);
   // Bookreader passes page in a strange place in the URL e.g. page/n1/mode/2up
   app.get('/details/:identifier/page/*', redirectWithQuery({0: "page"}));
   app.get('/download/:identifier/page/:page', sendBookReaderImages);
@@ -532,9 +538,9 @@ function mirrorHttp(config, cb) {
     });
   // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
   // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-archivecontroller/Routing yet
-  // this will be diverted to dweb-metadata which cant handle this pattern yet - TODO-DM242
+  // this will be diverted to dweb-metadata which cant handle this pattern yet - see https://github.com/internetarchive/dweb-archivecontroller/issues/11
   // TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
-  app.get('/metadata/*', proxyJson("https://archive.org"));
+  // app.get('/metadata/*', proxyJson("https://archive.org"));
   app.get('/mds/v1/get_related/all/*', sendRelated);
 // noinspection JSUnresolvedFunction
   app.get('/mds/*', proxyJson("https://be-api.us.archive.org/"));
@@ -562,26 +568,6 @@ function mirrorHttp(config, cb) {
     '/books/:identifier/ia_manifest' //e.g. https://api.archivelab.org/books/ArtOfCommunitySecondEdition/ia_manifest
   ], sendBookReaderJSON);
   app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
-  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
-
-  // noinspection JSUnresolvedVariable
-    app.get('/contenthash/:contenthash', (req, res, next) =>
-        MirrorFS.checkWhereValidFile(undefined, {
-                digest: req.params['contenthash'],
-                format: 'multihash58',
-                algorithm: "sha1",
-                copyDirectory: req.opts.copyDirectory,
-            },
-            (err, filepath) => {
-              if (!err && filepath) {
-                res.sendFile(filepath, {maxAge: "31536000000", immutable: true}, err => {
-                  if (err) next()
-                });
-              } else {
-                next(); // Not found by contenthash.
-              }
-            }));
-  app.get('/contenthash/*', proxyUrl("https://archive.org")); // If we dont have a local copy, try the server
   //e.g. /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
   app.get('/BookReader/BookReaderPreview.php', sendBookReaderImages);
   app.get('/ipfs/*', proxyUrl('ipfs:')); // Will go to next if IPFS transport not running
@@ -602,7 +588,7 @@ function mirrorHttp(config, cb) {
   app.get('/iiif/:identifierindex/:ltwh/full/0/default.jpg', (req, res, next) => {
     res.status(200);
     const [left,top,width,height] = req.params.ltwh.split(',');
-    const [identifier, index] = req.params.identifierindex.split('$'); //TODO-IIIF check its not split('$')
+    const [identifier, index] = req.params.identifierindex.split('$');
     const ai = new ArchiveItem({identifier: identifier});
     waterfall([
       (cb) => ai.fetch_metadata(req.opts, cb),
