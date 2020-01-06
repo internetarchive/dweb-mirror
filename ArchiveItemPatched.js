@@ -329,11 +329,13 @@ ArchiveItem.prototype.fetch_bookreader = function(opts={}, cb) { //TODO-API
 ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, noCache=false,
                                               zip=undefined, file=undefined, scale=undefined, rotate=undefined,
                                               page=undefined, skipNet=false, skipFetchFile=undefined,
+                                              itemPath=undefined, subPrefix=undefined,
                                               copyDirectory=undefined }={}, cb) { //TODO-API noCache
   /* Fetch a page from the item, caching it
 
       page      usually "cover_t.jpg" to get the page
-                or leaf1_w2000
+                or leaf1_w2000 - from mediawiki
+                or leaf1 - from BookreaderPreview.php/... when book is lendable, not free
       scale     factor to shrink raw image by (2 is about right for a full screen) floats will be quantized
       rotate    0 for normal, unsure what other values are
       zip       Name of file holding the image
@@ -345,32 +347,37 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
   // page from dweb-archive is only used for cover_t.jpg but mediawiki uses it based on size of image it wants, specifically
   // leaf1_w2000 meaning page 1, with ideal width 2000 pixels.
   waterfall([
-      (cbw) =>
-        this.fetch_metadata({copyDirectory}, cbw),
-      (ai, cbw) =>
-        this.fetch_bookreader({copyDirectory}, cbw),
-      (ai, cbw) => {
-        if (page) {
-          if (page.startsWith('leaf')) {
-            [l, w] = page.split('_w');
-            const pageManifest = this.pageManifestFrom({leafNum: parseInt(l.slice(4))});
-            const pageParms = this.pageParms(pageManifest, {idealWidth: parseInt(w)});
-            zip = pageParms.zip;
-            file = pageParms.file;
-            scale = pageParms.scale; // quantized to 2^n by pageQuantizedScale()
-            page = undefined;
-          }
-        } else { // There is no scale if page & !"leaf..."
-          scale = this.pageQuantizedScale(scale); // // quantized to 2^n by pageQuantizedScale()
+    (cbw) =>
+      this.fetch_metadata({copyDirectory}, cbw),
+    (ai, cbw) =>
+      this.fetch_bookreader({copyDirectory}, cbw),
+    (ai, cbw) => {
+      if (page) {
+        if (page.startsWith('leaf')) {
+          [l, w] = page.split('_w');
+          const pageManifest = this.pageManifestFrom({leafNum: parseInt(l.slice(4))});
+          const pageParms = this.pageParms(pageManifest, {idealWidth: parseInt(w)});
+          zip = pageParms.zip;
+          file = pageParms.file;
+          scale = pageParms.scale; // quantized to 2^n by pageQuantizedScale()
         }
-        if (zip) zipfile = zip.split('/')[4];
-        const urls = page
-          ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
-          // Reconstruct url as we will quantize the scale
-          : `https://${ai.server}/BookReader/BookReaderImages.php?${parmsFrom({zip, file, scale, rotate})}`;
+      } else { // There is no scale if page & !"leaf..."
+        scale = this.pageQuantizedScale(scale); // // quantized to 2^n by pageQuantizedScale()
+      }
+      if (zip) zipfile = zip.split('/')[4];
+      // Reconstruct url as we will quantize the scale
+      const urls = (zip && file)
+        ? `https://${ai.server}/BookReader/BookReaderImages.php?${parmsFrom({zip, file, scale, rotate})}`
+        : page
+        ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({id: this.itemid, itemPath: this.dir, server: this.server, page: page})}`
+        : undefined; // THis would be an error
+      if (!urls) {
+        debug("Failure to build URLs for bookreader %o", {identifier: this.itemid, zip, file, page, scale, rotate})
+        cbw(new Error("insufficient info to build URL"));
+      } else {
         const debugname = `${this.itemid}_${file}`;
         const relFilePath = `${this.itemid}/_pages/` + (page ? page : `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
-        if (page) { // This is the cover , its not scaled or rotated
+        if (!(scale && file)) { // This is the cover or a leaf of a preview, its not scaled or rotated
           MirrorFS.cacheAndOrStream({ urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory }, cbw);
         } else { // Looking for page by file name with scale and rotation
           //Strategy is complex:
@@ -401,7 +408,7 @@ ArchiveItem.prototype.fetch_page = function({ wantStream=false, wantSize=false, 
                 }});
             }
           )
-        } }
+      } } }
     ], cb);
 };
 

@@ -582,6 +582,8 @@ function mirrorHttp(config, cb) {
               }
             }));
   app.get('/contenthash/*', proxyUrl("https://archive.org")); // If we dont have a local copy, try the server
+  //e.g. /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
+  app.get('/BookReader/BookReaderPreview.php', sendBookReaderImages);
   app.get('/ipfs/*', proxyUrl('ipfs:')); // Will go to next if IPFS transport not running
   //app.get('/ipfs/*', proxyUpstream); // TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
   app.get('/ipfs/*', proxyUrl('https://ipfs.io')); // Will go to next if IPFS transport not running
