@@ -427,6 +427,9 @@ function mirrorHttp(config, cb) {
 
 // Keep these lines in alphabetical order
 // unless there is a reason not to (e.g. because capture specific before generic) in which case document in order!
+  // If ther is a redir.html file it will use it, otherwise it will do a standard redirect)
+  app.get('/', (req, res, next) => {
+      res.sendFile(config.archiveui.directory + "/redir.html", (err) => { next(); })})
   app.get('/', redirectWithQuery({identifier: "local"}));
   // Note app.get('/*'... is at the end after catch everythig else
 
