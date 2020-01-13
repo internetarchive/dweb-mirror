@@ -5,7 +5,9 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.0
-
+* 0.2.65: 
+  * Mediawiki installation
+  * Dockerfile tweeks
 * 0.2.64: 
   * Add eslint dependencies
   * Routing changes including contenthash obsolescence

@@ -498,6 +498,7 @@ class MirrorFS {
           if (!wantStream || !cbCalledOnFirstData) cb(new Error(mess)); // Cant send err if wantStream && cbCalledOnFirstData as already done it
 
         }
+        
       function _closeWriteToCache({hashstreamActual, writable, filepathTemp, newFilePath}, cb) {
         // noinspection JSCheckFunctionSignatures
         // The hashstream is upstream so should have flushed first.
@@ -596,7 +597,9 @@ class MirrorFS {
                               });
                               try {
                                 const s1 = new ReadableStreamClone(s); // Will be stream to file
+                                s1.name = "XXX S1 "+routedUrls.join(";"); // For debugging - TODO delete
                                 const s2 = new ReadableStreamClone(s); // Will be stream for consumer
+                                s1.name = "XXX S2 "+routedUrls.join(";"); // For debugging - TODO delete
                                 //TODO consider only opening hashstream and writable if the stream starts (i.e. 'readable')
                                 s1.pipe(hashstream).pipe(writable);   // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
                                 s1.once('error', (err) => {
