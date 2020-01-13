@@ -5,6 +5,7 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.0
+* 0.2.66: Support redir.html file if used
 * 0.2.65: 
   * Mediawiki installation
   * Dockerfile tweeks
