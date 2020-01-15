@@ -428,7 +428,9 @@ if [ ${STEP} -le 23 ]; then
     echo "Can't find ArchiveOrgAuth at ${ARCHIVEORGAUTH}"
     exit
   else
-    cp -r ${ARCHIVEORGAUTH} ${MEDIAWIKI}/extensions/ArchiveOrgAuth
+    echo "Next time do an install.... need to get this from the repo at https://git.archive.org/www/archiveorgauth.git"
+    echo 'Was ... cp -r ${ARCHIVEORGAUTH} ${MEDIAWIKI}/extensions/ArchiveOrgAuth'
+    exit
     # TODO would be better to get from repo - but dont know where it is (asked David 27Dec)
     pushd /etc/php/7.*/cli # Hopefully only one of them
     # Enable php ext-curl for command line
@@ -437,6 +439,7 @@ if [ ${STEP} -le 23 ]; then
     popd
     pushd ${MEDIAWIKI}
     echo "Note next line can take a while (2mins or so) before responds with anything"
+    mkdir -p /var/www/.composer
     composer require "nategood/httpful"
     popd
     appendOrReplaceBegin
@@ -445,15 +448,18 @@ if [ ${STEP} -le 23 ]; then
     appendOrReplace wgArchiveOrgAuthAccess '$wgArchiveOrgAuthAccess = "<ACCESS_KEY>"; # S3 access key'
     appendOrReplace wgArchiveOrgAuthSecret '$wgArchiveOrgAuthSecret = "<SECRET_KEY>"; # S3 secret key'
     appendOrReplace wgArchiveOrgAuthExternalSignupLink '$wgArchiveOrgAuthExternalSignupLink = "https://archive.org/account/login.createaccount.php"; # Fully qualified url for "Create account" link'
-    appendOrReplace wgArchiveOrgAuthExternalPasswordResetLink '$wgArchiveOrgAuthExternalPasswordResetLink = "https://example.com/reset_password"; # Fully qualified url for "Forgot password" link'
+    appendOrReplace wgArchiveOrgAuthExternalPasswordResetLink '$wgArchiveOrgAuthExternalPasswordResetLink = "https://archive.org/account/login.forgotpw.php"; # Fully qualified url for "Forgot password" link'
     appendOrReplace wgUserrightsInterwikiDelimiter '$wgUserrightsInterwikiDelimiter = "%";'
     appendOrReplace wgInvalidUsernameCharacters '$wgInvalidUsernameCharacters = "%:";'
     appendOrReplace wgUseCombinedLoginLink '$wgUseCombinedLoginLink = true;'
     appendOrReplace "wgGroupPermissions.*createaccount" '$wgGroupPermissions["*"]["createaccount"] = false;'
     appendOrReplace "wgGroupPermissions.*autocreateaccount" '$wgGroupPermissions["*"]["autocreateaccount"] = true;'
+    appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;
     appendOrReplaceEnd
     cat <<EOT
 If that worked, enter './install_mediawiki.sh 24' to install ArchiveLeaf extension'
+You'll need to come back and edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in
+Also ... for now hand edit ./extensions/ArchiveOrgAuth/includes/ArchiveOrgAuthProvider.php to change DB_SLAVE to DB_REPLICA
 EOT
     exit
   fi
