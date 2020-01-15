@@ -43,16 +43,34 @@ RUN set -x \
 #TODO require a persistent location, we can add that to configDefaults.yaml#directories
 RUN mkdir -p /root/archiveorg
 
+# Setup initial crawl - do this BEFORE the 'yarn add' of dweb-mirror
+# This config file is a good place to override anything (like port numbers, or initial crawl) needed for specific applications.
+COPY ./dweb-mirror.config.yaml /root/dweb-mirror.config.yaml
+
 # This was "COPY . /app" but better to get dweb-mirror from npm,
 # will be sure then to get a release rather than whatever is local
 #Have to run install during the build otherwise will build for different environment and may fail with ELF error
 RUN yarn add @internetarchive/dweb-mirror
 RUN yarn add supervisor
 
-# tell the world we use port 4244, doesnt actually make docker do anything
+# tell the world which port we use, doesnt actually make docker do anything
+# On dweb-mirror this is 4244 and on www-dweb-archive under kubernetes (K8) is 5000 - MUST match port in dweb-mirror.config.yaml
 EXPOSE 4244
+
+# Nasty hack to unhack this nasty line in archive.js :-) which generates unwanted logs if running on certain CI servers at IA
+# Should have no impact on any other setup
+#var log = location.host.substr(0, 4) !== 'www-' ? function () {} : console.log.bind(console);
+RUN sed -i '.BAK' -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.js'
+RUN sed -i '.BAK' -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.min.js'
+
+# On K8 only After yarn add DM, overwrite redir.html as a redirect breaks the liveness test
+#COPY ./redir.html /app/node_modules/@internetarchive/dweb-archive-dist/redir.html
 
 WORKDIR /app/node_modules/@internetarchive/dweb-mirror
 
-# when this container is invoked like "docker exec .." this is what that will run
+# Just for debugging. comment out when done
+#RUN apt-get update && apt-get -yq install sudo vim
+#Not working on k8 CMD [ "/bin/bash" ]
+
+# when this container is invoked like "docker exec .." this is what that will run.
 CMD [ "/app/node_modules/.bin/supervisor", "-i", "..", "--", "internetarchive", "-sc" ]
