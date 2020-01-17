@@ -454,7 +454,7 @@ if [ ${STEP} -le 23 ]; then
     appendOrReplace wgUseCombinedLoginLink '$wgUseCombinedLoginLink = true;'
     appendOrReplace "wgGroupPermissions.*createaccount" '$wgGroupPermissions["*"]["createaccount"] = false;'
     appendOrReplace "wgGroupPermissions.*autocreateaccount" '$wgGroupPermissions["*"]["autocreateaccount"] = true;'
-    appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;
+    appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;'
     appendOrReplaceEnd
     cat <<EOT
 If that worked, enter './install_mediawiki.sh 24' to install ArchiveLeaf extension'
@@ -519,7 +519,26 @@ img.thumbimage {
   height: auto;
 }
 ```
-When you are finished, come back here and enter './install_mediawiki.sh 20'
+When you are finished, come back here and enter './install_mediawiki.sh 32 to link the Offline Archive to the Palmleaf Wiki'
+EOT
+exit
+fi
+if [ ${STEP} -le 33 ]; then
+  echo step 33
+  pushd ${HOME}
+  if [ -f "dweb-mirror.config.yaml" ]; then
+    if grep palmleafwiki dweb-mirror.config.yaml; then
+        sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#'
+    else
+      sed -i.BAK -e 's#...#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#'
+    fi
+    diff dweb-mirror.config.yaml.BAK dweb-mirror.config.yaml
+  else
+    echo Once you have installed dweb-mirror you will need to add a variable  apps.palmleafwiki.pagelink: "http://MIRRORHOST/wiki"
+  fi
+  popd
+cat <<EOT
+If that appeared to work, come back here and enter './install_mediawiki.sh 34 to finish'
 EOT
 exit
 fi

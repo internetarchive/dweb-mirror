@@ -88,5 +88,7 @@ apps:
         level: tile         # sufficiently to show a tile
       startOnChange: true   # True if should start crawling any item that changes its level of crawing
       crawlEpubs: true      # Set to false, or comment out to skip crawling epubs
+    palmleafwiki: # TODO-MEDIAWIKI make installation auto change this
+      pagelink: 'https://palmleaf.org/wiki'  # Prefix for any pages to open in palmleaf, use 'http://MIRRORHOST/wiki/' if coinstalled
     # copyDirectory: /Volumes/Transcend/test2 # Overrides where to store data, normally this is a command-line parameter if used.
 #============== Dont edit anything from here on down ============================
