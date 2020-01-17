@@ -4,7 +4,11 @@
 
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
-## Release 0.2.0
+## Release 0.2.x
+* 0.2.67: 
+  * Add config to point button at local palmleafwiki
+  * Mediawiki: Debugging ArchiveOrgAth
+  * Aligning Dockerfile with www-dweb-mirror Dockerfile for Kubernetes
 * 0.2.66: Support redir.html file if used
 * 0.2.65: 
   * Mediawiki installation
