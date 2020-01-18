@@ -377,7 +377,7 @@ function mirrorHttp(config, cb) {
           data: RawBookReaderResponse.fromArchiveItem(ai).cooked({
             server: req.query.server,
             // On www-dweb-mirror we are running thru ingress, so serer http but browser needs to use https - can use x-forwarded-proto to distinguish
-            protocol: req.headers["x-forwarded-proto"] || httpOrHttps;
+            protocol: req.headers["x-forwarded-proto"] || httpOrHttps
           })
         });
       }
@@ -397,7 +397,7 @@ function mirrorHttp(config, cb) {
         res.json(RawBookReaderJSONResponse.fromArchiveItem(ai, {
           server: req.headers.host,
           // On www-dweb-mirror we are running thru ingress, so serer http but browser needs to use https - can use x-forwarded-proto to distinguish
-          protocol: req.headers["x-forwarded-proto"] || httpOrHttps;
+          protocol: req.headers["x-forwarded-proto"] || httpOrHttps
       }));
       }
     });
