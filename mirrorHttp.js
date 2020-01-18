@@ -364,24 +364,26 @@ function mirrorHttp(config, cb) {
     });
   }
 
-    function sendBookReaderJSIA(req, res, unusedNext) {
-        waterfall([
-            (cb) => new ArchiveItem({identifier: req.query.id})
-                .fetch_metadata(req.opts, cb),
-            (ai, cb) => ai.fetch_bookreader(req.opts, cb)
-        ], (err, ai) => {
-            if (err) {
-                res.status(404).send(err.message); // Its neither local, nor from server
-            } else {
-                res.json({
-                    data: RawBookReaderResponse.fromArchiveItem(ai).cooked({
-                        server: req.query.server,
-                        protocol: httpOrHttps
-                    })
-                });
-            }
+  function sendBookReaderJSIA(req, res, unusedNext) {
+    waterfall([
+      (cb) => new ArchiveItem({identifier: req.query.id})
+        .fetch_metadata(req.opts, cb),
+      (ai, cb) => ai.fetch_bookreader(req.opts, cb)
+    ], (err, ai) => {
+      if (err) {
+        res.status(404).send(err.message); // Its neither local, nor from server
+      } else {
+        res.json({
+          data: RawBookReaderResponse.fromArchiveItem(ai).cooked({
+            server: req.query.server,
+            // On www-dweb-mirror we are running thru ingress, so serer http but browser needs to use https - can use x-forwarded-proto to distinguish
+            protocol: req.headers["x-forwarded-proto"] || httpOrHttps;
+          })
         });
-    }
+      }
+    });
+  }
+
   function sendBookReaderJSON(req, res, unusedNext) {
     waterfall([
       (cb) => new ArchiveItem({identifier: req.params.identifier || req.query.itemId})
@@ -393,9 +395,10 @@ function mirrorHttp(config, cb) {
       } else {
         //TODO need server from req I think
         res.json(RawBookReaderJSONResponse.fromArchiveItem(ai, {
-            server: req.headers.host,
-            protocol: httpOrHttps
-          }));
+          server: req.headers.host,
+          // On www-dweb-mirror we are running thru ingress, so serer http but browser needs to use https - can use x-forwarded-proto to distinguish
+          protocol: req.headers["x-forwarded-proto"] || httpOrHttps;
+      }));
       }
     });
   }
@@ -611,6 +614,12 @@ function mirrorHttp(config, cb) {
         sh.extract({left: parseInt(left), top: parseInt(top), width: parseInt(width), height: parseInt(height)}).pipe(res)
       }
     );
+  });
+
+  // Echo back headers - for debugging
+  app.get('/echo', (req, res, next) => {
+    res.status(200);
+    res.json(req.headers);
   });
 
   // For debugging routing
