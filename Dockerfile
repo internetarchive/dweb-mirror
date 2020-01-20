@@ -18,7 +18,12 @@
 
 
 # Specify node version, alternatives node:12 or node:alpine but alpine is missing git, which is needed for dependencies of dweb-archive-dist
+# www-dweb-mirror uses ...
 FROM node:12
+# OLIP uses ...
+#ARG ARCH
+#FROM $ARCH/node:12-alpine
+
 MAINTAINER "Mitra Ardron <mitra@archive.org>"
 WORKDIR /app
 
@@ -28,9 +33,11 @@ WORKDIR /app
 # Install yarn which does a better job of de-duplicating etc
 #RUN npm i yarn -g
 
+## Need git for npm to be able to install some dependencies deep in the tree (its a known node:12 issue)
 # Have to run as root to do the apt steps
 USER root
 # Stole this line from https://github.com/tarampampam/node-docker/blob/master/Dockerfile
+# Git is neeed for install, could probably switch to the apk lines if it works on www-dweb-mirror
 RUN set -x \
     apt-get update \
     && apt-get -yq install git \
@@ -39,38 +46,43 @@ RUN set -x \
     && git --version && bash --version && ssh -V && npm -v && node -v && yarn -v
 #Alternative if you want bash or ssh:  && apt-get -yq install bash git openssh-server \
 
-# /root/archiveorg is the home directory it will run in, but its not persistent so all data lost between restarts
-#TODO require a persistent location, we can add that to configDefaults.yaml#directories
+# OLIP uses following, but `apk` not available on the k8 www-dweb-mirror
+# Also OLIP is adding python, make g++ and vips-dev which must be for debugging ?
+#RUN set -ex; \
+#    apk --no-cache --update add git python make g++ vips-dev; \
+#    mkdir -p /root/archiveorg
+
+## /root/archiveorg is the home directory it will run in, but its not persistent so all data lost between restarts
+# TODO require a persistent location, we can add that to configDefaults.yaml#directories
+# TODO OLIP - have been unable to get an answer from them as to how to persist this across
 RUN mkdir -p /root/archiveorg
 
+## Copy a user config for dweb-mirror, this should be in one of the locations listed in configDefaults.yaml
 # Setup initial crawl - do this BEFORE the 'yarn add' of dweb-mirror
 # This config file is a good place to override anything (like port numbers, or initial crawl) needed for specific applications.
 COPY ./dweb-mirror.config.yaml /root/dweb-mirror.config.yaml
 
-# This was "COPY . /app" but better to get dweb-mirror from npm,
-# will be sure then to get a release rather than whatever is local
+
+## The main install, could use "COPY" but this is sure then to get a release rather than whatever is local
 #Have to run install during the build otherwise will build for different environment and may fail with ELF error
 RUN yarn add @internetarchive/dweb-mirror
 RUN yarn add supervisor
 
-# tell the world which port we use, doesnt actually make docker do anything
-# On dweb-mirror this is 4244 and on www-dweb-archive under kubernetes (K8) is 5000 - MUST match port in dweb-mirror.config.yaml
+## tell the world which port we use, doesnt actually make docker do anything
+# On dweb-mirror this is 4244 and on www-dweb-archive under kubernetes (K8) is 5000
+# You can change this, but it MUST match the port in dweb-mirror.config.yaml
 EXPOSE 4244
 
-# Nasty hack to unhack this nasty line in archive.js :-) which generates unwanted logs if running on certain CI servers at IA
-# Should have no impact on any other setup
+##  Nasty hack to unhack this nasty line in archive.js :-) which generates unwanted logs if running on certain CI servers at IA
+# K8 www-dweb-mirror only but has no negative impact on any other setup
 #var log = location.host.substr(0, 4) !== 'www-' ? function () {} : console.log.bind(console);
 RUN sed -i '.BAK' -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.js'
 RUN sed -i '.BAK' -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.min.js'
 
-# On K8 only After yarn add DM, overwrite redir.html as a redirect breaks the liveness test
+## On K8 www-dweb-mirror only After yarn add DM, overwrite redir.html as a redirect breaks the liveness test
 #COPY ./redir.html /app/node_modules/@internetarchive/dweb-archive-dist/redir.html
 
 WORKDIR /app/node_modules/@internetarchive/dweb-mirror
 
-# Just for debugging. comment out when done
-#RUN apt-get update && apt-get -yq install sudo vim
-#Not working on k8 CMD [ "/bin/bash" ]
-
-# when this container is invoked like "docker exec .." this is what that will run.
+# when this container is invoked like "docker exec .." this is what that will run
 CMD [ "/app/node_modules/.bin/supervisor", "-i", "..", "--", "internetarchive", "-sc" ]
