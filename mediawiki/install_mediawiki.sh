@@ -38,7 +38,7 @@ function appendOrReplaceEnd {
   diff ${LOCALSETTINGSBAK} ${LOCALSETTINGS} || echo "===changes made above ==="
 }
 function appendOrReplace {
-  if grep $1 ${LOCALSETTINGS}
+  if grep "$1" ${LOCALSETTINGS}
   then
     echo "Swapping in place to: $2"
     sudo sed -i -e "s!^.*$1.*\$!$2!" ${LOCALSETTINGS}
@@ -102,7 +102,7 @@ if [ ${STEP} -le 1 ]; then
     sudo service apache2 reload # Notice php-apcu
     pushd /tmp/;
       wget https://releases.wikimedia.org/mediawiki/1.34/mediawiki-1.34.0.tar.gz
-      tar -xvzf /tmp/mediawiki-*.tar.gz
+      tar -xzf /tmp/mediawiki-*.tar.gz
       sudo mkdir ${MEDIAWIKI}
       sudo chown ${USER}.${GROUP} ${MEDIAWIKI}
       mv mediawiki-*/* ${MEDIAWIKI}
@@ -172,7 +172,7 @@ if [ ${STEP} -le 6 ]; then
     --installdbpass="${PASSWORD}" \
     --dbuser=palmleafdb \
     --dbpass="${PASSWORD}" \
-    --scriptpath=/mediawiki
+    --scriptpath=/mediawiki \
     --lang=en \
     --pass="${PASSWORD}" \
     "Palm Leaf Wiki" \
@@ -185,7 +185,7 @@ fi
 
 if [ ${STEP} -le 7 ]; then
   echo step 7 configure mediawiki.
-  echo "We'll try and do it automatically, but if it works ty fails see the following instructions"
+  echo "We'll try and do it automatically, but if it fails see the following instructions"
 
   MYSQLUSERPASS=`sudo egrep 'user|password' /etc/mysql/debian.cnf`
   cat <<EOT
@@ -291,7 +291,7 @@ else
   if [ -f ${HOME}/palmleaf-pages.xml ]
   then IMPORTFROM="${HOME}/palmleaf-pages.xml"
   else
-    echo "Must have ${HOME}/palmleaf-pages.xml or ${HOME}/palmleaf-pages.xml.gz, upload it and then ./install_mediawiki.sh 9"
+    echo "Must have ${HOME}/palmleaf-pages.xml or ${HOME}/palmleaf-pages.xml.gz, upload it and then ./install_mediawiki.sh 11"
     exit
   fi
 fi
@@ -313,7 +313,7 @@ php maintenance/rebuildrecentchanges.php
 php maintenance/initSiteStats.php --update
 sudo mysql -u root <<EOT
 USE palmleafdb;
-UPDATE actor SET actor_name="Old Maintenance script" WHERE actor_name="Old Maintenance script";
+UPDATE actor SET actor_name="Old Maintenance script" WHERE actor_name="Maintenance script";
 EOT
 popd
 cat <<EOT
@@ -328,7 +328,7 @@ if [ ${STEP} -le 15 ]; then
 if [ -f palmleaf-dir.tar.gz -a ! -d opt ]
 then
   echo "Untarring palmleaf-dir.tar.gz - this first step can take quite a few minutes"
-  tar -xzf < palmleaf-dir.tar.gz
+  tar -xzf palmleaf-dir.tar.gz
 fi
 if [ -d opt ]
 then
@@ -373,12 +373,12 @@ if [ ${STEP} -le 17 ]; then
   grep wgLogo ${LOCALSETTINGS}
   popd
 cat <<EOT
-If that worked, and the line looks good, come back here and enter './install_mediawiki.sh 18' to install HitCounters
+If that worked, and the line looks good, come back here and enter './install_mediawiki.sh 18' to install HitCounters and run maintenance/update
 EOT
 exit
 fi
 if [ ${STEP} -le 19 ]; then
-  echo step 19 - installing extensions
+  echo step 19 - installing HitCounter extensions and running the maintenance/update process
 cat <<EOT
 <rant>Mediawiki has an unusable extension system, involving downloading from a link that changes every time,
 untarring etc, so I have had to store a working version of the extension on the Wayback machine.</rant>
@@ -393,7 +393,7 @@ EOT
   popd
   cat <<EOT
 if that worked you'll see lines in the update.php step about either creating, hit_counter table, or that it already exists.
-if it worked, enter './install_mediawiki.sh 20 to install extensions'
+if it worked, enter './install_mediawiki.sh 20 to install Mirador extension'
 EOT
 exit
 fi
@@ -415,32 +415,31 @@ if [ ${STEP} -le 21 ]; then
     #Not needed: php maintenance/update.php
     popd
     cat <<EOT
-If that worked, enter './install_mediawiki.sh 22' to install ArchiveOrgAuth
+If that worked, enter './install_mediawiki.sh 22' to install ArchiveOrgAuth extension
 EOT
     exit
   fi
 fi
 if [ ${STEP} -le 23 ]; then
   echo step 23
-  ARCHIVEORGAUTH=${HOME}/opt/mediawiki/w/extensions/ArchiveOrgAuth
-  if [ ! -d "${ARCHIVEORGAUTH}" ]
-  then
-    echo "Can't find ArchiveOrgAuth at ${ARCHIVEORGAUTH}"
-    exit
-  else
-    echo "Next time do an install.... need to get this from the repo at https://git.archive.org/www/archiveorgauth.git"
-    echo 'Was ... cp -r ${ARCHIVEORGAUTH} ${MEDIAWIKI}/extensions/ArchiveOrgAuth'
-    exit
-    # TODO would be better to get from repo - but dont know where it is (asked David 27Dec)
     pushd /etc/php/7.*/cli # Hopefully only one of them
     # Enable php ext-curl for command line
     sudo sed -i.bak -e 's/.*extension=curl/extension=curl/' ./php.ini
     diff php.ini.bak php.ini || echo "Great it shows we made the change"
     popd
     pushd ${MEDIAWIKI}
+    sudo mkdir -p /var/www/.composer
     echo "Note next line can take a while (2mins or so) before responds with anything"
-    mkdir -p /var/www/.composer
     composer require "nategood/httpful"
+    popd
+    echo If that worked, enter './install_mediawiki.sh 24' to install ArchiveOrgAuth extension
+    exit
+fi
+if [ ${STEP} -le 24 ]; then
+  echo step 24
+    echo "TODO need Tracey to open perms - current m@a.o R*!"
+    pushd ${MEDIAWIKI}/extensions
+    git clone https://git.archive.org/www/archiveorgauth.git ArchiveOrgAuth
     popd
     appendOrReplaceBegin
     appendOrReplace "wfLoadExtension.*ArchiveOrgAuth" 'wfLoadExtension( "ArchiveOrgAuth" );'
@@ -457,9 +456,9 @@ if [ ${STEP} -le 23 ]; then
     appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;'
     appendOrReplaceEnd
     cat <<EOT
-If that worked, enter './install_mediawiki.sh 24' to install ArchiveLeaf extension'
-You'll need to come back and edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in
-Also ... for now hand edit ./extensions/ArchiveOrgAuth/includes/ArchiveOrgAuthProvider.php to change DB_SLAVE to DB_REPLICA
+If that worked, (and in particlar check the composer install worked)
+Edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in
+Then enter './install_mediawiki.sh 24' to install ArchiveLeaf extension'
 EOT
     exit
   fi
@@ -503,9 +502,10 @@ cat <<EOT
 The CSS may need to be manually edited, buy the previous install had this happen automatically, not sure where.
 
 Open
-To improve page rendering, add the following CSS to the `MediaWiki:Common.css` page on the wiki:
+To improve page rendering, add the following CSS to the 'MediaWiki:Common.css' page on the wiki:
+Note this is the first time we have opened the wiki so its also a test that its basically working.
 Open /wiki/MediaWiki:Common.css in your browser, and check it includes the following.
-```css
+
 .mw-jump {
   display: none;
 }
@@ -518,8 +518,8 @@ img.thumbimage {
   width: 100%;
   height: auto;
 }
-```
-When you are finished, come back here and enter './install_mediawiki.sh 32 to link the Offline Archive to the Palmleaf Wiki'
+
+When you are finished, come back here and enter './install_mediawiki.sh 32' to link the Offline Archive to the Palmleaf Wiki
 EOT
 exit
 fi
@@ -528,9 +528,17 @@ if [ ${STEP} -le 33 ]; then
   pushd ${HOME}
   if [ -f "dweb-mirror.config.yaml" ]; then
     if grep palmleafwiki dweb-mirror.config.yaml; then
-        sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#'
+        sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#' dweb-mirror.config.yaml
     else
-      sed -i.BAK -e 's#...#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#'
+      if grep '\.\.\.' dweb-mirror.config.yaml; then
+        sed -i.BAK -e 's#\.\.\.#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#' dweb-mirror.config.yaml
+      else
+        cp  diff dweb-mirror.config.yaml dweb-mirror.config.yaml.BAK
+        cat <<EOT >>dweb-mirror.config.yaml
+    palmleafwiki
+        pagelink: "http://MIRRORHOST/wiki"
+EOT
+      fi
     fi
     diff dweb-mirror.config.yaml.BAK dweb-mirror.config.yaml
   else
