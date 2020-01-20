@@ -160,7 +160,7 @@
     react "^15.2.0"
     react-dom "15.2.0"
 
-"@internetarchive/dweb-archivecontroller@^0.2.5":
+"@internetarchive/dweb-archivecontroller@^0.2.6":
   version "0.2.6"
   resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archivecontroller/-/dweb-archivecontroller-0.2.6.tgz#cc95c3f9835344a9b86860c89efcbe0a04ba54a1"
   integrity sha512-cc0nCrz52DhxdwdDs9Fm9DHONPT8QDcLJCYg9qVXaxt4dqkNkOeFcG7BJfY/qPmHvzAtYkOv2mgduEviW+zwlA==
@@ -175,10 +175,10 @@
     prettier-bytes "^1.0.4"
     simple-sha1 "^3.0.1"
 
-"@internetarchive/dweb-transports@^0.2.14":
-  version "0.2.14"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.14.tgz#ff13a9296a3b22ed2a2413bf3196337e676a04ba"
-  integrity sha512-WwXP1rcBwJPN8AXeJvd0XTUphnrOP0XW2zF8Fbx2scRmmVjFCS0ioTqVfQtJg6KeMhdM6wOBN/tcS8dndSt+DA==
+"@internetarchive/dweb-transports@^0.2.15":
+  version "0.2.15"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.15.tgz#d34db01dff6606d4f544b8411bd2769b5ed135bb"
+  integrity sha512-MsuHnew9jdFzpYx3nLY91O0/UmI9Dfa8Y5HBM5alJ2SJ8sfmaCU4lfCqQB5xEeSogbiy+bU7NJMPtvDKYx/tFA==
   dependencies:
     "@stratumn/canonicaljson" "^1.0.3"
     async "^2.6.3"

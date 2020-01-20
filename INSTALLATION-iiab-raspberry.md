@@ -14,14 +14,14 @@ will be much easier to follow.
  * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
  * TODO developer instructions on other platforms.
 
-If anything here doesn't work please email mitra@archive.org 
+If anything here doesn't work please email mitra@archive.org
 or it would be even more helpful to post a PR on https://github.com/internetarchive/dweb-mirror 
 
 ## See also
 * [README.md](./README.md) for more general information
 * [issue #111](https://github.com/internetarchive/dweb-mirror/issues/111) for meta task for anything IIAB.
 
-## Initial setup - getting Raspbian
+## Step 1 Initial setup - getting Raspbian
 
 If your Raspberry Pi comes with Raspbian you are in luck, skip this, 
 otherwise if it comes with NOOBS (as most do now) you'll need to replace it with Raspbian.
@@ -34,7 +34,8 @@ So this is what I did. (Edits welcome, if your experience differed)
 * On a Mac:
   * downloaded [Etcher](https://www.balena.io/etcher/) (100Mb)
   * Run Etcher (its supposed to be able to use the zip, though for this test we used the .img from expanding hte zip), selecting a fresh 16GB SD card as the destination
-* On Windows or Linux, I'm not sure the appropriate steps instead of Etcher. 
+* On Windows or Linux, 
+  * I'm not sure the appropriate steps instead of Etcher. 
 * Inserted into Raspbian 3 or 4, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
 * Powered up
@@ -48,6 +49,8 @@ So this is what I did. (Edits welcome, if your experience differed)
       but a restart, after the prompts for password etc, 
       got me to a partially completed download so I did not have to start from scratch
 * You might want to ... Menu/Preferences/Config / Set display to highest resolution
+* You probably want `Menu/Raspberry Pi Configuration/Interfaces/SSH enable` so that you can SSH 
+  into the box rather than use attached keyboard and screen.
 
 ## Workaround for Raspbian bug
 Raspbian has a bug that requires a patch until they push it to a new release. 
@@ -59,7 +62,7 @@ This should only be applicable until the Raspbian available at
 https://www.raspberrypi.org/downloads/raspbian/
 is dated newer than September 2019
 
-## Install Internet In A Box
+## Step 2 Install Internet In A Box
 
 Note its strongly recommended to connect your RPi to the Ethernet, rather than WiFi due to both to speed, 
 and some bugs in the IIAB installer

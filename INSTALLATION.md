@@ -131,6 +131,9 @@ and prompt you for some getting started things.
   then `Interfaces` and make sure `SSH` is enabled (by default it is Disabled). 
 * It should reboot at least once (as part of saving these changes)
 
+If you want it to run as a **hotspot** - try following the instructions at ... 
+https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/
+
 You can now open a Terminal window, or from your laptop `ssh raspberrypi`, 
 login as `pi` with the password you set above.
 
@@ -360,6 +363,8 @@ service internetarchive status
 ```
 Should show it started and is pinging `/info`
 
+Skip to step 8
+
 #### Step 7B: On Mac OSX
 TODO - Note that I've currently had problems with getting Mac OSX to start automatically
 see [dweb-mirror issue#196](https://github.com/internetarchive/dweb-mirror/issues/196)
@@ -375,6 +380,8 @@ sudo cp ~/node_modules/@internetarchive/dweb-mirror/org.archive.mirror.plist /Li
 sudo launchctl load /Library/LaunchAgents/org.archive.mirror.plist
 ```
 Restart your machine and check that http://localhost:4244 still works.
+
+Skip to step 8
 
 ## Step 8. Updating
 

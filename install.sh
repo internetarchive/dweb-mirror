@@ -67,11 +67,14 @@ echo "Architecture: ${ARCHITECTURE} OS: ${OPERATINGSYSTEM} PLATFORM: ${PLATFORM}
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  if ! yarn --version 2>/dev/null
+  if yarn --version 2>/dev/null && yarn --help | grep checksums >/dev/null
   then
-  step XXX "Adding Yarn sources"
+    echo "Yarn - the right one - looks like its installed"
+  else
+    step XXX "Adding Yarn sources"
     curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+    yarn --version 2>/dev/null && yarn --help | grep checksums >/dev/null # Check it worked (will error if not)
   fi
   set +e # update and upgrade often have non-zero return codes even though safe to continue
   step XXX "Apt update"
