@@ -7,7 +7,7 @@
 # Default is to look in home directory and root of any device (for example a USB) for directories "archiveorg"
 directories:
   - ~/archiveorg # Home directory of user
-  - /Volumes/*/archiveorg # Any connected volume
+  - /Volumes/*/archiveorg # Any connected volume on standard unix
   - /media/pi/*/archiveorg # At least on Internet-in-a-Box USB volumes are put here
   - /media/usb*/archiveorg # IIAB v7 seems to put them here via usbmount
   - /.data/archiveorg # This is where Rachel3+ puts its data

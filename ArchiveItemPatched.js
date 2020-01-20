@@ -537,24 +537,25 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
   noStore = noStore || !(copyDirectory || MirrorFS.directories.length);
   if (cb) { try { f.call(this, cb) } catch(err) { cb(err)}} else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) {reject(err)} else {resolve(res)} })} catch(err) {reject(err)}})} // Promisify pattern v2
 
-  function f(cb1) {
+  function f(cb0) {
 
     function expandLocally(arrAM, cb1) {
-    // Expand the members locally, errors are ignored
-    // unexpanded members typically come from:
-    // either a direct req from client to server for identifier:...
-    // or for identifier=fav-* when members loaded with unexpanded
-    // Note this does not obey noCache, consumer should.
-    // Doesnt return errors, its ok if cant expand
-    map(arrAM, // parallel async mapping
-      (am, cb2) => {
-        if (am.isExpanded()) { // Already expanded
-          cb2(null, am);
-        } else {
-          am.read({copyDirectory}, (err, o) =>
-            cb2(null, o ? new ArchiveMember(o) : am));
-        }
-      }, cb1);
+      // Expand the members locally, errors are ignored
+      // unexpanded members typically come from:
+      // either a direct req from client to server for identifier:...
+      // or for identifier=fav-* when members loaded with unexpanded
+      // Note this does not obey noCache, consumer should.
+      // Doesnt return errors, its ok if cant expand
+      map(arrAM, // parallel async mapping
+        (am, cb2) => {
+          if (am.isExpanded()) { // Already expanded
+            cb2(null, am);
+          } else {
+            am.read({copyDirectory}, (err, o) =>
+              cb2(null, o ? new ArchiveMember(o) : am));
+          }
+        },
+        cb1);
     }
 
     function readAndExpandMembersSearch(cb1) {
@@ -664,7 +665,7 @@ ArchiveItem.prototype.fetch_query = function(opts={}, cb) {
       // fetch_query.membersSearch will have the full set to this point (note .files is the files for the item, not the ArchiveItems for the search)
       ],
       (err, res) =>
-        cb(err, res));
+        cb0(err, res));
   }
 };
 

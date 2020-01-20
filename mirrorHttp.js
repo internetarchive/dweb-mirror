@@ -20,8 +20,8 @@ See URL_MAPPING.md (TODO which may be out of date) for summary of below rules pl
 //TODO-URI add compatibility with archive.org standard urls scan this file first, should be a git issue but
 const debug = require('debug')('dweb-mirror:mirrorHttp');
 const url = require('url');
-const express = require('express'); //http://expressjs.com/
-const morgan = require('morgan'); //https://www.npmjs.com/package/morgan
+const express = require('express'); // http://expressjs.com/
+const morgan = require('morgan'); // https://www.npmjs.com/package/morgan
 const path = require('path');
 const fs = require('fs');   // See https://nodejs.org/api/fs.html
 //const ParallelStream = require('parallel-streams');
@@ -37,6 +37,7 @@ const CrawlManager = require('./CrawlManager');
 const ArchiveFile = require('./ArchiveFilePatched');
 const ArchiveItem = require('./ArchiveItemPatched'); // Needed for fetch_metadata patch to use cache
 const ArchiveMember = require('./ArchiveMemberPatched');
+const { searchExpress, doQuery } = require('./search');
 
 const httpOrHttps = "http"; // This server is running on http, not https (at least currently)
 
@@ -64,7 +65,13 @@ function mirrorHttp(config, cb) {
           (typeof req.opts.start !== "undefined") ? `bytes ${req.opts.start}-${req.opts.end}` : "",
           (req.opts.noCache ? "NOCACHE" : ""),
           (req.opts.copyDirectory ? req.opts.copyDirectory : "" ));
-        next();
+        req.opts.protoHost =
+          process.env.APPLICATION_ROOT  // OLIP
+          ? process.env.APPLICATION_ROOT
+          : req.headers["x-forwarded-for"]
+          ? (req.headers["x-forwarded-proto"] + "://" + req.headers["x-forwarded-host"] + req.headers["x-forwarded-port"])
+          : (req.protocol + "://" + req.headers.host);
+      next();
     });
   /**
    * Redirect, passes query parameters in order of precedence .... queryParms; those in the query; transport & mirror
@@ -279,35 +286,15 @@ function mirrorHttp(config, cb) {
         o.rows = parseInt(req.query.rows, 10) || 75;
         o.page = parseInt(req.query.page, 10) || 1; // Page incrementing is done by anything iterating over pages, not at this point
         o.and = req.query.and; // I dont believe this is used anywhere
-        o.fetch_metadata(req.opts, (err, unused) => { // Not passing noCache as query usually after a fetch_metadata
-            if (err) {
-                debug('streamQuery could not fetch metadata for %s', o.itemid);
-                next(err);
-            } else {
-                o.fetch_query({copyDirectory: req.opts.copyDirectory, wantFullResp: true, noCache: req.opts.noCache}, (err, resp) => { // [ArchiveMember*]
-                    if (err) {
-                        debug('streamQuery for q="%s" failed with %s', o.query, err.message);
-                        res.status(404).send(err.message);
-                        next(err);
-                    } else {
-                        // Note we are adding crawlinfo to o - the ArchiveItem, but the resp.response.docs
-                        // is an array of pointers into same objects so its getting updated as well
-                      if (!wantCrawlInfo) {
-                        res.json(resp);
-                      } else {
-                        o.addCrawlInfo({config, copyDirectory: req.opts.copyDirectory}, (unusederr, unusedmembers) => {
-                          resp.response.downloaded = o.downloaded;
-                          resp.response.crawl = o.crawl;
-                          res.json(resp);
-                        });
-                      }
-                    }
-                });
-            }
+        req.opts.wantCrawlInfo = wantCrawlInfo;
+        doQuery(o, req.opts, config, (err, res) => {
+          if (err) {
+            next(err); // doQuery will have reported the error
+          } else {
+            res.json(resp);
+          }
         });
-
     }
-
 
     function streamThumbnail(req, res, next) {
         /*
@@ -615,7 +602,7 @@ function mirrorHttp(config, cb) {
       }
     );
   });
-
+  app.get('/opensearch', searchExpress);
   // Echo back headers - for debugging
   app.get('/echo', (req, res, next) => {
     res.status(200);
@@ -630,6 +617,7 @@ function mirrorHttp(config, cb) {
     next();
   })
 
+  // ----------- Below here are intentionally at the end -------
   // Lastly try a file - this will get archive.html, dweb-archive-bundle.js, favicon.ico, dweb-archive-styles.css
   app.get('/archive/*', _sendFileUrlArchive); // Must be after /archive/bookreader etc and before '/*'
   app.get('/*', _sendFileUrlArchive);
