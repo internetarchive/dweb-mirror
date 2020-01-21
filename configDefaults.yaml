@@ -12,6 +12,7 @@ directories:
   - /media/usb*/archiveorg # IIAB v7 seems to put them here via usbmount
   - /.data/archiveorg # This is where Rachel3+ puts its data
   - /library/archiveorg # This is where IIAB wants content
+  - /data/archiveorg # Persistent and shared volume on OLIB
 rescanDirectories: 15 # How often to rescan for these directories (in seconds)
 # Where to find the ArchiveUI relative to the directory this file and the code resides in
 archiveui:
