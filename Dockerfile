@@ -1,23 +1,27 @@
-# This should work, but AFAIK noone is currently using dweb-mirror under Docker so if not please send post a bug report or PR
+# This is the master Dockerfile
+# it should work, but AFAIK noone is currently using dweb-mirror under Docker so if not please send post a bug report or PR
+# In most cases install.sh is a better way to get something running on a box.
+# There is a variation of this in www-dweb-mirror repo running under Kubernates (k8) at https://www-dweb.dev.archive.org
+# There is a variation of this in OLIP https://gitlab.com/bibliosansfrontieres/olip/dweb-mirror
+# The changes in both those dockerfiles are incorporated below, but commented out.
+#
 
-# Docker reference: https://docs.docker.com/engine/reference/builder/
+# Docker quick reference - for more details check https://docs.docker.com/engine/reference/builder/
 # Building
 # > cd ...dweb-mirror
 # > docker image build --no-cache -t mitraardron/dweb-mirror:latest .   # Use no-cache or it might not rebuild from a changed npm
-# > docker push mitraardron/dweb-mirror:latest                          # Send to repo
-#
+# > docker push mitraardron/dweb-mirror:latest                          # Send to repo (this is usually not done)
 # For testing
 # > docker run -i -p 4244:4244 --name internetarchive mitraardron/dweb-mirror:latest           # Test it
 # > docker run -i -p 4244:4244 --name internetarchive mitraardron/dweb-mirror:latest /bin/bash # OR run bash inside it
-#
 # For production
 # > docker run -d —name internetarchive -p 4244:4244 mitraardron/dweb-mirror:latest    # Run production
 # > docker container stop mirrorHttp                                        # Stop running server
 # > docker container rm mirrorHttp                                          # Delete container
 # > docker logs mirrorHttp                                                  # See the logs
 
-
-# Specify node version, alternatives node:12 or node:alpine but alpine is missing git, which is needed for dependencies of dweb-archive-dist
+## Specify node version, alternatives node:12 or node:alpine or node:12-alpine but alpine images are missing git,
+# which is needed for dependencies of dweb-archive-dist
 # www-dweb-mirror uses ...
 FROM node:12
 # OLIP uses ...
@@ -27,8 +31,8 @@ FROM node:12
 MAINTAINER "Mitra Ardron <mitra@archive.org>"
 WORKDIR /app
 
-# Yarn used to need installing, but seems present in alpine docker and node:12 images now
-#Yarn needs npm for the build, but should be happy with the version in the docker base distro
+## Yarn used to need installing, but is now present in alpine docker and node:12 images
+# Yarn needs npm for the build, but should be happy with the version in the docker base distro
 #RUN npm i npm@latest -g
 # Install yarn which does a better job of de-duplicating etc
 #RUN npm i yarn -g
@@ -76,8 +80,8 @@ EXPOSE 4244
 ##  Nasty hack to unhack this nasty line in archive.js :-) which generates unwanted logs if running on certain CI servers at IA
 # K8 www-dweb-mirror only but has no negative impact on any other setup
 #var log = location.host.substr(0, 4) !== 'www-' ? function () {} : console.log.bind(console);
-RUN sed -i '.BAK' -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.js'
-RUN sed -i '.BAK' -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.min.js'
+RUN sed -i.BAK -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.js'
+RUN sed -i.BAK -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.min.js'
 
 ## On K8 www-dweb-mirror only After yarn add DM, overwrite redir.html as a redirect breaks the liveness test
 #COPY ./redir.html /app/node_modules/@internetarchive/dweb-archive-dist/redir.html
