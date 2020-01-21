@@ -20,9 +20,10 @@
 # > docker container rm mirrorHttp                                          # Delete container
 # > docker logs mirrorHttp                                                  # See the logs
 
-## Specify node version, alternatives node:12 or node:alpine or node:12-alpine but alpine images are missing git,
-# which is needed for dependencies of dweb-archive-dist
-# www-dweb-mirror uses ...
+## Specify node version, alternatives node:12 or node:12-alpine but
+# alpine images are missing git, which is needed for dependencies of dweb-archive-dist
+# and node:12 not available on i386 and is missing apk
+# www-dweb-mirror uses node:12 OLIP uses node:12-alpine
 FROM node:12
 # OLIP uses ...
 #ARG ARCH
