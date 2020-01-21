@@ -70,6 +70,7 @@ Make sure to uncomment/insert these lines in ${LOCALSETTINGS} if things are fail
 \$wgShowExceptionDetails = true;
 \$wgShowDBErrorBacktrace = true;
 \$wgShowSQLErrors = true;
+\$wgDebugLogFile = "/var/log/mediawiki.log";
 EOT
 set -e
 set -x # Just for debugging
@@ -105,6 +106,7 @@ if [ ${STEP} -le 1 ]; then
       tar -xzf /tmp/mediawiki-*.tar.gz
       sudo mkdir ${MEDIAWIKI}
       sudo chown ${USER}.${GROUP} ${MEDIAWIKI}
+
       mv mediawiki-*/* ${MEDIAWIKI}
     popd
   fi
@@ -262,6 +264,11 @@ if [ ${STEP} -le 9 ]; then
   appendOrReplace max_execution_time 'ini_set("max_execution_time", 0);'
   appendOrReplace wgAllowCopyUploads '$wgAllowCopyUploads = true;'
   appendOrReplaceEnd
+
+  # Make the log writable
+  sudo touch /var/log/mediawiki.log
+  sudo chown www-data.pi /var/log/mediawiki.log
+  sudo chmod g+w  /var/log/mediawiki.log
 cat <<EOT
 If this worked enter './install_mediawiki.sh 10'
 EOT
@@ -430,15 +437,15 @@ if [ ${STEP} -le 23 ]; then
     pushd ${MEDIAWIKI}
     sudo mkdir -p /var/www/.composer
     echo "Note next line can take a while (2mins or so) before responds with anything"
-    composer require "nategood/httpful"
+    # Carefull if change this, "nategood/httpful" will set to "^0.3.0" which then hits a bug where that format isn't recognized
+    composer require "nategood/httpful=0.3.0"
     popd
     echo If that worked, enter './install_mediawiki.sh 24' to install ArchiveOrgAuth extension
     exit
 fi
 if [ ${STEP} -le 24 ]; then
   echo step 24
-    echo "TODO need Tracey to open perms - current m@a.o R*!"
-    pushd ${MEDIAWIKI}/extensions
+  pushd ${MEDIAWIKI}/extensions
     git clone https://git.archive.org/www/archiveorgauth.git ArchiveOrgAuth
     popd
     appendOrReplaceBegin
@@ -484,6 +491,7 @@ fi
 if [ ${STEP} -le 27 ]; then
   echo step 27 switching permissions to www-data, but whatever group this user is running as.
   sudo chown -R ${APACHEUSER}.${GROUP} ${MEDIAWIKI}
+  sudo chmod -R g+w ${MEDIAWIKI}
   echo "If that worked, enter './install_mediawiki.sh 28' to configure short urls"
   exit
 fi
@@ -552,9 +560,37 @@ exit
 fi
 if [ ${STEP} -le 99 ]; then
   echo step 99
+  pushd $MEDIAWIKI
+    echo 'Run update one last chance - this is where we caught the bug in composer.json before'
+    echo 'If reports problems at nategood/httpfil ^0.3.0 then the fix with composer in ArchiveLeaf didn't work
+    maintenance/update.php
+  popd
+  echo "A quick bit of testing ..."
+  service transliterator status
+  echo "Next line should respond "wayan" otherwise transliterator probably not working
+  curl http://localhost:3000/Balinese-ban_001 -d ᬯᬬᬦ᭄᭞
 cat <<EOT
-It should now be fully working
-There are outstanding issues at: https://github.com/internetarchive/dweb-mirror/issues/286
+It should now be fully working Except ... bugs
+$wgServer needs to be "http://192.168.0.14" not http://localhost - edit it in LocalSettings to be ip name or address of your box
+http://192.168.0.14/transcriber/static/media/zwnj.0da8f3f5.svg isn't working
+There may be other outstanding issues at: https://github.com/internetarchive/dweb-mirror/issues/286
+
+
+To test ...
+In browser go to  http://<IP_OF_BOX>/wiki
+Should open main page
+
+Click Random page
+Should open a page, typically with a series of images
+If shows url of localhost and fails to load, its usually that LocalSettings.php/$wgServer is set to localhost
+If doesn't show "edit" above each image then its usually the nategood/httpful ^0.3.0 error in composer.json
+
+Click edit on one of the leafs with writing (not the top one)
+Should see image and balinese script text,
+Click the 3 vertical dots in top right and "Show Transliteration"
+Should show the balinese text transcribed to latin
+If not then the transcriber service isn't running - we had bugs there but should be fixed (its setup in ArchiveLeaf/maintenance/offline)
+
 EOT
 exit
 fi
