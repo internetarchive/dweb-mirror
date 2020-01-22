@@ -5,6 +5,7 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.70: Implement opensearch for OLIP, debug Dockerfile and mediawiki installs
 * 0.2.69: DOnt force protcocol to be http in mirrorHttp (breaks www-dev-mirror)
 * 0.2.67: 
   * Add config to point button at local palmleafwiki
