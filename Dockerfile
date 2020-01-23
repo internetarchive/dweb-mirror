@@ -49,22 +49,28 @@ RUN set -x \
     && apt-get -yq clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && git --version && bash --version && ssh -V && npm -v && node -v && yarn -v
-#Alternative if you want bash or ssh:  && apt-get -yq install bash git openssh-server \
+#if you want bash or ssh:
+#RUN apt-get -yq install bash openssh-server
 
 # OLIP uses following, but `apk` not available on the k8 www-dweb-mirror
 # Also OLIP is adding python, make g++ and vips-dev which must be for debugging ?
 #RUN set -ex; \
-#    apk --no-cache --update add git python make g++ vips-dev; \
+#    apk --no-cache --update add git
 #    mkdir -p /root/archiveorg
+#
+# i386 needs some extra packages to build dweb-mirror apparently.
+#RUN set -ex; \
+#    [ `uname -p` = "i386" ] && apk --no-cache --update add python make g++ vips-dev;
 
-## /root/archiveorg is the home directory it will run in, but its not persistent so all data lost between restarts
-# TODO require a persistent location, we can add that to configDefaults.yaml#directories
-# TODO OLIP - have been unable to get an answer from them as to how to persist this across
+## Connect to a persistent volume for (potentially large) data caching
+# OLIP - /data/archiveorg as /data is persistent. (Added to configDefaults.yaml#directories)
+# www-dweb-mirror: /root/archiveorg : data intentionally not persistent as used for testing
 RUN mkdir -p /root/archiveorg
 
 ## Copy a user config for dweb-mirror, this should be in one of the locations listed in configDefaults.yaml
 # Setup initial crawl - do this BEFORE the 'yarn add' of dweb-mirror
 # This config file is a good place to override anything (like port numbers, or initial crawl) needed for specific applications.
+# TODO-OLIP - need strategy for where to put this and where to read it
 COPY ./dweb-mirror.config.yaml /root/dweb-mirror.config.yaml
 
 

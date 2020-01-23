@@ -137,7 +137,7 @@ https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/
 You can now open a Terminal window, or from your laptop `ssh raspberrypi`, 
 login as `pi` with the password you set above.
 
-**Workaround for Raspbian bug**: 
+##### Workaround for Raspbian bug: 
 Raspbian has a bug that requires a patch until they push it to a new release. 
 It looks from https://github.com/raspberrypi/linux/issues/3271 like you need to do 
 ```

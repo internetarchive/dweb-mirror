@@ -26,6 +26,8 @@ function step {
 
 step 00 Determining what kind of box this is
 
+###### PLATFORM AUTODETECTION CODE, DUPLICATED IN in dweb-mirror/install.sh and dweb-mirror/mediawiki/mediawiki.conf
+
 # Convert the portable uname results into go specific environment note Mac has $HOSTTYPE=x86_64 but not sure that is on other platforms
 case `uname -m` in
 "armv7l") ARCHITECTURE="arm";;    # e.g. Raspberry 3 or OrangePiZero. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
@@ -45,9 +47,14 @@ esac
 [ ! -e /usr/sbin/armbian-config ] || OPERATINGSYSTEM="armbian"
 [ ! -e /etc/dpkg/origins/raspbian ] || OPERATINGSYSTEM="raspbian"
 
-#TODO detect Rachel, IIAB etc and set $PLATFORM
+#Auto-Detect Rachel, IIAB etc and set $PLATFORM
 PLATFORM="unknown"
 [ ! -e /etc/rachelinstaller-version ] || PLATFORM="rachel"
+[ ! -d /opt/iiab ] || PLATFORM="iiab"
+
+#TODO Auto detect "Nuc"
+echo "ARCHITECTURE=${ARCHITECTURE} OPERATINGSYSTEM=${OPERATINGSYSTEM} PLATFORM=${PLATFORM}"
+## END OF AUTODETECTION CODE, DUPLICATED IN in dweb-mirror/install.sh and dweb-mirror/mediawiki/mediawiki.conf
 
 # And setup some defaults
 INSTALLDIR=`pwd`  # Default to where we are running this from
@@ -63,7 +70,7 @@ case "${ARCHITECTURE}" in
 "amd64") YARNCONCURRENCY=4;;
 esac
 
-echo "Architecture: ${ARCHITECTURE} OS: ${OPERATINGSYSTEM} PLATFORM: ${PLATFORM} CACHEDIR: ${CACHEDIR} INSTALLDIR: ${INSTALLDIR}"
+echo "CACHEDIR: ${CACHEDIR} INSTALLDIR: ${INSTALLDIR}"
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then

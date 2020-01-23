@@ -1,6 +1,4 @@
-# Installation instructions for dweb-mirror on IIAB on Raspberry Pi 3
-
-Note that these will change once IIAB integrates into their main repo.
+# Installation instructions for dweb-mirror on IIAB on Raspberry Pi 3 or 4
 
 If you not installing dweb-archive+IIAB on a Raspberry Pi then one of these documents 
 will be much easier to follow. 
@@ -23,7 +21,7 @@ or it would be even more helpful to post a PR on https://github.com/internetarch
 
 ## Step 1 Initial setup - getting Raspbian
 
-If your Raspberry Pi comes with Raspbian you are in luck, skip this, 
+If your Raspberry Pi comes with Raspbian you are in luck, skip to Step 1B, 
 otherwise if it comes with NOOBS (as most do now) you'll need to replace it with Raspbian.
 
 Internet in a Box's site is short on the initial details, especially if your RPi comes with NOOBS as mine did. 
@@ -38,7 +36,7 @@ So this is what I did. (Edits welcome, if your experience differed)
   * I'm not sure the appropriate steps instead of Etcher. 
 * Inserted into Raspbian 3 or 4, and powered up with Kbd and HDMI and Mouse inserted. 
 * If at all possible insert Ethernet, otherwise it will work over WiFi with some extra steps.
-* Powered up
+* Power it up
 * It prompted me for some getting started things, 
 * Accepted "Next to get started" though I suspect IIAB's comprehensive install gets some of them as well.
 * Selected your country, language, keyboard - it shouldnt matter which.
@@ -52,7 +50,7 @@ So this is what I did. (Edits welcome, if your experience differed)
 * You probably want `Menu/Raspberry Pi Configuration/Interfaces/SSH enable` so that you can SSH 
   into the box rather than use attached keyboard and screen.
 
-## Workaround for Raspbian bug
+## Step 1B Workaround for Raspbian bug
 Raspbian has a bug that requires a patch until they push it to a new release. 
 It looks from https://github.com/raspberrypi/linux/issues/3271 like you need to do 
 ```
@@ -71,7 +69,7 @@ Internet Archive is in the IIAB distribution.
 
 Open a terminal window. 
 
-Run `sudo curl d.iiab.io/install.txt | sudo bash` to install it.
+Run `curl d.iiab.io/install.txt | sudo bash` to install it.
  
 To enable it either
 a) select the `BIG` distribution, in which case Internet Archive is included 
@@ -188,12 +186,8 @@ IIAB will start the internetarchive server each time it reboots.
 
 The software is frequently revised so its recommended to update, especially if you see any bugs or problems.
 
-Updating is a three step process due to some (current) weaknesses in each step 
 ```
-sudo su
-cd /opt/iiab
+cd /opt/iiab/iiab
 git pull
-./runrole internetarchive
-cd /opt/iiab/internetarchive
-sudo yarn update
+./runrole --reinstall internetarchive
 ```
