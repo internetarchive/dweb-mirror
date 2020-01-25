@@ -2,6 +2,38 @@
 
 # Can enter "./install_mediawiki 2" to start with step 2
 STEP=${1:-0}
+
+
+###### PLATFORM AUTODETECTION CODE, DUPLICATED IN in dweb-mirror/install.sh and dweb-mirror/mediawiki/mediawiki.conf
+
+# Convert the portable uname results into go specific environment note Mac has $HOSTTYPE=x86_64 but not sure that is on other platforms
+case `uname -m` in
+"armv7l") ARCHITECTURE="arm";;    # e.g. Raspberry 3 or OrangePiZero. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
+"x86_64") ARCHITECTURE="amd64";;  # e.g. a Mac OSX
+"i?86") ARCHITECTURE="386";;      # e.g. a Rachel3+
+*) echo "Unknown processor type `uname -m`, needs configuring"; ARCHITECTURE="unknown";;
+esac
+# See also /sys/firmware/devicetree/base/model
+
+# Now find OS type, note Mac also has a $OSTYPE
+case `uname -s` in
+"Darwin") OPERATINGSYSTEM="darwin";;   # e.g. a Mac OSX
+"Linux") OPERATINGSYSTEM="linux";;     # e.g. Raspberry 3 or Rachel3+ or OrangePiZero/Armbian
+*) echo "Unknown Operating system type `uname -s` - needs configuring"; OPERATINGSYSTEM="unknown";;
+esac
+# Hard to tell Armbian from Raspbian or a bigger Linux so some heuristics here
+[ ! -e /usr/sbin/armbian-config ] || OPERATINGSYSTEM="armbian"
+[ ! -e /etc/dpkg/origins/raspbian ] || OPERATINGSYSTEM="raspbian"
+
+#Auto-Detect Rachel, IIAB etc and set $PLATFORM
+PLATFORM="unknown"
+[ ! -e /etc/rachelinstaller-version ] || PLATFORM="rachel"
+[ ! -d /opt/iiab ] || PLATFORM="iiab"
+
+#TODO Auto detect "Nuc"
+echo "ARCHITECTURE=${ARCHITECTURE} OPERATINGSYSTEM=${OPERATINGSYSTEM} PLATFORM=${PLATFORM}"
+## END OF AUTODETECTION CODE, DUPLICATED IN in dweb-mirror/install.sh and dweb-mirror/mediawiki/mediawiki.conf
+
 # User and group running this and other shell functions as,
 # On Nuc it was scribe / staff; on RPI typically pi / pi
 USER=pi
@@ -9,22 +41,52 @@ GROUP=pi
 APACHEUSER="www-data"
 RUNNINGON=localhost
 PASSWORD='Gr33nP@ges!'
-# On Nuc had it at...
-#MEDIAWIKI=/usr/share/mediawiki
-# On RPI ...
-MEDIAWIKI=/var/lib/mediawiki
+
+## Autodetect where mediawiki is already, or should be installed
+# Note mediawiki* intentionally not quoted so will expand
+MEDIAWIKIINSTALLED=
+if [ ${PLATFORM} == "iiab" ]
+then
+  if [ -d /library/mediawiki* ]
+  then
+    MEDIAWIKI=`echo /library/mediawiki*`
+    # Note there is also a link to it at /library/www/html/mwlink
+    MEDIAWIKIINSTALLED=1
+  else
+    echo "Need to install mediawiki through editing IIAB install files and installing through its ansible - TO BE DOCUMENTED"
+    exit
+  fi
+else # !PLATFORM==iiab
+  MEDIAWIKI=/var/lib/mediawiki
+  # On Nuc had it at... but dont have test for Nuc yet
+  #MEDIAWIKI=/usr/share/mediawiki
+fi
+
 # On Nuc was at /etc/mediawiki/LocalSettings.php
 LOCALSETTINGS=${MEDIAWIKI}/LocalSettings.php
 ZIPFILE=palmleaf-dir.tar.gz
 #WAYBACK_HITCOUNTER=https://archive.org/web/20191230063858/https://extdist.wmflabs.org/dist/extensions/HitCounters-REL1_34-48dd6cb.tar.gz
 WAYBACK_HITCOUNTER=https://web.archive.org/web/20191230063858if_/https://extdist.wmflabs.org/dist/extensions/HitCounters-REL1_34-48dd6cb.tar.gz
-# Where are the mediawiki install files already installed
-DWEBMIRRORMEDIAWIKI=${HOME}/node_modules/@internetarchive/dweb-mirror/mediawiki
+
+## Look for dweb-mirror Where are the mediawiki install files already installed
+DMMAYBE="/opt/iiab/internetarchive ${HOME}"
+for NODEMODULESPARENT in ${DMMAYBE}; do
+  DWEBMIRROR=${NODEMODULESPARENT}/node_modules/@internetarchive/dweb-mirror
+  [ -d ${DWEBMIRROR} ] && break
+done
+DWEBMIRRORMEDIAWIKI=${DWEBMIRROR}/mediawiki
 if [ ! -d ${DWEBMIRRORMEDIAWIKI} ]
 then
-  echo "dweb-mirror must be installed before this, cant find it at ${DWEBMIRRORMEDIAWIKI}"
+  echo "dweb-mirror must be installed before this, cant find it at any of ${DM_MAYBE}"
   exit
 fi
+if [ ${PLATFORM} == "iiab" ] ; then
+  DATABASENAME=iiab_mediawiki
+else
+  DATABASENAME=palmleafdb
+fi
+
+echo "MEDIAWIKI=${MEDIAWIKI} MEDIAWIKIINSTALLED=${MEDIAWIKIINSTALLED} DWEBMIRROR=${DWEBMIRROR}"
 
 function appendOrReplaceBegin {
   LOCALSETTINGSBAK=${MEDIAWIKI}/LocalSettings.`date -Iminutes`.php
@@ -48,16 +110,6 @@ function appendOrReplace {
   fi
 }
 
-# Now find OS type, note Mac also has a $OSTYPE
-case `uname -s` in
-"Darwin") OPERATINGSYSTEM="darwin";;   # e.g. a Mac OSX
-"Linux") OPERATINGSYSTEM="linux";;     # also seen in caps
-*) echo "Unknown Operating system type `uname -s` - needs configuring"; OPERATINGSYSTEM="unknown"; exit;;
-esac
-# Hard to tell Armbian from Raspbian or a bigger Linux so some heuristics here
-[ ! -e /usr/sbin/armbian-config ] || OPERATINGSYSTEM="armbian"
-[ ! -e /etc/dpkg/origins/raspbian ] || OPERATINGSYSTEM="raspbian"
-
 cat <<EOT
 ==== THIS IS A PARTIAL INSTALLER FOR MEDIAWIKI FOR PLAMLEAF =======
 This installation will terminate if there is any error
@@ -77,65 +129,73 @@ set -x # Just for debugging
 
 if [ ${STEP} -le 1 ]; then
   echo step 1 Fetching operating system packages
-  if [ "${OPERATINGSYSTEM}" == "armbian" -o  "${OPERATINGSYSTEM}" == "darwin" ]; then
-    echo "Haven't tried this on ${OPERATINGSYSTEM} - walk this road carefully, and document it ! "
-    exit
-  fi
-  if [ "${OPERATINGSYSTEM}" == "linux" ]; then
-    #From https://www.mediawiki.org/wiki/User:Legoktm/Packages
-    sudo apt-get install software-properties-common # Get add-apt-repository
-    sudo add-apt-repository ppa:legoktm/mediawiki-lts # Ubuntu only
-    sudo apt-get update  #
-    # sudo apt-get upgrade # Make sure OS up to date
-    sudo apt-get -y mediawiki
-    sudo apt-get -y libapache2-mod-php # Ubuntu only
-  fi
-  if [ "${OPERATINGSYSTEM}" == "raspbian" ]; then
-    # https://www.mediawiki.org/wiki/Manual:Running_MediaWiki_on_Debian_or_Ubuntu
-    sudo apt-get update
-    sudo apt-get upgrade # Make sure OS up to date
-    # Alternative suggested for some OS looks like 2nd for Raspbian
-    # sudo apt-get install apache2 mysql-server php php-mysql libapache2-mod-php php-xml php-mbstring
-    # sudo apt-get install apache2 mysql-server php5 php5-mysql libapache2-mod-php5 # Recommended but fails
-    sudo apt-get install -y apache2 mariadb-server-10.0 php php-mysql libapache2-mod-php php-xml php-mbstring
-    # Optional extras - mediawiki configuration checks for them, and composer/nategood/httpful needs php-curl
-    sudo apt-get install -y imagemagick php-apcu php-intl php-curl
-    sudo service apache2 reload # Notice php-apcu
-    pushd /tmp/;
-      wget https://releases.wikimedia.org/mediawiki/1.34/mediawiki-1.34.0.tar.gz
-      tar -xzf /tmp/mediawiki-*.tar.gz
-      sudo mkdir ${MEDIAWIKI}
-      sudo chown ${USER}.${GROUP} ${MEDIAWIKI}
+  if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
+    echo "Mediawiki already installed at $MEDIAWIKI"
+  else
+    if [ "${OPERATINGSYSTEM}" == "armbian" -o  "${OPERATINGSYSTEM}" == "darwin" ]; then
+      echo "Haven't tried this on ${OPERATINGSYSTEM} - walk this road carefully, and document it ! "
+      exit
+    fi
+    if [ "${OPERATINGSYSTEM}" == "linux" ]; then
+      #From https://www.mediawiki.org/wiki/User:Legoktm/Packages
+      sudo apt-get install software-properties-common # Get add-apt-repository
+      sudo add-apt-repository ppa:legoktm/mediawiki-lts # Ubuntu only
+      sudo apt-get update  #
+      # sudo apt-get upgrade # Make sure OS up to date
+      sudo apt-get -y mediawiki
+      sudo apt-get -y libapache2-mod-php # Ubuntu only
+    fi
+    if [ "${OPERATINGSYSTEM}" == "raspbian" ]; then
+      # https://www.mediawiki.org/wiki/Manual:Running_MediaWiki_on_Debian_or_Ubuntu
+      sudo apt-get update
+      sudo apt-get upgrade # Make sure OS up to date
 
-      mv mediawiki-*/* ${MEDIAWIKI}
-    popd
+      # Alternative suggested for some OS looks like 2nd for Raspbian
+      # sudo apt-get install apache2 mysql-server php php-mysql libapache2-mod-php php-xml php-mbstring
+      # sudo apt-get install apache2 mysql-server php5 php5-mysql libapache2-mod-php5 # Recommended but fails
+      sudo apt-get install -y apache2 mariadb-server-10.0 php php-mysql libapache2-mod-php php-xml php-mbstring
+      # Optional extras - mediawiki configuration checks for them, and nategood/httpful needs php-curl
+      sudo apt-get install -y imagemagick php-apcu php-intl php-curl
+      sudo service apache2 reload # Notice php-apcu
+      pushd /tmp/;
+        wget https://releases.wikimedia.org/mediawiki/1.34/mediawiki-1.34.0.tar.gz
+        tar -xzf /tmp/mediawiki-*.tar.gz
+        sudo mkdir ${MEDIAWIKI}
+        sudo chown ${USER}.${GROUP} ${MEDIAWIKI}
+        mv mediawiki-*/* ${MEDIAWIKI}
+      popd
+    fi
   fi
 
   # Probably need on all OS - except maybe not Darwin/OSX or Debian
-  sudo apt-get install -y composer # Needed for ArchiveOrgAuth extension
+  sudo apt-get install -y composer # Needed for ArchiveOrgAuth extension to install nategood/httpful
 
   cat <<EOT
-  If this worked, enter './install_mediawiki.sh 3'
+  If this worked, enter './install_mediawiki.sh 2'
 EOT
   exit
 fi
 if [ ${STEP} -le 3 ]; then
   echo step 3 configure mysql
-  sudo mysqld_safe --skip-grant-tables --skip-networking &
-  # Expect the first two mysql's to fail if repeated
-  set +e
-  sudo mysql -u root <<EOT
+  if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
+    echo "Mediawiki already installed at $MEDIAWIKI so database should exist"
+  else
+
+    sudo mysqld_safe --skip-grant-tables --skip-networking &
+    # Expect the first two mysql's to fail if repeated
+    set +e
+    sudo mysql -u root <<EOT
 CREATE USER 'palmleafdb'@'localhost' IDENTIFIED BY 'Gr33nP@ges!';
 EOT
-  sudo mysql -u root  <<EOT
+    sudo mysql -u root  <<EOT
 CREATE DATABASE palmleafdb;
 EOT
-set -e
-  sudo mysql -u root <<EOT
+  set -e
+    sudo mysql -u root <<EOT
 use palmleafdb;
 GRANT ALL ON palmleafdb.* TO 'palmleafdb'@'localhost';
 EOT
-cat <<EOT
+  cat <<EOT
 This part has been failing for me, have not got a consistent way to make it work yet.
 Try it manually and use 'SELECT * FROM mysql.user' to check it worked,
 palmleafdb should show a hash in the password field
@@ -145,101 +205,118 @@ With password Gr33nP@ges!
 DO NOT SKIP THIS CHECK, ITS FAILED MOST TIMES SO FAR AND WITHOUT IT THE NEXT STEPS WILL TO !
 If this worked, enter './install_mediawiki.sh 4'
 EOT
-exit
+  fi
+  exit
 fi
 
 if [ ${STEP} -le 5 ]; then
   echo step 5 configure php
 
-pushd /etc/php/7.*/apache2 # Hopefully only one of them
-sudo sed -i.bak -e 's/upload_max_filesize.*$/upload_max_filesize = 20M/' \
-  -e 's/memory_limit .*/memory_limit = 128M/' \
-  -e 's/.*extension=intl/extension=intl/' ./php.ini
-diff php.ini.bak php.ini || echo "Great it shows we made the change"
-popd
-sudo ln -s ${MEDIAWIKI} /var/www/html/mediawiki
-ls -al /var/www/html/mediawiki
-echo If this worked, enter './install_mediawiki.sh 6'
-exit
+  echo Making sure handling big enough limits, make sure changes in the upwards direction.
+  pushd /etc/php/7.*/apache2 # Hopefully only one of them
+  sudo sed -i.bak -e 's/upload_max_filesize.*$/upload_max_filesize = 20M/' \
+    -e 's/memory_limit .*/memory_limit = 128M/' \
+    -e 's/.*extension=intl/extension=intl/' ./php.ini
+  diff php.ini.bak php.ini || echo "Great it shows we made the change"
+  popd
+
+  if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
+    echo "Mediawiki already installed at $MEDIAWIKI so assuming linked into apache alias, or symlink or nginx  config"
+    curl -L http://localhost/wiki/Main_Page | grep 404 && echo "BUT there's a 404 at http://localhost/wiki/Main_Page so something is wrong"
+  else
+
+    sudo ln -sf ${MEDIAWIKI} /var/www/html/mediawiki
+    ls -al /var/www/html/mediawiki
+  fi
+  echo If this worked, enter './install_mediawiki.sh 6'
+  exit
 fi
 
 if [ ${STEP} -le 6 ]; then
   echo step 6 configure mediawiki.
-  echo '===== THIS WAS FIRST TIME WE ARE ATTEMPTING THIS, IF FAILS ENTER "./install_mediawiki.sh 7" FOR ALTERNATIVE'
-  pushd ${MEDIAWIKI}
-  php 'maintenance/install.php' \
-    --dbname=palmleafdb \
-    --dbserver="localhost" \
-    --installdbuser=palmleafdb \
-    --installdbpass="${PASSWORD}" \
-    --dbuser=palmleafdb \
-    --dbpass="${PASSWORD}" \
-    --scriptpath=/mediawiki \
-    --lang=en \
-    --pass="${PASSWORD}" \
-    "Palm Leaf Wiki" \
-    "palmleafdb"
-  ls -al ${LOCALSETTINGS}
-  popd
-echo 'If this worked and the file exists, enter "./install_mediawiki.sh 8", if it failed enter "./install_mediawiki.sh 7" for more instructions'
-exit
+
+  if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
+    echo "Mediawiki already installed at $MEDIAWIKI so assuming maintenance install has been done"
+    echo "Note that database and dbuser probably have a different name"
+    curl -L http://localhost/wiki/Main_Page | grep 404 && echo "BUT there's a 404 at http://localhost/wiki/Main_Page so something is wrong"
+    grep 'wgDB' ${LOCALSETTINGS}
+  else
+
+    pushd ${MEDIAWIKI}
+    php 'maintenance/install.php' \
+      --dbname=palmleafdb \
+      --dbserver="localhost" \
+      --installdbuser=palmleafdb \
+      --installdbpass="${PASSWORD}" \
+      --dbuser=palmleafdb \
+      --dbpass="${PASSWORD}" \
+      --scriptpath=/mediawiki \
+      --lang=en \
+      --pass="${PASSWORD}" \
+      "Palm Leaf Wiki" \
+      "palmleafdb"
+    popd
+    ls -al ${LOCALSETTINGS}
+  fi
+  echo 'If this worked and the file exists, enter "./install_mediawiki.sh 8", if it failed enter "./install_mediawiki.sh 7" for more instructions'
+  exit
 fi
 
 if [ ${STEP} -le 7 ]; then
   echo step 7 configure mediawiki.
-  echo "We'll try and do it automatically, but if it fails see the following instructions"
+  echo "OK - so autoconfiguration failed, try the following instructions"
 
   MYSQLUSERPASS=`sudo egrep 'user|password' /etc/mysql/debian.cnf`
   cat <<EOT
-You should now open a browser window to 'http://YOURBOXHERE/mediawiki',
+    You should now open a browser window to 'http://YOURBOXHERE/mediawiki',
 
-You will need the following info:
+    You will need the following info:
 
-Mysql user and password (you probably dont need this)
-$MYSQLUSERPASS
+    Mysql user and password (you probably dont need this)
+    $MYSQLUSERPASS
 
-Database host: localhost
-Database: palmleafdb
-Database prefix:        # To match that ion the export
-user:     palmleafdb
-password: Gr33nP@ges!
+    Database host: localhost
+    Database: palmleafdb
+    Database prefix:        # To match that ion the export
+    user:     palmleafdb
+    password: Gr33nP@ges!
 
-Then on next screen
-Use same account for installation: tick
+    Then on next screen
+    Use same account for installation: tick
 
-Then on next screen
-Name: Palm Leaf Wiki
-Namespace: PalmLeaf
-Username: palmleafdb
-Password: Gr33nP@ges!
-Email: mitra@archive.org
-Ask me more questions: tick
+    Then on next screen
+    Name: Palm Leaf Wiki
+    Namespace: PalmLeaf
+    Username: palmleafdb
+    Password: Gr33nP@ges!
+    Email: mitra@archive.org
+    Ask me more questions: tick
 
-Then on next screen "ask me more questions"
-User rights: open
-Licence: Creative Commons Attribution-ShareAlike
-Enable: all the Email settings
-ParserHooks: ParserFunctions
+    Then on next screen "ask me more questions"
+    User rights: open
+    Licence: Creative Commons Attribution-ShareAlike
+    Enable: all the Email settings
+    ParserHooks: ParserFunctions
 
-If there is a place to enter script path, it should be "/w"
+    If there is a place to enter script path, it should be "/w"
 
-If the final page fails - fix the problem, then reload it - it shouldnt ask you to start again.
+    If the final page fails - fix the problem, then reload it - it shouldnt ask you to start again.
 
-DO NOT CLICK "enter your wiki" yet
+    DO NOT CLICK "enter your wiki" yet
 
-It will offer you to download LocalSettings.php - save it somewhere,
-then you need to upload it to ${MEDIAWIKI}/LocalSettings.php
+    It will offer you to download LocalSettings.php - save it somewhere,
+    then you need to upload it to ${MEDIAWIKI}/LocalSettings.php
 
-When you are finished, come back here and enter './install_mediawiki.sh 9'
+    When you are finished, come back here and enter './install_mediawiki.sh 9'
 
 EOT
-#  open "http://localhost/mediawiki"
-exit
+  #  open "http://localhost/mediawiki"
+  exit
 fi
 
 if [ ${STEP} -le 9 ]; then
   echo step 9 Fix up LocalSettings
-  if grep 'automatically generated by the MediaWiki' ${LOCALSETTINGS}
+  if grep 'automatically generated by the MediaWiki' ${LOCALSETTINGS} # This is also true on IIAB
   then
     echo "Great found ${LOCALSETTINGS} that you updated"
   else
@@ -248,8 +325,15 @@ if [ ${STEP} -le 9 ]; then
     exit
   fi
   appendOrReplaceBegin
-  # Check next line, might be an opportunity during install
-  appendOrReplace 'wgScriptPath =' '$wgScriptPath = "/w";' # match is to avoid matching wgResourcePath = $wgScriptPath
+  if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
+    # Note wgScriptPath on IIAB was /mwlink
+    echo "Mediawiki installed - scriptpath set, so not overriding to /w"
+    grep 'wgScriptPath =' ${LOCALSETTINGS}
+  else
+    appendOrReplace 'wgScriptPath =' '$wgScriptPath = "/w";' # match is to avoid matching wgResourcePath = $wgScriptPath
+  fi
+  appendOrReplace wgSitename '$wgSitename = "Palm Leaf Wiki";' # Change it as will be "Community Wiki" on IIAB
+  appendOrReplace wgMetaNamespace  '$wgMetaNamespace = "PalmLeaf";' # Change it as will be "Community_Wiki" on IIAB
   appendOrReplace wgArticlePath '$wgArticlePath = "/wiki/\$1"; # Article URLs look like this'
   appendOrReplace wgEmergencyContact '$wgEmergencyContact = "mitra@archive.org";'
   appendOrReplace wgPasswordSender '$wgPasswordSender = "mitra@archive.org"; # This may be wrong'
@@ -269,105 +353,119 @@ if [ ${STEP} -le 9 ]; then
   sudo touch /var/log/mediawiki.log
   sudo chown www-data.pi /var/log/mediawiki.log
   sudo chmod g+w  /var/log/mediawiki.log
-cat <<EOT
-If this worked enter './install_mediawiki.sh 10'
-EOT
-exit
-fi
-if [ ${STEP} -le 10 ]; then
-  echo step 10 Apache2 config
-  pushd /etc/apache2
-  if [ -f conf-available/mediawiki.conf ]
-  then echo "Looks like conf-available/mediawiki.conf already installed, comparing ... if differences aren't a problem enter './install_mediawiki.sh 11'"
-    diff conf-available/mediawiki.conf ${DWEBMIRRORMEDIAWIKI}/mediawiki.conf
-  else
-    sudo cp ${DWEBMIRRORMEDIAWIKI}/mediawiki.conf conf-available/mediawiki.conf
-    echo "If this works enter './install_mediawiki.sh 11'"
-  fi
-  cd conf-enabled
-  sudo ln -s ../conf-available/mediawiki.conf .
-  popd
+  echo "If this worked enter './install_mediawiki.sh 10'"
   exit
 fi
+if [ ${STEP} -le 10 ]; then
+  echo step 10 Apache2 or Nginx config
+  if [ ${PLATFORM} == "iiab" -a -d "/etc/nginx" ]; then
+    pushd /etc/nginx
+      sudo tee -a ./conf.d/mediawiki-nginx.conf <<EOT >>/dev/null
+location /mwlink/config { # Protect this from PHP
+}
+location /mwlink/upload { # Protect this from PHP
+}
+EOT
+    popd
+  else
+    pushd /etc/apache2
+      if [ -f conf-available/mediawiki.conf ]; then
+        echo "Looks like conf-available/mediawiki.conf already installed, comparing ... if differences aren't a problem enter './install_mediawiki.sh 11'"
+        diff conf-available/mediawiki.conf ${DWEBMIRRORMEDIAWIKI}/mediawiki.conf
+        cd conf-enabled
+        sudo ln -sf ../conf-available/mediawiki.conf .
+      else if [ ${PLATFORM} == "iiab" ]; then
+          sudo mv sites-available/mediawiki.conf sites-available/mediawiki.conf.BAK
+          cat ${DWEBMIRRORMEDIAWIKI}/mediawiki.conf | sed -e "s#/var/www/html/#${MEDIAWIKI}/#"  | sudo tee sites-available/mediawiki.conf >/dev/null
+          cd sites-enabled
+          sudo ln -sf ../sites-available/mediawiki.conf .
+          echo "If this worked enter './install_mediawiki.sh 11'"
+        else
+          sudo cp ${DWEBMIRRORMEDIAWIKI}/mediawiki.conf conf-available/mediawiki.conf
+          echo "If this works enter './install_mediawiki.sh 11'"
+          cd conf-enabled
+          sudo ln -sf ../conf-available/mediawiki.conf .
+        fi
+      fi
+    popd
+  fi
+  exit
+fi
+
 if [ ${STEP} -le 11 ]; then
   echo step 11 import export
 
-if [ -f ${HOME}/palmleaf-pages.xml.gz ]
-then IMPORTFROM="${HOME}/palmleaf-pages.xml.gz"
-else
-  if [ -f ${HOME}/palmleaf-pages.xml ]
-  then IMPORTFROM="${HOME}/palmleaf-pages.xml"
+  if [ -f ${HOME}/palmleaf-pages.xml.gz ]
+  then IMPORTFROM="${HOME}/palmleaf-pages.xml.gz"
   else
-    echo "Must have ${HOME}/palmleaf-pages.xml or ${HOME}/palmleaf-pages.xml.gz, upload it and then ./install_mediawiki.sh 11"
-    exit
+    if [ -f ${HOME}/palmleaf-pages.xml ]
+    then IMPORTFROM="${HOME}/palmleaf-pages.xml"
+    else
+      echo "Must have ${HOME}/palmleaf-pages.xml or ${HOME}/palmleaf-pages.xml.gz, upload it and then ./install_mediawiki.sh 11"
+      exit
+    fi
   fi
-fi
-# Exporting and importing https://www.mediawiki.org/wiki/Help:Export
-# Importing that xml dump https://www.mediawiki.org/wiki/Manual:Importing_XML_dumps
-pushd ${MEDIAWIKI}
-php maintenance/importDump.php --conf ${LOCALSETTINGS} --username-prefix="" --no-updates ${IMPORTFROM}
-popd
-
-cat <<EOT
-If this worked enter './install_mediawiki.sh 12' to rebuildrecentchanges and initSiteStats
-EOT
-exit
-fi
-if [ ${STEP} -le 13 ]; then
-  echo step 13 - rebuild stuff
-pushd ${MEDIAWIKI}
-php maintenance/rebuildrecentchanges.php
-php maintenance/initSiteStats.php --update
-sudo mysql -u root <<EOT
-USE palmleafdb;
-UPDATE actor SET actor_name="Old Maintenance script" WHERE actor_name="Maintenance script";
-EOT
-popd
-cat <<EOT
-If this worked enter './install_mediawiki.sh 14' to import images
-note that the next step will take several hours so make sure you can leave it running
-EOT
-exit
-fi
-if [ ${STEP} -le 15 ]; then
-  echo step 15 - importing images
-
-if [ -f palmleaf-dir.tar.gz -a ! -d opt ]
-then
-  echo "Untarring palmleaf-dir.tar.gz - this first step can take quite a few minutes"
-  tar -xzf palmleaf-dir.tar.gz
-fi
-if [ -d opt ]
-then
-  echo "Looks like we already have the images unzipped"
-  if [ -d opt/mediawiki/w/images ]
-  then
-    IMAGEBASEDIR="${HOME}/opt/mediawiki/w/images"
-    rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Dont import thumbnails
-    rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Dont import archived images
-    rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Dont import temp files left over from some other process
-  else
-    echo "But cannot find the "images" directory at ${HOME}/opt/mediawiki/w/images - unsure how to recover"
-    exit
-  fi
-else
-  echo "Cant find opt directory so not sure where to find images directory - unsure how to recover but this code could be made more generic"
+  # Exporting and importing https://www.mediawiki.org/wiki/Help:Export
+  # Importing that xml dump https://www.mediawiki.org/wiki/Manual:Importing_XML_dumps
+  pushd ${MEDIAWIKI}
+    [ ${PLATFORM} != "iiab" ] || echo 'Seen problems with wgServerHost = $_SERVER["HTTP_HOST"] on iiab - unsure why or if significant'
+    php maintenance/importDump.php --conf ${LOCALSETTINGS} --username-prefix="" --no-updates ${IMPORTFROM}
+  popd
+  echo If this worked enter './install_mediawiki.sh 12' to rebuildrecentchanges and initSiteStats
   exit
 fi
 
-# Import images , note different from what says in wiki above
-echo "==== NOTE THIS CAN TAKE SEVERAL HOURS !  ===== "
-echo "If it fails, or you lose the ssh etc then you can rerun it, and it will skip over the parts already done"
-pushd ${MEDIAWIKI}
-php maintenance/importImages.php --search-recursively ${IMAGEBASEDIR}
-php maintenance/checkImages.php | grep missing | sed -E 's/^(.+):.+/File:\1/' | php maintenance/deleteBatch.php
-php maintenance/deleteArchivedRevisions.php --delete || echo
-php maintenance/deleteArchivedFiles.php --delete  # May generate error messages you can ignore
-popd
-cat <<EOT
-If that worked enter './install_mediawiki.sh 16' to find the logo
-EOT
-exit
+if [ ${STEP} -le 13 ]; then
+  echo step 13 - rebuild stuff
+  pushd ${MEDIAWIKI}
+    php maintenance/rebuildrecentchanges.php
+    php maintenance/initSiteStats.php --update
+    echo "USE ${DATABASENAME}; UPDATE actor SET actor_name='Old Maintenance script' WHERE actor_name='Maintenance script';" | sudo mysql -u root
+  popd
+  echo If this worked enter './install_mediawiki.sh 14' to import images
+  echo note that the next step will take several hours so make sure you can leave it running
+  exit
+fi
+
+if [ ${STEP} -le 15 ]; then
+  echo step 15 - importing images
+
+  if [ -f palmleaf-dir.tar.gz -a ! -d opt ]
+  then
+    echo "Untarring palmleaf-dir.tar.gz - this first step can take quite a few minutes"
+    tar -xzf palmleaf-dir.tar.gz
+  fi
+  if [ -d opt ]
+  then
+    echo "Looks like we already have the images unzipped"
+    if [ -d opt/mediawiki/w/images ]
+    then
+      IMAGEBASEDIR="${HOME}/opt/mediawiki/w/images"
+      rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Dont import thumbnails
+      rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Dont import archived images
+      rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Dont import temp files left over from some other process
+    else
+      echo "But cannot find the "images" directory at ${HOME}/opt/mediawiki/w/images - unsure how to recover"
+      exit
+    fi
+  else
+    echo "Cant find opt directory so not sure where to find images directory - unsure how to recover but this code could be made more generic"
+    exit
+  fi
+
+  # Import images , note different from what says in wiki above
+  echo "==== NOTE THIS CAN TAKE SEVERAL HOURS !  ===== "
+  echo "If it fails, or you lose the ssh etc then you can rerun it, and it will skip over the parts already done"
+  pushd ${MEDIAWIKI}
+  php maintenance/importImages.php --search-recursively ${IMAGEBASEDIR}
+  php maintenance/checkImages.php | grep missing | sed -E 's/^(.+):.+/File:\1/' | php maintenance/deleteBatch.php
+  php maintenance/deleteArchivedRevisions.php --delete || echo
+  php maintenance/deleteArchivedFiles.php --delete  # May generate error messages you can ignore
+  popd
+  cat <<EOT
+  If that worked enter './install_mediawiki.sh 16' to find the logo
+  EOT
+  exit
 fi
 if [ ${STEP} -le 17 ]; then
   echo step 17 - Looking for and installing palm-leaf-wiki-logo as logo
