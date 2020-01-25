@@ -287,7 +287,7 @@ function mirrorHttp(config, cb) {
         o.page = parseInt(req.query.page, 10) || 1; // Page incrementing is done by anything iterating over pages, not at this point
         o.and = req.query.and; // I dont believe this is used anywhere
         req.opts.wantCrawlInfo = wantCrawlInfo;
-        doQuery(o, req.opts, config, (err, res) => {
+        doQuery(o, req.opts, config, (err, resp) => {
           if (err) {
             next(err); // doQuery will have reported the error
           } else {
