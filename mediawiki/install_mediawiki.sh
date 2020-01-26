@@ -110,23 +110,39 @@ function appendOrReplace {
   fi
 }
 
-cat <<EOT
-==== THIS IS A PARTIAL INSTALLER FOR MEDIAWIKI FOR PLAMLEAF =======
-This installation will terminate if there is any error
+if [ ${STEP} -le 0 ]; then
 
-If things fail, there may be useful debugging logs in:
-/var/log/apache2/{access, error}.log
-/var/log/mysql/error.log
+  cat <<EOT
+  ==== THIS IS A PARTIAL INSTALLER FOR MEDIAWIKI FOR PALMLEAF =======
+  This installation will terminate if there is any error
 
-Make sure to uncomment/insert these lines in ${LOCALSETTINGS} if things are failing:
-\$wgShowExceptionDetails = true;
-\$wgShowDBErrorBacktrace = true;
-\$wgShowSQLErrors = true;
-\$wgDebugLogFile = "/var/log/mediawiki.log";
+  You will need palmleaf-pages.xml.gz and palmleaf-dir.tar.gz, both big files,
+  I suggest starting their upload to the home directory now,
+  but be careful not to run steps 11 or 15 while the upload is partially done as it will see a partial file as if its complete.
+
+  Each step in this process involves running this script with another step number.
+  We do this as things fail - especially in different environments, and it gives you a chance to manually check there were no errors.
+
+  Each step should run from your home directory, its perfectly OK if you run the script as for example:
+  ~/node_modules/@internetarchive/dweb-mirror/mediawiki/install_mediawiki.sh
+  Or if you copy it to your home directory so you can run simply
+  ~/install_mediawiki.sh
+
+  If things fail, there may be useful debugging logs in:
+  /var/log/apache2/{access, error}.log
+  /var/log/mysql/error.log
+
+  Make sure to uncomment/insert these lines in ${LOCALSETTINGS} if things are failing:
+  \$wgShowExceptionDetails = true;
+  \$wgShowDBErrorBacktrace = true;
+  \$wgShowSQLErrors = true;
+  \$wgDebugLogFile = "/var/log/mediawiki.log";
 EOT
+  echo For the first step, enter './install_mediawiki.sh 1'
+  exit
+fi
 set -e
 set -x # Just for debugging
-
 if [ ${STEP} -le 1 ]; then
   echo step 1 Fetching operating system packages
   if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
@@ -170,9 +186,7 @@ if [ ${STEP} -le 1 ]; then
   # Probably need on all OS - except maybe not Darwin/OSX or Debian
   sudo apt-get install -y composer # Needed for ArchiveOrgAuth extension to install nategood/httpful
 
-  cat <<EOT
-  If this worked, enter './install_mediawiki.sh 2'
-EOT
+  echo If this worked, enter './install_mediawiki.sh 2'
   exit
 fi
 if [ ${STEP} -le 3 ]; then
@@ -184,16 +198,12 @@ if [ ${STEP} -le 3 ]; then
     sudo mysqld_safe --skip-grant-tables --skip-networking &
     # Expect the first two mysql's to fail if repeated
     set +e
-    sudo mysql -u root <<EOT
-CREATE USER 'palmleafdb'@'localhost' IDENTIFIED BY 'Gr33nP@ges!';
-EOT
-    sudo mysql -u root  <<EOT
-CREATE DATABASE palmleafdb;
-EOT
-  set -e
-    sudo mysql -u root <<EOT
-use palmleafdb;
-GRANT ALL ON palmleafdb.* TO 'palmleafdb'@'localhost';
+    # If change next line, careful with quoting and escaping since PASSWORD may contain a !
+    echo "CREATE USER 'palmleafdb'@'localhost' IDENTIFIED BY '${PASSWORD}';" | sudo mysql -u root
+    echo "CREATE DATABASE palmleafdb;" | sudo mysql -u root
+    set -e
+    echo "use palmleafdb; GRANT ALL ON palmleafdb.* TO 'palmleafdb'@'localhost';" | sudo mysql -u root
+
 EOT
   cat <<EOT
 This part has been failing for me, have not got a consistent way to make it work yet.
@@ -214,10 +224,10 @@ if [ ${STEP} -le 5 ]; then
 
   echo Making sure handling big enough limits, make sure changes in the upwards direction.
   pushd /etc/php/7.*/apache2 # Hopefully only one of them
-  sudo sed -i.bak -e 's/upload_max_filesize.*$/upload_max_filesize = 20M/' \
-    -e 's/memory_limit .*/memory_limit = 128M/' \
-    -e 's/.*extension=intl/extension=intl/' ./php.ini
-  diff php.ini.bak php.ini || echo "Great it shows we made the change"
+    sudo sed -i.bak -e 's/upload_max_filesize.*$/upload_max_filesize = 20M/' \
+      -e 's/memory_limit .*/memory_limit = 128M/' \
+      -e 's/.*extension=intl/extension=intl/' ./php.ini
+    diff php.ini.bak php.ini || echo "Great it shows we made the change"
   popd
 
   if [ -n "${MEDIAWIKIINSTALLED:-}" ]; then
@@ -243,18 +253,18 @@ if [ ${STEP} -le 6 ]; then
   else
 
     pushd ${MEDIAWIKI}
-    php 'maintenance/install.php' \
-      --dbname=palmleafdb \
-      --dbserver="localhost" \
-      --installdbuser=palmleafdb \
-      --installdbpass="${PASSWORD}" \
-      --dbuser=palmleafdb \
-      --dbpass="${PASSWORD}" \
-      --scriptpath=/mediawiki \
-      --lang=en \
-      --pass="${PASSWORD}" \
-      "Palm Leaf Wiki" \
-      "palmleafdb"
+      php 'maintenance/install.php' \
+        --dbname=palmleafdb \
+        --dbserver="localhost" \
+        --installdbuser=palmleafdb \
+        --installdbpass="${PASSWORD}" \
+        --dbuser=palmleafdb \
+        --dbpass="${PASSWORD}" \
+        --scriptpath=/mediawiki \
+        --lang=en \
+        --pass="${PASSWORD}" \
+        "Palm Leaf Wiki" \
+        "palmleafdb"
     popd
     ls -al ${LOCALSETTINGS}
   fi
@@ -435,52 +445,66 @@ if [ ${STEP} -le 15 ]; then
     echo "Untarring palmleaf-dir.tar.gz - this first step can take quite a few minutes"
     tar -xzf palmleaf-dir.tar.gz
   fi
-  if [ -d opt ]
+  if [ ! -d opt ]
   then
-    echo "Looks like we already have the images unzipped"
-    if [ -d opt/mediawiki/w/images ]
-    then
-      IMAGEBASEDIR="${HOME}/opt/mediawiki/w/images"
-      rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Dont import thumbnails
-      rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Dont import archived images
-      rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Dont import temp files left over from some other process
-    else
-      echo "But cannot find the "images" directory at ${HOME}/opt/mediawiki/w/images - unsure how to recover"
-      exit
-    fi
-  else
     echo "Cant find opt directory so not sure where to find images directory - unsure how to recover but this code could be made more generic"
     exit
+  else
+    echo "Looks like we already have the images unzipped"
+    if [ ! -d opt/mediawiki/w/images ]
+    then
+      echo "But cannot find the "images" directory at ${HOME}/opt/mediawiki/w/images - unsure how to recover"
+      exit
+    else
+      if [ ! -w ${MEDIAWIKI}/images ]
+      then
+        echo "This will not work if cannot write ${MEDIAWIKI}/images"
+        echo "We can't fix this automatically as there are different situations"
+        echo "We had success on iiab last time, adding 'pi' to the www-data group and making ${MEDIAWIKI}/images group writable"
+        exit
+      else
+        IMAGEBASEDIR="${HOME}/opt/mediawiki/w/images"
+        rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Dont import thumbnails
+        rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Dont import archived images
+        rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Dont import temp files left over from some other process
+      fi
+    fi
+
   fi
 
+  echo "If that worked enter './install_mediawiki.sh 16' to do the import"
+  echo "==== NOTE THIS CAN TAKE SEVERAL HOURS !  ===== "
+  echo "If you dont have a couple of hours enter ..."
+  echo "cd ${MEDIAWIKI}; nohup php maintenance/importImages.php --search-recursively ${IMAGEBASEDIR} &"
+  echo "You can then come back and enter './install_mediawiki.sh 16' which will skip over the import"
+  exit
+fi
+if [ ${STEP} -le 16 ]; then
+  echo step 16 - Looking for and installing palm-leaf-wiki-logo as logo
   # Import images , note different from what says in wiki above
   echo "==== NOTE THIS CAN TAKE SEVERAL HOURS !  ===== "
-  echo "If it fails, or you lose the ssh etc then you can rerun it, and it will skip over the parts already done"
+  echo "If this fails, or you lose the ssh etc then you can rerun it, and it will skip over the parts already done"
   pushd ${MEDIAWIKI}
-  php maintenance/importImages.php --search-recursively ${IMAGEBASEDIR}
-  php maintenance/checkImages.php | grep missing | sed -E 's/^(.+):.+/File:\1/' | php maintenance/deleteBatch.php
-  php maintenance/deleteArchivedRevisions.php --delete || echo
-  php maintenance/deleteArchivedFiles.php --delete  # May generate error messages you can ignore
+    php maintenance/importImages.php --search-recursively ${IMAGEBASEDIR}
+    php maintenance/checkImages.php | grep missing | sed -E 's/^(.+):.+/File:\1/' | php maintenance/deleteBatch.php
+    php maintenance/deleteArchivedRevisions.php --delete || echo
+    php maintenance/deleteArchivedFiles.php --delete  # May generate error messages you can ignore
   popd
-  cat <<EOT
-  If that worked enter './install_mediawiki.sh 16' to find the logo
-  EOT
+  echo "If that worked enter './install_mediawiki.sh 17' to find the logo"
   exit
 fi
 if [ ${STEP} -le 17 ]; then
   echo step 17 - Looking for and installing palm-leaf-wiki-logo as logo
   pushd ${MEDIAWIKI}
-  LOGO2=`find images -name palm-leaf-wiki-logo.png -print`
-  LOGOLN="\$wgLogo = \"\$wgScriptPath/${LOGO2}\";"
-  appendOrReplaceBegin
-  appendOrReplace wgLogo "${LOGOLN}"
-  appendOrReplaceEnd
-  grep wgLogo ${LOCALSETTINGS}
+    LOGO2=`find images -name palm-leaf-wiki-logo.png -print`
+    LOGOLN="\$wgLogo = \"\$wgScriptPath/${LOGO2}\";"
+    appendOrReplaceBegin
+    appendOrReplace wgLogo "${LOGOLN}"
+    appendOrReplaceEnd
+    grep wgLogo ${LOCALSETTINGS}
   popd
-cat <<EOT
-If that worked, and the line looks good, come back here and enter './install_mediawiki.sh 18' to install HitCounters and run maintenance/update
-EOT
-exit
+  echo "If that worked, and the line looks good, come back here and enter './install_mediawiki.sh 18' to install HitCounters and run maintenance/update"
+  exit
 fi
 if [ ${STEP} -le 19 ]; then
   echo step 19 - installing HitCounter extensions and running the maintenance/update process
@@ -492,15 +516,13 @@ EOT
   appendOrReplace "wfLoadExtension.*HitCounters" 'wfLoadExtension( "HitCounters" );'
   appendOrReplaceEnd
   pushd ${MEDIAWIKI}/extensions
-  curl ${WAYBACK_HITCOUNTER} | tar -xz
-  cd ${MEDIAWIKI}
-  php maintenance/update.php  # Runs extensions/HitCounters/update.php
+    curl ${WAYBACK_HITCOUNTER} | tar -xz
+    cd ${MEDIAWIKI}
+    php maintenance/update.php  # Runs extensions/HitCounters/update.php
   popd
-  cat <<EOT
-if that worked you'll see lines in the update.php step about either creating, hit_counter table, or that it already exists.
-if it worked, enter './install_mediawiki.sh 20 to install Mirador extension'
-EOT
-exit
+  echo "if that worked you'll see lines in the update.php step about either creating, hit_counter table, or that it already exists."
+  echo "if it worked, enter './install_mediawiki.sh 20' to install Mirador extension"
+  exit
 fi
 if [ ${STEP} -le 21 ]; then
   echo step 21
@@ -517,26 +539,24 @@ if [ ${STEP} -le 21 ]; then
     appendOrReplaceEnd
     # No action required in README
     pushd ${MEDIAWIKI}
-    #Not needed: php maintenance/update.php
+      #Not needed: php maintenance/update.php
     popd
-    cat <<EOT
-If that worked, enter './install_mediawiki.sh 22' to install ArchiveOrgAuth extension
-EOT
+    echo "If that worked, enter './install_mediawiki.sh 22' to install ArchiveOrgAuth extension"
     exit
   fi
 fi
 if [ ${STEP} -le 23 ]; then
   echo step 23
     pushd /etc/php/7.*/cli # Hopefully only one of them
-    # Enable php ext-curl for command line
-    sudo sed -i.bak -e 's/.*extension=curl/extension=curl/' ./php.ini
-    diff php.ini.bak php.ini || echo "Great it shows we made the change"
+      # Enable php ext-curl for command line
+      sudo sed -i.bak -e 's/.*extension=curl/extension=curl/' ./php.ini
+      diff php.ini.bak php.ini || echo "Great it shows we made the change"
     popd
     pushd ${MEDIAWIKI}
-    sudo mkdir -p /var/www/.composer
-    echo "Note next line can take a while (2mins or so) before responds with anything"
-    # Carefull if change this, "nategood/httpful" will set to "^0.3.0" which then hits a bug where that format isn't recognized
-    composer require "nategood/httpful=0.3.0"
+      sudo mkdir -p /var/www/.composer
+      echo "Note next line can take a while (2mins or so) before responds with anything"
+      # Carefull if change this, "nategood/httpful" will set to "^0.3.0" which then hits a bug where that format isn't recognized
+      composer require "nategood/httpful=0.3.0"
     popd
     echo If that worked, enter './install_mediawiki.sh 24' to install ArchiveOrgAuth extension
     exit
@@ -560,11 +580,9 @@ if [ ${STEP} -le 24 ]; then
     appendOrReplace "wgGroupPermissions.*autocreateaccount" '$wgGroupPermissions["*"]["autocreateaccount"] = true;'
     appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;'
     appendOrReplaceEnd
-    cat <<EOT
-If that worked, (and in particlar check the composer install worked)
-Edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in
-Then enter './install_mediawiki.sh 24' to install ArchiveLeaf extension'
-EOT
+    echo "If that worked, (and in particlar check the composer install worked)"
+    echo "Edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in"
+    echo "Then enter './install_mediawiki.sh 24' to install ArchiveLeaf extension"
     exit
   fi
 fi
@@ -632,29 +650,27 @@ fi
 if [ ${STEP} -le 33 ]; then
   echo step 33
   pushd ${HOME}
-  if [ -f "dweb-mirror.config.yaml" ]; then
-    if grep palmleafwiki dweb-mirror.config.yaml; then
-        sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#' dweb-mirror.config.yaml
-    else
-      if grep '\.\.\.' dweb-mirror.config.yaml; then
-        sed -i.BAK -e 's#\.\.\.#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#' dweb-mirror.config.yaml
+    if [ -f "dweb-mirror.config.yaml" ]; then
+      if grep palmleafwiki dweb-mirror.config.yaml; then
+          sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#' dweb-mirror.config.yaml
       else
-        cp  diff dweb-mirror.config.yaml dweb-mirror.config.yaml.BAK
-        cat <<EOT >>dweb-mirror.config.yaml
-    palmleafwiki
-        pagelink: "http://MIRRORHOST/wiki"
-EOT
+        if grep '\.\.\.' dweb-mirror.config.yaml; then
+          sed -i.BAK -e 's#\.\.\.#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#' dweb-mirror.config.yaml
+        else
+          cp  diff dweb-mirror.config.yaml dweb-mirror.config.yaml.BAK
+          cat <<EOT >>dweb-mirror.config.yaml
+      palmleafwiki
+          pagelink: "http://MIRRORHOST/wiki"
+  EOT
+        fi
       fi
+      diff dweb-mirror.config.yaml.BAK dweb-mirror.config.yaml
+    else
+      echo Once you have installed dweb-mirror you will need to add a variable  apps.palmleafwiki.pagelink: "http://MIRRORHOST/wiki"
     fi
-    diff dweb-mirror.config.yaml.BAK dweb-mirror.config.yaml
-  else
-    echo Once you have installed dweb-mirror you will need to add a variable  apps.palmleafwiki.pagelink: "http://MIRRORHOST/wiki"
-  fi
   popd
-cat <<EOT
-If that appeared to work, come back here and enter './install_mediawiki.sh 34 to finish'
-EOT
-exit
+  echo "If that appeared to work, come back here and enter './install_mediawiki.sh 34 to finish'"
+  exit
 fi
 if [ ${STEP} -le 99 ]; then
   echo step 99
