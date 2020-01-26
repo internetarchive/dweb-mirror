@@ -901,6 +901,7 @@ ArchiveItem.prototype.pageParms = function( pageManifest, fetchPageOpts) {
   const res = Object.assign({}, {
     zip: url.searchParams.get("zip"),
     file: url.searchParams.get("file"),
+    page: url.searchParams.get("page"), // Needed for urls like BookReaderPreview generated for lent out items
     scale: quantizedScale,
     rotate: 0,
   }, fetchPageOpts);
@@ -1093,11 +1094,11 @@ ArchiveItem.prototype.addMagnetLink = function({copyDirectory=undefined, config=
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
     if (torrentFile) {
       const dwebTorrentUrl = `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`; // For Webtorrent etc to find torrent file
-      torrentFile.cacheAndOrStream({wantBuff: true, copyDirectory}, (err, buffer) => {
+      torrentFile.cacheAndOrStream({ wantBuff: true, copyDirectory }, (err, buffer) => {
         if (err) {
-          debug("ERROR in addMagnetLink: %s", err.message); // For exmample becaue forbidden
+          debug("WARNING unable to add magnet link: %s", err.message); // For exmample because forbidden
         } else {
-          this.magnetlink = dwebMagnetLinkFrom({dwebTorrentUrl, archiveBuffer: buffer});
+          this.magnetlink = dwebMagnetLinkFrom({ dwebTorrentUrl, archiveBuffer: buffer });
         }
         cb(); // Dont pass error up, as failure to add Magnet isn't fatal
       });
