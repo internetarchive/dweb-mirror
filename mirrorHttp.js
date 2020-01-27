@@ -27,9 +27,10 @@ const fs = require('fs'); // See https://nodejs.org/api/fs.html
 // const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
 const parallel = require('async/parallel');
+const sharp = require('sharp');
 
 // IA packages
-const { RawBookReaderResponse, RawBookReaderJSONResponse, gateway, specialidentifiers, homeQuery, routed } = require('@internetarchive/dweb-archivecontroller');
+const { RawBookReaderResponse, RawBookReaderJSONResponse, specialidentifiers, homeQuery, routed } = require('@internetarchive/dweb-archivecontroller');
 
 // Local files
 const MirrorFS = require('./MirrorFS');
@@ -42,7 +43,17 @@ const { searchExpress, doQuery } = require('./search');
 const httpOrHttps = 'http'; // This server is running on http, not https (at least currently)
 
 const app = express();
-function mirrorHttp(config, cb) {
+
+// SEE-IDENTICAL-CODE-CANONICALIZETASKS in dweb-mirror.mirrorHttp and dweb-archive.LocalComponent
+function canonicalizeTasks(tasks) {
+  /* Turn an array of tasks where identifiers may be arrays or singles into canonicalized form - one task per identifier */
+  // This turns each task into an array of tasks with one identifier per task, then flattens that array of arrays into a 1D array
+  return [].concat(...tasks.map(task => (Array.isArray(task.identifier)
+    ? task.identifier.map(identifier => Object.assign({}, task, { identifier }))
+    : task)));
+}
+
+function mirrorHttp(config, cb0) {
   debug('Starting HTTP server on %d, Caching in %o', config.apps.http.port, config.directories);
   // noinspection JSUnresolvedVariable
   app.use(morgan(config.apps.http.morgan)); // TODO write to a file then recycle that log file (see https://www.npmjs.com/package/morgan )
@@ -72,6 +83,35 @@ function mirrorHttp(config, cb) {
         : (req.protocol + '://' + req.headers.host);
     next();
   });
+
+  function _newArchiveItem(identifier, config1, opts, cb) {
+    // Enhanced version of new ArchiveItem + fetch_metadata + handling special
+    const ai = new ArchiveItem({ identifier });
+    if (Object.keys(specialidentifiers).includes(identifier)) {
+      ai.metadata = {};
+      Object.entries(specialidentifiers[identifier]).forEach(kv => ai.metadata[kv[0]] = kv[1]); // Copy over
+      if (ai.itemid === 'local') {
+        ArchiveMember.expandMembers(
+          canonicalizeTasks(config1.apps.crawl.tasks)
+            .map(t => new ArchiveMember({
+              identifier: t.identifier,
+              query: t.query,
+              sort: t.sort, // Maybe undefined in which case specified in ArchiveItem.defaultSortStr
+              mediatype: t.query ? 'search' : undefined
+            }, { unexpanded: true })),
+          (err, res) => {
+            ai.membersFav = res;
+            cb(err, ai);
+          }
+        );
+      } else {
+        cb(null, ai);
+      }
+    } else {
+      ai.fetch_metadata(Object.assign({ darkOk: true }, opts), cb);
+    }
+  }
+
   /**
    * Redirect, passes query parameters in order of precedence .... queryParms; those in the query; transport & mirror
    * @param queryParms { parameters to pass in query, can override {mirror, transport} and in query}
@@ -79,6 +119,7 @@ function mirrorHttp(config, cb) {
    * Identical code in dweb  and dweb-mirror
    */
   function redirectWithQuery(queryParms = {}) {
+    /* eslint-disable-next-line func-names */
     return function (req, res) {
       if (req.params.identifier) { queryParms.identifier = req.params.identifier; } // For urls that include identifier pass to queryParms
       if (queryParms[0]) { queryParms[queryParms[0]] = req.params[queryParms[0]]; delete queryParms['0']; } // {0:"page"} means take the * in the url and pass as the page=
@@ -130,21 +171,21 @@ function mirrorHttp(config, cb) {
     // Urls like /epubreader/*
     _sendFileOrError(req, res, next, path.join(config.epubreader.directory, req.params[0]));
   }
-  function sendRelated(req, res, next) {
+  function sendRelated(req, res, unusedNext) {
     // req.opts = { noCache, copyDirectory}
     const identifier = req.params[0];
     const ai = new ArchiveItem({ identifier });
     waterfall([
       (cb) => cb((identifier && !Object.keys(specialidentifiers).includes(identifier)) ? null : new Error(`ERROR There is no related info for special identifier ${identifier}`)),
       (cb) => ai.fetch_metadata(req.opts, cb),
-      (ai, cb) => ai.relatedItems({ copyDirectory: req.opts.copyDirectory, wantMembers: false, noCache: req.opts.noCache }, cb),
-      (res, cb) => ArchiveItem.addCrawlInfoRelated(res, { config, copyDirectory: req.opts.copyDirectory }, (err) => cb(err, res)),
-    ], (err, obj) => {
+      (ai1, cb) => ai1.relatedItems({ copyDirectory: req.opts.copyDirectory, wantMembers: false, noCache: req.opts.noCache }, cb),
+      (rels, cb) => ArchiveItem.addCrawlInfoRelated(rels, { config, copyDirectory: req.opts.copyDirectory }, (err) => cb(err, rels)),
+    ], (err, rels) => {
       if (err) {
         // next(err);
         res.status(404).send(err.message);
       } else {
-        res.json(obj);
+        res.json(rels);
       }
     });
   }
@@ -161,28 +202,6 @@ function mirrorHttp(config, cb) {
       });
   }
 
-  // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
-  // Note req.url will start with "/"
-  // proxyUrl goes through DTS name mapping, so normally can be a raw URL to archive.org
-  // req.opts = { start, end, noCache}
-  // noinspection JSUnresolvedVariable
-  function proxyUrl(prefix, headers = {}) {
-    return function (req, res, next) {
-      // Proxy a request to somewhere under urlbase, which should NOT end with /
-      // req.opts = { start, end, noCache}
-      const url = routed(prefix + req.url);
-      debug('Proxying from %s', url);
-      DwebTransports.createReadStream(
-        url,
-        Object.assign({}, req.opts, { preferredTransports: config.connect.preferredStreamTransports }), (err, s) => {
-          _proxy(req, res, next, err, s, headers);
-        }
-      );
-    };
-  }
-  // like proxyUrl but return proxy function that sets JSON content-type header
-  function proxyJson(prefix) { return proxyUrl(prefix, { 'Content-Type': 'application/json' }); }
-
   // Pass a stream to the result
   function _proxy(req, res, next, err, s, headers) {
     if (err) {
@@ -192,20 +211,37 @@ function mirrorHttp(config, cb) {
       res.status(200); // Assume error if dont get here
       res.set(headers);
       s.pipe(res);
-      s.on('error', err => { // Make sure to catch error though too late to do anything useful with it.
-        debug('Stream had error, %o', err.message, err);
-        next(err); // Will generate immediate 400
+      s.on('error', err0 => { // Make sure to catch error though too late to do anything useful with it.
+        debug('Stream had error, %o', err0.message, err0);
+        next(err0); // Will generate immediate 400
         // res.destroy(err); // Doesnt work - "Empty reply from server" no headers get sent
         // Doesnt work as already sent headers ... errAndNext(req, res, next, err);
       });
     }
   }
 
-  // noinspection JSUnusedLocalSymbols
-  function temp(req, res, next) {
-    console.log(req);
-    next();
+  // There are a couple of proxies e.g. proxy-http-express but it disables streaming when headers are modified.
+  // Note req.url will start with "/"
+  // proxyUrl goes through DTS name mapping, so normally can be a raw URL to archive.org
+  // req.opts = { start, end, noCache}
+  // noinspection JSUnresolvedVariable
+  function proxyUrl(prefix, headers = {}) {
+    /* eslint-disable-next-line func-names */
+    return function (req, res, next) {
+      // Proxy a request to somewhere under urlbase, which should NOT end with /
+      // req.opts = { start, end, noCache}
+      const url0 = routed(prefix + req.url);
+      debug('Proxying from %s', url0);
+      DwebTransports.createReadStream(
+        url0,
+        Object.assign({}, req.opts, { preferredTransports: config.connect.preferredStreamTransports }), (err, s) => {
+          _proxy(req, res, next, err, s, headers);
+        }
+      );
+    };
   }
+  // like proxyUrl but return proxy function that sets JSON content-type header
+  function proxyJson(prefix) { return proxyUrl(prefix, { 'Content-Type': 'application/json' }); }
 
   function streamArchiveFile(req, res, next) {
     // Note before this is called req.opts = {start, end}
@@ -330,10 +366,10 @@ function mirrorHttp(config, cb) {
             (cb) => ai.fetch_metadata({ noCache, copyDirectory: req.opts.copyDirectory }, cb),
             (archiveitem, cb2) => archiveitem.saveThumbnail({ noCache, copyDirectory: req.opts.copyDirectory, wantStream: true, }, cb2)
           ],
-          (err, s) => {
-            if (err) {
-              debug('Failed to stream Thumbnail for %s: %s', itemid, err.message);
-              next(err);
+          (err1, s) => {
+            if (err1) {
+              debug('Failed to stream Thumbnail for %s: %s', itemid, err1.message);
+              next(err1);
             } else {
               sendJpegStream(s);
             }
@@ -392,7 +428,7 @@ function mirrorHttp(config, cb) {
     // eg /BookReader/BookReaderImages.php?zip=/27/items/IDENTIFIER/unitednov65unit_jp2.zip&file=unitednov65unit_jp2/unitednov65unit_0006.jp2&scale=4&rotate=0
     // or /download/IDENTIFIER/page/cover_t.jpg
     // or /tutur-smara-bhuwana/page/leaf1_w2000.jpg from mediawiki/ArchiveLeaf
-    // or (book preview as e.g. already lent out): /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
+    // or (book preview as e.g. already lent out): /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0 */
     // Note the urls for Image and Preview are gratuitously different ! so need to capture both sets of parameters
     // req.opts = { noCache}
     const identifier = req.params.identifier || req.query.id || (req.query.zip ? req.query.zip.split('/')[3] : undefined);
@@ -414,12 +450,12 @@ function mirrorHttp(config, cb) {
 
   // Keep these lines in alphabetical order
   // unless there is a reason not to (e.g. because capture specific before generic) in which case document in order!
-  // If ther is a redir.html file it will use it, otherwise it will do a standard redirect)
+  // If there is a redir.html file it will use it, otherwise it will do a standard redirect)
   app.get('/', (req, res, next) => {
-    res.sendFile(config.archiveui.directory + '/redir.html', (err) => { next(); });
+    res.sendFile(config.archiveui.directory + '/redir.html', (unusedErr) => { next(); });
   });
   app.get('/', redirectWithQuery({ identifier: 'local' }));
-  // Note app.get('/*'... is at the end after catch everythig else
+  // Note app.get('/*'... is at the end after catch everything else
 
   // Not currently used, but might be soon, ConfigDetailsComponent now uses admin/setconfig/IDENTIFIER/LEVEL
   /*
@@ -449,6 +485,7 @@ function mirrorHttp(config, cb) {
   });
 
   function crawlManager(f) {
+    /* eslint-disable-next-line func-names */
     return function (req, res) {
       CrawlManager.crawls[req.params.crawlid][f]();
       res.json(CrawlManager.crawls[req.params.crawlid].status());
@@ -461,7 +498,7 @@ function mirrorHttp(config, cb) {
   app.get('/admin/crawl/resume/:crawlid', crawlManager('resume'));
   app.get('/admin/crawl/empty/:crawlid', crawlManager('empty'));
   app.get('/admin/crawl/status', (req, res) => res.json(CrawlManager.status()));
-  app.get('/admin/crawl/add', (req, res) => {
+  app.get('/admin/crawl/add', (req, res, next) => {
     // Expect opts identifier, query, copyDirectory, but could be adding search, related, in future
     // Order is significant, config should NOT be overridable by query parameters.
     CrawlManager.add({ ...req.query, config }, err => {
@@ -472,7 +509,7 @@ function mirrorHttp(config, cb) {
       }
     });
   });
-  app.get('/admin/crawl/add/:identifier', (req, res) => {
+  app.get('/admin/crawl/add/:identifier', (req, res, next) => {
     CrawlManager.add({ config, identifier: req.params.identifier, copyDirectory: req.opts.copyDirectory }, err => {
       if (err) { // No errors expected
         next(err);
@@ -499,6 +536,7 @@ function mirrorHttp(config, cb) {
   app.get([
     '/download/:itemid/*',
     '/serve/:itemid/*'], streamArchiveFile);
+  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
   app.get(['/images/*',
     '/includes/*', // matches archive.org & dweb.archive.org but not dweb.me
     '/jw/*', // matches archive.org but not dweb.me
@@ -516,9 +554,9 @@ function mirrorHttp(config, cb) {
           cb => ai.addCrawlInfo({ config, copyDirectory: req.opts.copyDirectory }, cb),
           cb => ai.addMagnetLink({ copyDirectory: req.opts.copyDirectory, config }, cb)
         ],
-        (err, unusedArr) => {
-          if (err) {
-            res.status(500).send(err.message);
+        (err1, unusedArr) => {
+          if (err1) {
+            res.status(500).send(err1.message);
           } else {
             res.json(ai.exportMetadataAPI());
           }
@@ -558,7 +596,7 @@ function mirrorHttp(config, cb) {
     '/books/:identifier/ia_manifest' // e.g. https://api.archivelab.org/books/ArtOfCommunitySecondEdition/ia_manifest
   ], sendBookReaderJSON);
   app.get('/BookReader/BookReaderImages.php', sendBookReaderImages);
-  // e.g. /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0  app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
+  // e.g. /BookReader/BookReaderPreview.php?id=bdrc-W1KG14545&subPrefix=bdrc-W1KG14545&itemPath=/34/items/bdrc-W1KG14545&server=ia803001.us.archive.org&page=leaf4&fail=preview&&scale=11.652542372881356&rotate=0
   app.get('/BookReader/BookReaderPreview.php', sendBookReaderImages);
   app.get('/ipfs/*', proxyUrl('ipfs:')); // Will go to next if IPFS transport not running
   // app.get('/ipfs/*', proxyUpstream); // TODO dweb.me doesnt support /ipfs see https://github.com/internetarchive/dweb-mirror/issues/101
@@ -572,20 +610,19 @@ function mirrorHttp(config, cb) {
   }, (err) => (err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico')))); // Dont go to Error, favicons often aborted
 
   app.get('/info', sendInfo);
-  const sharp = require('sharp');
   // IIF support e.g. https://iiif.archivelab.org/iiif/mantra-pangwisesan%240/1026,1245,2316,617/full/0/default.jpg
   // TODO-IIIF move to a function, probably on ArchiveItem
-  app.get('/iiif/:identifierindex/:ltwh/full/0/default.jpg', (req, res, next) => {
+  app.get('/iiif/:identifierindex/:ltwh/full/0/default.jpg', (req, res, unusedNext) => {
     res.status(200);
     const [left, top, width, height] = req.params.ltwh.split(',');
     const [identifier, index] = req.params.identifierindex.split('$');
     const ai = new ArchiveItem({ identifier });
     waterfall([
       (cb) => ai.fetch_metadata(req.opts, cb),
-      (ai, cb) => ai.fetch_bookreader(req.opts, cb),
-      (ai, cb) => {
-        const manifest = ai.pageManifests()[index];
-        ai.fetch_page(ai.pageParms(manifest, {
+      (ai1, cb) => ai1.fetch_bookreader(req.opts, cb),
+      (ai1, cb) => {
+        const manifest = ai1.pageManifests()[index];
+        ai1.fetch_page(ai1.pageParms(manifest, {
           copyDirectory: req.opts.copyDirectory,
           wantStream: true,
           scale: 1,
@@ -597,13 +634,13 @@ function mirrorHttp(config, cb) {
       const sh = sharp();
       s.pipe(sh);
       sh.extract({
-        left: parseInt(left), top: parseInt(top), width: parseInt(width), height: parseInt(height)
+        left: parseInt(left, 10), top: parseInt(top, 10), width: parseInt(width, 10), height: parseInt(height, 10)
       }).pipe(res);
     });
   });
   app.get('/opensearch', searchExpress);
   // Echo back headers - for debugging
-  app.get('/echo', (req, res, next) => {
+  app.get('/echo', (req, res, unusedNext) => {
     res.status(200);
     res.json(req.headers);
   });
@@ -644,44 +681,7 @@ function mirrorHttp(config, cb) {
       throw (err); // Will be uncaught exception
     }
   });
-  cb(null, server); // Just in case this becomes async
-}
-
-// SEE-IDENTICAL-CODE-CANONICALIZETASKS in dweb-mirror.mirrorHttp and dweb-archive.LocalComponent
-function canonicalizeTasks(tasks) {
-  /* Turn an array of tasks where identifiers may be arrays or singles into canonicalized form - one task per identifier */
-  // This turns each task into an array of tasks with one identifier per task, then flattens that array of arrays into a 1D array
-  return [].concat(...tasks.map(task => (Array.isArray(task.identifier)
-    ? task.identifier.map(identifier => Object.assign({}, task, { identifier }))
-    : task)));
-}
-
-function _newArchiveItem(identifier, config, opts, cb) {
-  // Enhanced version of new ArchiveItem + fetch_metadata + handling special
-  const ai = new ArchiveItem({ identifier });
-  if (Object.keys(specialidentifiers).includes(identifier)) {
-    ai.metadata = {};
-    Object.entries(specialidentifiers[identifier]).forEach(kv => ai.metadata[kv[0]] = kv[1]); // Copy over
-    if (ai.itemid === 'local') {
-      ArchiveMember.expandMembers(
-        canonicalizeTasks(config.apps.crawl.tasks)
-          .map(t => new ArchiveMember({
-            identifier: t.identifier,
-            query: t.query,
-            sort: t.sort, // Maybe undefined in which case specified in ArchiveItem.defaultSortStr
-            mediatype: t.query ? 'search' : undefined
-          }, { unexpanded: true })),
-        (err, res) => {
-          ai.membersFav = res;
-          cb(err, ai);
-        }
-      );
-    } else {
-      cb(null, ai);
-    }
-  } else {
-    ai.fetch_metadata(Object.assign({ darkOk: true }, opts), cb);
-  }
+  cb0(null, server); // Just in case this becomes async
 }
 
 
