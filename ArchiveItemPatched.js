@@ -351,8 +351,11 @@ ArchiveItem.prototype.fetch_page = function ({
       cb(err, data || stream || size) returns either data, or if wantStream then a stream
    */
   let zipfile;
-  // page from dweb-archive is only used for cover_t.jpg but mediawiki uses it based on size of image it wants, specifically
-  // leaf1_w2000 meaning page 1, with ideal width 2000 pixels.
+  debug("subPrefix=%s zip=%s page=%s scale=%s rotate=%s", subPrefix, zip, page, scale, rotate);
+  // page = cover_t.jpg - bookreader cover page
+  // page=leaf1_w2000 meaning page 1, with ideal width 2000 pixels, comes from Palmleaf wiki
+  // page=leaf1 scale=10.1234 subPrefix=IDENTIFIER zipfile=undefined from BookReaderPreview call made when book unavailable
+
   waterfall([
     (cbw) =>
       this.fetch_metadata({ copyDirectory }, cbw),
@@ -363,7 +366,7 @@ ArchiveItem.prototype.fetch_page = function ({
         if (page.startsWith('leaf')) {
           const [l, w] = page.split('_w');
           const pageManifest = this.pageManifestFrom({ leafNum: parseInt(l.slice(4), 10) });
-          const pageParms = this.pageParms(pageManifest, { idealWidth: parseInt(w, 10) });
+          const pageParms = this.pageParms(pageManifest, { idealWidth: parseInt(w, 10), scale });
           zip = pageParms.zip;
           file = pageParms.file;
           scale = pageParms.scale; // quantized to 2^n by pageQuantizedScale()
@@ -376,7 +379,7 @@ ArchiveItem.prototype.fetch_page = function ({
       const urls = (zip && file)
         ? `https://${ai.server}/BookReader/BookReaderImages.php?${parmsFrom({ zip, file, scale, rotate })}`
         : page
-        ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({ page, id: this.itemid, itemPath: this.dir, server: this.server })}`
+        ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({ subPrefix, page, scale, rotate, id: this.itemid, itemPath: this.dir, server: this.server })}`
         : undefined; // THis would be an error
       if (!urls) {
         debug('Failure to build URLs for bookreader %o', { identifier: this.itemid, zip, file, page, scale, rotate });
@@ -922,21 +925,23 @@ ArchiveItem.prototype.pageQuantizedScale = function (idealScale) {
  * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
  * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage (override manifet)
  *  idealWidth if present is used to calculate the optimum quantized scale (next larger file)
+ *  scale if present is quantized
+ *    currently dont have a use case with both idealWidth and scale specified so undefined which will dominate.
  * @returns { parameters for fetch_page }
  */
 ArchiveItem.prototype.pageParms = function (pageManifest, fetchPageOpts) {
   const url = new URL(pageManifest.uri);
-  const idealScale = pageManifest.width / (fetchPageOpts.idealWidth || 800);
-  const quantizedScale = this.pageQuantizedScale(idealScale); // SEE also checkWhereValidFileRotatedScaled
-  url.searchParams.append('scale', quantizedScale);
-  url.searchParams.append('rotate', 0);
-  const res = Object.assign({}, {
-    zip: url.searchParams.get('zip'),
-    file: url.searchParams.get('file'),
-    page: url.searchParams.get('page'), // Needed for urls like BookReaderPreview generated for lent out items
-    scale: quantizedScale,
-    rotate: 0,
-  }, fetchPageOpts);
+  const idealScale = fetchPageOpts.scale || (pageManifest.width / (fetchPageOpts.idealWidth || 800));
+  const res = Object.assign({},
+      { rotate: 0, // default rotation
+        // From the url in pageManifest
+        zip: url.searchParams.get('zip'),
+        file: url.searchParams.get('file'),
+        page: url.searchParams.get('page'), // Needed for urls like BookReaderPreview generated for lent out items
+      },
+    fetchPageOpts, // Override parameters and add new ones like skipNet
+    { scale: this.pageQuantizedScale(idealScale) } // SEE also checkWhereValidFileRotatedScaled
+  ); // Use quantizedScale derived above
   return res;
 };
 ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undefined }, cb) {
