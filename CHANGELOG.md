@@ -5,6 +5,11 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.71:
+  * Mediawiki installation script / instructions now work for IIAB platform
+  * Docker improved to support OLIP
+  * Fix bug in search
+  * Handle page leafs for BookReaderPreview better
 * 0.2.70: Implement opensearch for OLIP, debug Dockerfile and mediawiki installs
 * 0.2.69: DOnt force protcocol to be http in mirrorHttp (breaks www-dev-mirror)
 * 0.2.67: 
