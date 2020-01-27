@@ -745,7 +745,7 @@ if [ ${STEP} -le 99 ]; then
     Should open a page, typically with a series of images
     If shows url of localhost and fails to load, its usually that LocalSettings.php/$wgServer is set to localhost
 
-    If shows with [] instead of Balinese script - check the Browser console log .... had probles with ttf files
+    If shows with [] instead of Balinese script - check the Browser console log, probably an Nginx/Apache problem getting the fonts
 
     It should show Guest at top right, click and select "Login" from the dropdown.
     Login with your archive.org id and password
@@ -755,10 +755,13 @@ if [ ${STEP} -le 99 ]; then
 
     Click edit on one of the leafs with writing (not the top one)
     Should see image and balinese script text,
+
     Click the 3 vertical dots in top right and "Show Transliteration"
     Should show the balinese text transcribed to latin
-    If not then the transcriber service isn't running - we had bugs there but should be fixed (its setup in ArchiveLeaf/maintenance/offline)
-
+    If not then either the transcriber service isn't running - in which case it would also fail the test above.
+    - we had bugs there but should be fixed (its setup in ArchiveLeaf/maintenance/offline)
+    OR it can't access the API - check the browser log for errors accessing /w/api.php and see the code in ArchiveLeaf/maintenance/offline
+    that sets up nginx to forward /w/api.php to /mwlink/api.php for IIAB.
 
 EOT
 exit
