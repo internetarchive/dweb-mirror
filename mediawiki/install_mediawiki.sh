@@ -82,9 +82,15 @@ then
 fi
 if [ ${PLATFORM} == "iiab" ] ; then
   DATABASENAME=iiab_mediawiki
+  DMCONFIG=/root/dweb-mirror.config.yaml
+  NGINXCONF=/etc/nginx/conf.d/mediawiki-nginx.conf
 else
   DATABASENAME=palmleafdb
+  DMCONFIG=${HOME}/dweb-mirror.config.yaml
+  # Next line Untested except on iiab
+  NGINXCONF=/etc/nginx/conf.d/mediawiki-nginx.conf
 fi
+IMAGEBASEDIR="${HOME}/opt/mediawiki/w/images" # Where the images to import will be after untarring
 
 echo "MEDIAWIKI=${MEDIAWIKI} MEDIAWIKIINSTALLED=${MEDIAWIKIINSTALLED} DWEBMIRROR=${DWEBMIRROR}"
 
@@ -110,6 +116,24 @@ function appendOrReplace {
   fi
 }
 
+function makeWritable {
+  # Expecially on IIAB the perms are locked down on key directories, so we have a pattern of needing a writable directory.
+  # On Raw RPI have been making them group "pi" and group writable - but check if hit this code
+  # On IIAB: 'pi' should be in the group 'www-data', and directory should be group-writable
+  if [ ! -w "${MEDIAWIKI}/${1}" ]; then
+    if [ "${PLATFORM}" == "iiab" ]; then
+      sudo chgrp www-data "${MEDIAWIKI}/${1}"
+      sudo chmod g+w "${MEDIAWIKI}/${1}"
+    else
+      echo "Need a strategy for platform=${PLATFORM} to make ${MEDIAWIKI}/${1} writable"
+      exit
+    fi
+  fi
+  if [ ! -w "${MEDIAWIKI}/${1}" ]; then
+    echo "Failed to make ${MEDIAWIKI}/${1} writable}"
+    exit
+  fi
+}
 if [ ${STEP} -le 0 ]; then
 
   cat <<EOT
@@ -369,14 +393,12 @@ fi
 if [ ${STEP} -le 10 ]; then
   echo step 10 Apache2 or Nginx config
   if [ ${PLATFORM} == "iiab" -a -d "/etc/nginx" ]; then
-    pushd /etc/nginx
-      sudo tee -a ./conf.d/mediawiki-nginx.conf <<EOT >>/dev/null
+    sudo tee -a ${NGINXCONF} <<EOT >>/dev/null
 location /mwlink/config { # Protect this from PHP
 }
 location /mwlink/upload { # Protect this from PHP
 }
 EOT
-    popd
   else
     pushd /etc/apache2
       if [ -f conf-available/mediawiki.conf ]; then
@@ -463,7 +485,6 @@ if [ ${STEP} -le 15 ]; then
         echo "We had success on iiab last time, adding 'pi' to the www-data group and making ${MEDIAWIKI}/images group writable"
         exit
       else
-        IMAGEBASEDIR="${HOME}/opt/mediawiki/w/images"
         rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Dont import thumbnails
         rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Dont import archived images
         rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Dont import temp files left over from some other process
@@ -512,14 +533,15 @@ cat <<EOT
 <rant>Mediawiki has an unusable extension system, involving downloading from a link that changes every time,
 untarring etc, so I have had to store a working version of the extension on the Wayback machine.</rant>
 EOT
-  appendOrReplaceBegin
-  appendOrReplace "wfLoadExtension.*HitCounters" 'wfLoadExtension( "HitCounters" );'
-  appendOrReplaceEnd
+  makeWritable extensions
   pushd ${MEDIAWIKI}/extensions
     curl ${WAYBACK_HITCOUNTER} | tar -xz
     cd ${MEDIAWIKI}
     php maintenance/update.php  # Runs extensions/HitCounters/update.php
   popd
+  appendOrReplaceBegin
+  appendOrReplace "wfLoadExtension.*HitCounters" 'wfLoadExtension( "HitCounters" );'
+  appendOrReplaceEnd
   echo "if that worked you'll see lines in the update.php step about either creating, hit_counter table, or that it already exists."
   echo "if it worked, enter './install_mediawiki.sh 20' to install Mirador extension"
   exit
@@ -552,6 +574,11 @@ if [ ${STEP} -le 23 ]; then
       sudo sed -i.bak -e 's/.*extension=curl/extension=curl/' ./php.ini
       diff php.ini.bak php.ini || echo "Great it shows we made the change"
     popd
+    makeWritable .  # MEDIAWIKI directory itself
+    makeWritable vendor
+    makeWritable vendor/composer
+    makeWritable vendor/wikimedia
+    makeWritable vendor/psr
     pushd ${MEDIAWIKI}
       sudo mkdir -p /var/www/.composer
       echo "Note next line can take a while (2mins or so) before responds with anything"
@@ -562,52 +589,64 @@ if [ ${STEP} -le 23 ]; then
     exit
 fi
 if [ ${STEP} -le 24 ]; then
-  echo step 24
+  echo step 24 installing ArchiveOrgAuth extension
   pushd ${MEDIAWIKI}/extensions
-    git clone https://git.archive.org/www/archiveorgauth.git ArchiveOrgAuth
-    popd
-    appendOrReplaceBegin
-    appendOrReplace "wfLoadExtension.*ArchiveOrgAuth" 'wfLoadExtension( "ArchiveOrgAuth" );'
-    appendOrReplace wgArchiveOrgAuthEndpoint '$wgArchiveOrgAuthEndpoint = "https://archive.org/services/xauthn/"; # Url for API endpoint, eg.: http://example.com/xnauth/ ( with trailing slash )'
-    appendOrReplace wgArchiveOrgAuthAccess '$wgArchiveOrgAuthAccess = "<ACCESS_KEY>"; # S3 access key'
-    appendOrReplace wgArchiveOrgAuthSecret '$wgArchiveOrgAuthSecret = "<SECRET_KEY>"; # S3 secret key'
-    appendOrReplace wgArchiveOrgAuthExternalSignupLink '$wgArchiveOrgAuthExternalSignupLink = "https://archive.org/account/login.createaccount.php"; # Fully qualified url for "Create account" link'
-    appendOrReplace wgArchiveOrgAuthExternalPasswordResetLink '$wgArchiveOrgAuthExternalPasswordResetLink = "https://archive.org/account/login.forgotpw.php"; # Fully qualified url for "Forgot password" link'
-    appendOrReplace wgUserrightsInterwikiDelimiter '$wgUserrightsInterwikiDelimiter = "%";'
-    appendOrReplace wgInvalidUsernameCharacters '$wgInvalidUsernameCharacters = "%:";'
-    appendOrReplace wgUseCombinedLoginLink '$wgUseCombinedLoginLink = true;'
-    appendOrReplace "wgGroupPermissions.*createaccount" '$wgGroupPermissions["*"]["createaccount"] = false;'
-    appendOrReplace "wgGroupPermissions.*autocreateaccount" '$wgGroupPermissions["*"]["autocreateaccount"] = true;'
-    appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;'
-    appendOrReplaceEnd
-    echo "If that worked, (and in particlar check the composer install worked)"
-    echo "Edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in"
-    echo "Then enter './install_mediawiki.sh 24' to install ArchiveLeaf extension"
-    exit
-  fi
+    if [ -d "ArchiveOrgAuth" ]
+    then
+      cd ArchiveOrgAuth
+      git pull
+    else
+      git clone https://git.archive.org/www/archiveorgauth.git ArchiveOrgAuth
+      cd ArchiveOrgAuth
+    fi
+  popd
+  appendOrReplaceBegin
+  appendOrReplace "wfLoadExtension.*ArchiveOrgAuth" 'wfLoadExtension( "ArchiveOrgAuth" );'
+  appendOrReplace wgArchiveOrgAuthEndpoint '$wgArchiveOrgAuthEndpoint = "https://archive.org/services/xauthn/"; # Url for API endpoint, eg.: http://example.com/xnauth/ ( with trailing slash )'
+  appendOrReplace wgArchiveOrgAuthAccess '$wgArchiveOrgAuthAccess = "<ACCESS_KEY>"; # S3 access key'
+  appendOrReplace wgArchiveOrgAuthSecret '$wgArchiveOrgAuthSecret = "<SECRET_KEY>"; # S3 secret key'
+  appendOrReplace wgArchiveOrgAuthExternalSignupLink '$wgArchiveOrgAuthExternalSignupLink = "https://archive.org/account/login.createaccount.php"; # Fully qualified url for "Create account" link'
+  appendOrReplace wgArchiveOrgAuthExternalPasswordResetLink '$wgArchiveOrgAuthExternalPasswordResetLink = "https://archive.org/account/login.forgotpw.php"; # Fully qualified url for "Forgot password" link'
+  appendOrReplace wgUserrightsInterwikiDelimiter '$wgUserrightsInterwikiDelimiter = "%";'
+  appendOrReplace wgInvalidUsernameCharacters '$wgInvalidUsernameCharacters = "%:";'
+  appendOrReplace wgUseCombinedLoginLink '$wgUseCombinedLoginLink = true;'
+  appendOrReplace "wgGroupPermissions.*createaccount" '$wgGroupPermissions["*"]["createaccount"] = false;'
+  appendOrReplace "wgGroupPermissions.*autocreateaccount" '$wgGroupPermissions["*"]["autocreateaccount"] = true;'
+  appendOrReplace "wgMainCacheType" '$wgMainCacheType = CACHE_ANYTHING;'
+  appendOrReplaceEnd
+  echo "If that worked"
+  echo "Edit $MEDIAWIKI/LocalSettings.php to put the S3 keys in"
+  echo "Then enter './install_mediawiki.sh 24' to install ArchiveLeaf extension"
+  exit
 fi
 
 if [ ${STEP} -le 25 ]; then
   echo step 25 Installing ArchiveLeaf extension
-  cd $MEDIAWIKI/extensions
-  # TODO merge into internetarchive branch
-  #sudo git clone https://github.com/internetarchive/mediawiki-extension-archive-leaf.git ArchiveLeaf
-  if [ -d "ArchiveLeaf" ]
-  then
-    cd ArchiveLeaf
-    git pull
-  else
-    git clone https://github.com/mitra42/mediawiki-extension-archive-leaf.git ArchiveLeaf
-    cd ArchiveLeaf
-  fi
-  maintenance/offline
+  makeWritable skins # For Metrolook
+  pushd $MEDIAWIKI/extensions
+    # TODO merge into internetarchive branch
+    #sudo git clone https://github.com/internetarchive/mediawiki-extension-archive-leaf.git ArchiveLeaf
+    if [ -d "ArchiveLeaf" ]
+    then
+      cd ArchiveLeaf
+      git pull
+    else
+      git clone https://github.com/mitra42/mediawiki-extension-archive-leaf.git ArchiveLeaf
+      cd ArchiveLeaf
+    fi
+    maintenance/offline
+  popd
   echo "If that worked, enter './install_mediawiki.sh 26' to fixup permissions"
   exit
 fi
 if [ ${STEP} -le 27 ]; then
-  echo step 27 switching permissions to www-data, but whatever group this user is running as.
-  sudo chown -R ${APACHEUSER}.${GROUP} ${MEDIAWIKI}
-  sudo chmod -R g+w ${MEDIAWIKI}
+  if [ "${PLATFORM}" == "iiab" ]; then
+    echo step 27 not changing permissions as done by IIAB
+  else
+    echo step 27 switching permissions to www-data, but whatever group this user is running as.
+    sudo chown -R ${APACHEUSER}.${GROUP} ${MEDIAWIKI}
+    sudo chmod -R g+w ${MEDIAWIKI}
+  fi
   echo "If that worked, enter './install_mediawiki.sh 28' to configure short urls"
   exit
 fi
@@ -617,56 +656,57 @@ if [ ${STEP} -le 29 ]; then
   sudo a2enmod rewrite
   sudo sed -i -e 's!</VirtualHost>!    RewriteEngine on\n    RewriteRule ^/?wiki(/.*)?$ /mediawiki/index.php [L]\n</VirtualHost>!' /etc/apache2/sites-available/000-default.conf
   sudo systemctl restart apache2
-  echo "If that worked, enter './install_mediawiki.sh 30' to xxx"
+  echo "If that worked, enter './install_mediawiki.sh 30' to check CSS"
   exit
 fi
 if [ ${STEP} -le 31 ]; then
   echo step 31 Installing ArchiveLeaf CSS
-cat <<EOT
-The CSS may need to be manually edited, buy the previous install had this happen automatically, not sure where.
+  cat <<EOT
+  The CSS may need to be manually edited, buy the previous install had this happen automatically, not sure where.
 
-Open
-To improve page rendering, add the following CSS to the 'MediaWiki:Common.css' page on the wiki:
-Note this is the first time we have opened the wiki so its also a test that its basically working.
-Open /wiki/MediaWiki:Common.css in your browser, and check it includes the following.
+  Open
+  To improve page rendering, add the following CSS to the 'MediaWiki:Common.css' page on the wiki:
+  Note this is the first time we have opened the wiki so its also a test that its basically working.
+  Open /wiki/MediaWiki:Common.css in your browser, and check it includes the following.
 
-.mw-jump {
-  display: none;
-}
+  .mw-jump {
+    display: none;
+  }
 
-.thumbinner {
-  max-width: 100%;
-}
+  .thumbinner {
+    max-width: 100%;
+  }
 
-img.thumbimage {
-  width: 100%;
-  height: auto;
-}
+  img.thumbimage {
+    width: 100%;
+    height: auto;
+  }
 
-When you are finished, come back here and enter './install_mediawiki.sh 32' to link the Offline Archive to the Palmleaf Wiki
+  When you are finished, come back here and enter './install_mediawiki.sh 32' to link the Offline Archive to the Palmleaf Wiki
 EOT
-exit
+  exit
 fi
 if [ ${STEP} -le 33 ]; then
   echo step 33
   pushd ${HOME}
-    if [ -f "dweb-mirror.config.yaml" ]; then
-      if grep palmleafwiki dweb-mirror.config.yaml; then
-          sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#' dweb-mirror.config.yaml
+    # Note for IIAB has to run sudo, its ok to run it for rest
+    if sudo [ -f "${DMCONFIG}" ]; then
+      if sudo grep palmleafwiki "${DMCONFIG}"; then
+          sudo sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#' "${DMCONFIG}"
       else
-        if grep '\.\.\.' dweb-mirror.config.yaml; then
-          sed -i.BAK -e 's#\.\.\.#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#' dweb-mirror.config.yaml
+        if sudo grep '\.\.\.' dweb-mirror.config.yaml; then
+          sudo sed -i.BAK -e 's#\.\.\.#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#' "${DMCONFIG}"
         else
-          cp  diff dweb-mirror.config.yaml dweb-mirror.config.yaml.BAK
-          cat <<EOT >>dweb-mirror.config.yaml
-      palmleafwiki
+          sudo cp "${DMCONFIG}" "${DMCONFIG}.BAK"
+          sudo tee -a "${DMCONFIG}" <<EOT >/dev/null
+      palmleafwiki:
           pagelink: "http://MIRRORHOST/wiki"
-  EOT
+EOT
         fi
       fi
-      diff dweb-mirror.config.yaml.BAK dweb-mirror.config.yaml
+      sudo diff "${DMCONFIG}.BAK" "${DMCONFIG}" || echo "Change made"
     else
-      echo Once you have installed dweb-mirror you will need to add a variable  apps.palmleafwiki.pagelink: "http://MIRRORHOST/wiki"
+      echo Once you have installed dweb-mirror you will need to add a variable apps.palmleafwiki.pagelink: "http://MIRRORHOST/wiki" to ${DMCONFIG}
     fi
   popd
   echo "If that appeared to work, come back here and enter './install_mediawiki.sh 34 to finish'"
@@ -674,6 +714,7 @@ if [ ${STEP} -le 33 ]; then
 fi
 if [ ${STEP} -le 99 ]; then
   echo step 99
+  set +x
   pushd $MEDIAWIKI
     echo 'Run update one last chance - this is where we caught the bug in composer.json before'
     echo 'If reports problems at nategood/httpfil ^0.3.0 then the fix with composer in ArchiveLeaf didn't work
@@ -681,29 +722,43 @@ if [ ${STEP} -le 99 ]; then
   popd
   echo "A quick bit of testing ..."
   service transliterator status
-  echo "Next line should respond "wayan" otherwise transliterator probably not working
-  curl http://localhost:3000/Balinese-ban_001 -d ᬯᬬᬦ᭄᭞
-cat <<EOT
-It should now be fully working Except ... bugs
-$wgServer needs to be "http://192.168.0.14" not http://localhost - edit it in LocalSettings to be ip name or address of your box
-http://192.168.0.14/transcriber/static/media/zwnj.0da8f3f5.svg isn't working
-There may be other outstanding issues at: https://github.com/internetarchive/dweb-mirror/issues/286
+  echo "Next line should respond 'wayan,' otherwise transliterator probably not working"
+  if [ "${PLATFORM}" == "iiab" ]; then
+    TRANSLITERATORPORT=4248
+  else
+    TRANSLITERATORPORT=3000
+  fi
+  curl http://localhost:${TRANSLITERATORPORT}/Balinese-ban_001 -d ᬯᬬᬦ᭄᭞
+  echo "It should now be fully working Except ... bugs"
+  echo '$wgServer needs to be "http://192.168.0.14" or possibly: "//" . $_SERVER["HTTP_HOST"] , it is currently '
+  grep 'wgServer' ${LOCALSETTINGS}
+  echo "Check you can get to http://<YOUR BOX>/transcriber/static/media/zwnj.0da8f3f5.svg"
+  echo "If not check the apache or nginx rewrite rule setup by ArchiveLeaf/maintenance/online, have seen nginx lose the $1 at the end and not sure fixed correctly"
+  [ ! -f ${NGINXCONF} ] || grep 'transcriber/static' ${NGINXCONF}
+  echo "There may be other outstanding issues at: https://github.com/internetarchive/dweb-mirror/issues/286"
+  cat <<EOT
+    To test ...
+    In browser go to  http://<IP_OF_BOX>/wiki
+    Should open main page
 
+    Click Random page
+    Should open a page, typically with a series of images
+    If shows url of localhost and fails to load, its usually that LocalSettings.php/$wgServer is set to localhost
 
-To test ...
-In browser go to  http://<IP_OF_BOX>/wiki
-Should open main page
+    If shows with [] instead of Balinese script - check the Browser console log .... had probles with ttf files
 
-Click Random page
-Should open a page, typically with a series of images
-If shows url of localhost and fails to load, its usually that LocalSettings.php/$wgServer is set to localhost
-If doesn't show "edit" above each image then its usually the nategood/httpful ^0.3.0 error in composer.json
+    It should show Guest at top right, click and select "Login" from the dropdown.
+    Login with your archive.org id and password
+    It should show your email address top right
+    And above each image it should show edit.
+    If not then its usually the nategood/httpful ^0.3.0 error in composer.json
 
-Click edit on one of the leafs with writing (not the top one)
-Should see image and balinese script text,
-Click the 3 vertical dots in top right and "Show Transliteration"
-Should show the balinese text transcribed to latin
-If not then the transcriber service isn't running - we had bugs there but should be fixed (its setup in ArchiveLeaf/maintenance/offline)
+    Click edit on one of the leafs with writing (not the top one)
+    Should see image and balinese script text,
+    Click the 3 vertical dots in top right and "Show Transliteration"
+    Should show the balinese text transcribed to latin
+    If not then the transcriber service isn't running - we had bugs there but should be fixed (its setup in ArchiveLeaf/maintenance/offline)
+
 
 EOT
 exit
