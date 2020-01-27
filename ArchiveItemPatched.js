@@ -1,5 +1,5 @@
 /* eslint-disable func-names, no-use-before-define, no-inner-declarations, camelcase, consistent-return, no-unused-vars */
-/* eslint-disable indent, object-property-newline, implicit-arrow-linebreak, object-curly-newline, block-spacing */
+/* eslint-disable indent, object-property-newline, implicit-arrow-linebreak, object-curly-newline, block-spacing, no-lonely-if */
 /*
 // Monkey patches dweb-archivecontroller,
 // Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadata is used to use the cache
@@ -32,7 +32,7 @@ const MirrorFS = require('./MirrorFS');
 
 function traceStream(s, { name = '', func = '' } = {}) {
   if (s) { // Only trace if its a stream (simplifies calling)
-    // Note there is a sideeffect of this, to cancel the unhandled error exception in core-modules/events.js/EventEmitter.prototype.emit
+    // Note there is a side-effect of this, to cancel the unhandled error exception in core-modules/events.js/EventEmitter.prototype.emit
     s.once('error', err => {
       debug('Tracing error on stream %s %s %o', name, func, err); // TODO change to %s err.message when solid
     });
@@ -549,6 +549,7 @@ ArchiveItem.prototype.fetch_query = function (opts = {}, cb) {
       * Write each member to its own `<IDENTIFIER>_member.json`
    */
   if (typeof opts === 'function') { cb = opts; opts = {}; } // Allow opts parameter to be skipped
+  /* eslint-disable-next-line prefer-const */ /* as cant have let and const mixed in destructuring */
   let { noCache, noStore, skipNet, copyDirectory } = opts;
   noCache = noCache || !(copyDirectory || MirrorFS.directories.length);
   noStore = noStore || !(copyDirectory || MirrorFS.directories.length);
@@ -904,7 +905,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function ({ copyDirectory }, cb) 
       }
     }
   ], unusedErr => {
-    // Done Report error because it could just be because havent downlodaed files info via metadata API,
+    // Done Report error because it could just be because have not downloaded files info via metadata API,
     // if (err) debug("Failure in addDownloadedInfoFiles for %s %O", this.itemid, err);
     // Also dont block
     cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
@@ -923,7 +924,7 @@ ArchiveItem.prototype.pageQuantizedScale = function (idealScale) {
 /**
  * Return an object suitable for passing to fetch_page to check size
  * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
- * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage (override manifet)
+ * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage (override manifest)
  *  idealWidth if present is used to calculate the optimum quantized scale (next larger file)
  *  scale if present is quantized
  *    currently dont have a use case with both idealWidth and scale specified so undefined which will dominate.
@@ -940,8 +941,7 @@ ArchiveItem.prototype.pageParms = function (pageManifest, fetchPageOpts) {
         page: url.searchParams.get('page'), // Needed for urls like BookReaderPreview generated for lent out items
       },
     fetchPageOpts, // Override parameters and add new ones like skipNet
-    { scale: this.pageQuantizedScale(idealScale) } // SEE also checkWhereValidFileRotatedScaled
-  ); // Use quantizedScale derived above
+    { scale: this.pageQuantizedScale(idealScale) }); // Use quantizedScale derived above SEE also checkWhereValidFileRotatedScaled
   return res;
 };
 ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undefined }, cb) {
@@ -985,7 +985,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
               ),
             ], (unusedErr, unusedRes) => cb0(null)),
             cb0 => {
-              // Note .flat isnt valid till node 11.x
+              // Note .flat is not valid till node 11.x
               const downloadedPages = this.pageManifests().filter(pg => pg.downloaded);
               this.downloaded.pages_size = downloadedPages.reduce((sum, pg) => sum + pg.size, 0);
               this.downloaded.pages_count = downloadedPages.length;
@@ -1006,7 +1006,7 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
     (member, cb1) => {
       const ai = new ArchiveItem({ identifier: member.identifier });
       waterfall([
-        // Fetch Metadata here first, and wait for it, otherwise will fetch in paralel in addDownloadedInfoFiles and addDownloadedInfoPages
+        // Fetch Metadata here first, and wait for it, otherwise will fetch in parallel in addDownloadedInfoFiles and addDownloadedInfoPages
         cb3 => ai.fetch_metadata({ skipNet: true, copyDirectory }, cb3),
         (ai1, cb3) => parallel([
           cb2 => ai1.addDownloadedInfoFiles({ copyDirectory }, cb2),
@@ -1137,7 +1137,7 @@ ArchiveItem.prototype.addMagnetLink = function ({ copyDirectory = undefined } = 
       const dwebTorrentUrl = `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`; // For Webtorrent etc to find torrent file
       torrentFile.cacheAndOrStream({ wantBuff: true, copyDirectory }, (err, buffer) => {
         if (err) {
-          debug('WARNING unable to add magnet link: %s', err.message); // For exmample because forbidden
+          debug('WARNING unable to add magnet link: %s', err.message); // For example because forbidden
         } else {
           this.magnetlink = dwebMagnetLinkFrom({ dwebTorrentUrl, archiveBuffer: buffer });
         }
