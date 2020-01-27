@@ -151,7 +151,7 @@
   dependencies:
     jquery "^3.4.1"
 
-"@internetarchive/dweb-archive-dist@^0.2.14":
+"@internetarchive/dweb-archive-dist@^0.2.18":
   version "0.2.18"
   resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.18.tgz#bdbf9048d0c0fbd6dda313a3076155267a156f66"
   integrity sha512-g31WRNXFcxe5MSOh53CqbwdksVtBiVXOMwkkCULm6tYjQvzYHQV8DkJ71ALTZpI/ibl1kE7JlCF+MgIuKe6UfA==
@@ -175,10 +175,10 @@
     prettier-bytes "^1.0.4"
     simple-sha1 "^3.0.1"
 
-"@internetarchive/dweb-transports@^0.2.16":
-  version "0.2.16"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.16.tgz#8c2408efd1c137400f7bac45d76d58144880dc30"
-  integrity sha512-wGaANEiWeMWJ5ybOtOsBCO+VNdhTc8ncOaLXuhwD2rQ/M/3emGwwcSTMOFW9BZbS3+2or8DXnGZi9ZgXVDzYaA==
+"@internetarchive/dweb-transports@^0.2.17":
+  version "0.2.17"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.17.tgz#82efd9c9714b04c6cdbcc183cfe52c287949f15c"
+  integrity sha512-zSeN1YLBHJauUf/6gLVMdQLvRw6+Pf3/UW/s/di3F02jjvL/qv4esrjrxz8/1Rg0MmTSmqecyrj99+QlqTKWVw==
   dependencies:
     "@stratumn/canonicaljson" "^1.0.3"
     async "^2.6.3"
@@ -647,9 +647,9 @@ d@1, d@^1.0.1:
     type "^1.0.1"
 
 damerau-levenshtein@^1.0.4:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/damerau-levenshtein/-/damerau-levenshtein-1.0.5.tgz#780cf7144eb2e8dbd1c3bb83ae31100ccc31a414"
-  integrity sha512-CBCRqFnpu715iPmw1KrdOrzRqbdFwQTwAWyyyYS42+iAgHCuXZ+/TdMgQkUENPomxEz9z1BEzuQU2Xw0kUuAgA==
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/damerau-levenshtein/-/damerau-levenshtein-1.0.6.tgz#143c1641cb3d85c60c32329e26899adea8701791"
+  integrity sha512-JVrozIeElnj3QzfUIt8tB8YMluBJom4Vw9qTPpjGYQ9fYlB3D/rb6OordUxf3xeFB35LKWs0xqcO5U6ySvBtug==
 
 debug@2.6.9, debug@^2.6.9:
   version "2.6.9"
