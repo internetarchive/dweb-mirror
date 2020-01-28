@@ -194,7 +194,7 @@ ArchiveItem.prototype.read = function ({ copyDirectory = undefined }, cb) {
       } else if (['audio', 'etree', 'movies'].includes(res.metadata.mediatype)) {
         _parse('playlist', (err1, o1) => {
           res.playlist = o1; // maybe undefined
-          cb(err1); // Should fail if no playlist, so re-reads from server and gets playlist
+          cb1(err1); // Should fail if no playlist, so re-reads from server and gets playlist
         });
       } else {
         cb1(null);
@@ -224,7 +224,8 @@ ArchiveItem.prototype.read = function ({ copyDirectory = undefined }, cb) {
       Object.assign(res, o); // Note this could have the bad download=null, but will be filtered through loadFromMetadataAPI
       cb1(err);
     }),
-  ], (err, unused) => cb(err, res));
+  ], (err, unused) =>
+    cb(err, res));
 };
 
 // noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
