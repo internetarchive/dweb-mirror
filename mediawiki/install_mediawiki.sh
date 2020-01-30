@@ -441,6 +441,8 @@ if [ ${STEP} -le 11 ]; then
   # Importing that xml dump https://www.mediawiki.org/wiki/Manual:Importing_XML_dumps
   pushd ${MEDIAWIKI}
     [ ${PLATFORM} != "iiab" ] || echo 'Seen problems with wgServerHost = $_SERVER["HTTP_HOST"] on iiab - unsure why or if significant'
+    # Delete main page first, else wont get overwritten
+    echo Main_Page | php maintenance/deleteBatch.php
     php maintenance/importDump.php --conf ${LOCALSETTINGS} --username-prefix="" --no-updates ${IMPORTFROM}
   popd
   echo If this worked enter './install_mediawiki.sh 12' to rebuildrecentchanges and initSiteStats
@@ -695,12 +697,13 @@ if [ ${STEP} -le 33 ]; then
           sudo sed -i.BAK -e 's#pagelink.*$#pagelink: "http://MIRRORHOST/wiki"#' "${DMCONFIG}"
       else
         if sudo grep '\.\.\.' dweb-mirror.config.yaml; then
-          sudo sed -i.BAK -e 's#\.\.\.#    palmleafwiki\n        pagelink: "http://MIRRORHOST/wiki"\n...#' "${DMCONFIG}"
+          # Setting crawl.opts.crawlPalmLeaf and apps.palmleafwiki
+          sudo sed -i.BAK -e 's#\.\.\.#      crawlPalmLeaf: true\n  palmleafwiki\n  pagelink: "http://MIRRORHOST/wiki"\n...#' "${DMCONFIG}"
         else
           sudo cp "${DMCONFIG}" "${DMCONFIG}.BAK"
           sudo tee -a "${DMCONFIG}" <<EOT >/dev/null
-      palmleafwiki:
-          pagelink: "http://MIRRORHOST/wiki"
+  palmleafwiki:
+    pagelink: "http://MIRRORHOST/wiki"
 EOT
         fi
       fi
