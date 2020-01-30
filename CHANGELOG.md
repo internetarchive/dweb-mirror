@@ -5,6 +5,7 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.75: Crawls / pages / palmleaf; installation improvements (OLIP, Mediawiki)
 * 0.2.74: Oops - catch typo introduced in liniting 
 * 0.2.73: Bump dependency on dweb-transports to 0.2.17 and dweb-archive-dist 0.2.18
 * 0.2.71:
