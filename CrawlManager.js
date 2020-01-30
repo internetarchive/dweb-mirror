@@ -26,6 +26,7 @@ const HashStore = require('./HashStore');
     noCache: bool||false      If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
     skipFetchFile: bool||false  If true will just comment on file, not actually fetch it (including thumbnails)
     maxFileSize: 10000000       If set, constrains maximum size of any one file
+    crawlPalmLeaf: bool||false  If set will fetch specific pages wiki uses i.e. closest quantized size to 400px,2000px and full size
 
   Example initialization:
   search([
@@ -43,11 +44,12 @@ const HashStore = require('./HashStore');
 class CrawlManager {
 
     constructor({initialItemTaskList=[], copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false,
-                    noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, crawlEpubs=undefined,
+                    noCache=false, maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined,
+                    crawlEpubs=undefined, crawlPalmLeaf = false,
                     defaultDetailsSearch=undefined, defaultDetailsRelated=undefined,callbackDrainOnce=false, name=undefined}={}) {
         this.clearState();
         this.setopts({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache, maxFileSize, concurrency,
-            limitTotalTasks, crawlEpubs, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
+            limitTotalTasks, crawlEpubs, crawlPalmLeaf, defaultDetailsSearch, defaultDetailsRelated, callbackDrainOnce, name});
         this._taskQ = queue((task, cb) => {
           // Tasks will loop from 1-5 secs if disconnected, the randomness is to spread tasks out.
           asyncUntil(
@@ -114,9 +116,9 @@ class CrawlManager {
     }
     static startCrawl(initialItemTaskList, { copyDirectory=undefined, debugidentifier=undefined, skipFetchFile=false, noCache=false,
         maxFileSize=undefined, concurrency=1, limitTotalTasks=undefined, defaultDetailsSearch=undefined,
-        callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined, crawlEpubs=false }={},  cb) {
+        callbackDrainOnce=undefined, defaultDetailsRelated=undefined, name=undefined, crawlEpubs=false, crawlPalmLeaf=false }={},  cb) {
         const CM = new CrawlManager({initialItemTaskList, copyDirectory, debugidentifier, skipFetchFile, noCache,
-            maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name, crawlEpubs});
+            maxFileSize, concurrency, limitTotalTasks, defaultDetailsRelated, defaultDetailsSearch, callbackDrainOnce, name, crawlEpubs, crawlPalmLeaf});
         debug("Starting crawl %d tasks opts=%o", initialItemTaskList.length,
             ObjectFilter(CM, (k,v) =>  v && this.optsallowed.includes(k)));
         if (copyDirectory) {
@@ -335,7 +337,7 @@ class CrawlPage extends Crawlable {
         }
     }
     isUniq(crawlmanager) {
-        const key = [this.identifier,this.pageParms.page || this.pageParms.zip, this.pageParms.file].join('/');
+        const key = [this.identifier,this.pageParms.page || this.pageParms.zip, this.pageParms.file, this.pageParms.scale, this.pageParms.rotate].join('/');
         const prevTasks = crawlmanager._uniqFiles[key];
         if (prevTasks) { return false; }
         else {
@@ -432,6 +434,13 @@ class CrawlItem extends Crawlable {
      * @param cb            cb(err)     synchronous, so currently called immediately
      */
     _crawlPages(crawlmanager, cb) {
+      function _crawlPage(pageManifest, asParent, o) {
+        crawlmanager._push(new CrawlPage({
+          pageParms: this.item.pageParms(pageManifest, {...o, skipNet: false}),
+          identifier: this.item.itemid,
+          archiveitem: this.item
+        }, asParent));
+      }
         const asParent = this.asParent();
         if (['details', 'all'].includes(this.level)) { // Details
             crawlmanager._push(new CrawlPage({
@@ -442,10 +451,13 @@ class CrawlItem extends Crawlable {
                 }
             }, asParent));
             this.item.pageManifests().forEach(pageManifest => {
-                crawlmanager._push(new CrawlPage( {
-                  pageParms: this.item.pageParms(pageManifest, { skipNet: false }),
-                  identifier: this.item.itemid,
-                  archiveitem: this.item}, asParent));
+              if (crawlmanager.crawlPalmLeaf && this.item.isPalmLeaf()) {
+                _crawlPage.call(this, pageManifest, asParent, { idealWidth: 400 });
+                _crawlPage.call(this, pageManifest, asParent, { idealWidth: 2000 });
+                _crawlPage.call(this, pageManifest, asParent, { scale: 1 });
+              } else {
+                _crawlPage.call(this, pageManifest, asParent, { idealWidth: 800 })
+              }
             });
         }
         cb();
@@ -485,7 +497,7 @@ class CrawlItem extends Crawlable {
                     const asParent = this.asParent();
                     if (this.identifier) { // (but only on items, not on searches)
                         if (this.level === "details") { // Details
-                            (this.item.minimumForUI({crawlEpubs: crawlmanager.crawlEpubs}) || []).forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
+                            (this.item.minimumForUI({crawlEpubs: crawlmanager.crawlEpubs && !this.item.isPalmLeaf()}) || []).forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
                         } else if (this.level === "all") { // Details - note tests maxFileSize before processing rather than before queuing
                             if (this.item.files) this.item.files.forEach(af => crawlmanager._push(new CrawlFile({file: af}, asParent)));
                         }

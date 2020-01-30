@@ -352,7 +352,7 @@ ArchiveItem.prototype.fetch_page = function ({
       cb(err, data || stream || size) returns either data, or if wantStream then a stream
    */
   let zipfile;
-  debug('subPrefix=%s zip=%s page=%s scale=%s rotate=%s', subPrefix, zip, page, scale, rotate);
+  debug('subPrefix=%s zip=%s file=%s page=%s scale=%s rotate=%s', subPrefix, zip, file, page, scale, rotate);
   // page = cover_t.jpg - bookreader cover page
   // page=leaf1_w2000 meaning page 1, with ideal width 2000 pixels, comes from Palmleaf wiki
   // page=leaf1 scale=10.1234 subPrefix=IDENTIFIER zipfile=undefined from BookReaderPreview call made when book unavailable
