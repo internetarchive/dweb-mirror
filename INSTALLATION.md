@@ -23,6 +23,8 @@ There are separate instructions for:
 * [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
   for Rachel on their own Rachel 3+ (incomplete)
 
+See also [INSTALLATION-faq.md](./INSTALLATION-faq.md), a work in progress to 
+handle some of the questions.
 If anything here doesn't work please email mitra@archive.org 
 or it would be even more helpful to post a question or fix
 on https://github.com/internetarchive/dweb-mirror/issues
