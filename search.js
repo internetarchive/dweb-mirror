@@ -69,8 +69,7 @@ function atomEntry(m, {protoHost}) {
   `;
 }
 function atomFrom(resp, req) {
-  return `
-    <?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
     <feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
       ${atomFeedInfo(resp, req)}
       ${resp.response.docs.map(m => atomEntry(m, req.opts)).join('')}
@@ -78,8 +77,7 @@ function atomFrom(resp, req) {
   `;
 }
 function XMLdescriptor({protoHost=undefined}={}) {
-  return `
-    <?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
     <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
       <ShortName>Offline Internet Archive</ShortName>
       <Description>Offline Internet Archive search engine</Description>
