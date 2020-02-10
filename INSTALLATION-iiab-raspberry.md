@@ -3,14 +3,17 @@
 If you not installing dweb-archive+IIAB on a Raspberry Pi then one of these documents 
 will be much easier to follow. 
 
- * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
- * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md)
- * Raspberry Pi without IIAB [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
- * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
- * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
- * Mac OSX Developer [INSTALLATION-osx-dev.md](INSTALLATION-dev.md)
- * Everything in one doc [INSTALLATION-work.md](./INSTALLATION-work.md)
- * TODO developer instructions on other platforms.
+* [INSTALLATION.md](./INSTALLATION.md)
+  for general installation instructions.
+* [INSTALLATION-dev.md](./INSTALLATION-dev.md) 
+  for developers who want to work on this code or on dweb-archive (our offline Javascript UI).
+  These are tested on Mac OSX, but should work with only minor changes on Linux (feedback welcome).
+* [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md) 
+  to install Internet In A Box on a Rasperry Pi
+* [INSTALLATION-iiab-olip.md](./INSTALLATION-olip-raspberrypi.md) 
+  to install OLIP on a Rasperry Pi
+* [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
+  for Rachel on their own Rachel 3+ (incomplete)
 
 If anything here doesn't work please email mitra@archive.org
 or it would be even more helpful to post a PR on https://github.com/internetarchive/dweb-mirror 

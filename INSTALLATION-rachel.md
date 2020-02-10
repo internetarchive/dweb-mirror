@@ -1,5 +1,20 @@
 # Installation Instructions for dweb-mirror on Rachel 3+ (from WorldPossible)
 
+If you not installing the offline archive on a Rachel 3+ then one of these documents 
+will be much easier to follow. 
+
+* [INSTALLATION.md](./INSTALLATION.md)
+  for general installation instructions.
+* [INSTALLATION-dev.md](./INSTALLATION-dev.md) 
+  for developers who want to work on this code or on dweb-archive (our offline Javascript UI).
+  These are tested on Mac OSX, but should work with only minor changes on Linux (feedback welcome).
+* [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md) 
+  to install Internet In A Box on a Rasperry Pi
+* [INSTALLATION-iiab-olip.md](./INSTALLATION-olip-raspberrypi.md) 
+  to install OLIP on a Rasperry Pi
+* [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
+  for Rachel on their own Rachel 3+ (incomplete)
+
 This is a work in progress - and hasn't been tried on a clean box, since many of the earlier attempts failed and I have no 
 way to give it a full factory reset.
 

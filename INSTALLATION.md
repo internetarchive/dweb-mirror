@@ -20,6 +20,8 @@ There are separate instructions for:
   These are tested on Mac OSX, but should work with only minor changes on Linux (feedback welcome).
 * [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md) 
   to install Internet In A Box on a Rasperry Pi
+* [INSTALLATION-iiab-olip.md](./INSTALLATION-olip-raspberrypi.md) 
+  to install OLIP on a Rasperry Pi
 * [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
   for Rachel on their own Rachel 3+ (incomplete)
 

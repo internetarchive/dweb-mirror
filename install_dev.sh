@@ -75,8 +75,9 @@ then
   if ! yarn --version 2>/dev/null
   then
   step XXX "Adding Yarn sources"
-    curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+    curl -sSL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+
   fi
   set +e # update and upgrade often have non-zero return codes even though safe to continue
   step XXX "Apt update"
