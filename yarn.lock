@@ -151,10 +151,10 @@
   dependencies:
     jquery "^3.4.1"
 
-"@internetarchive/dweb-archive-dist@^0.2.21":
-  version "0.2.21"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.21.tgz#9645c93b014566032f96fe89b9072eec23bf3d3e"
-  integrity sha512-y4kL2n+huQRBiMbijed8hJnx1UVGGwrR6LSqUUE+B+FAGjty3vCi+nuTO3MSqPwED3T4I8SYD+k78IeyENZWOg==
+"@internetarchive/dweb-archive-dist@^0.2.22":
+  version "0.2.22"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.22.tgz#91d970203c0668923782982297a8ecc4e9d60842"
+  integrity sha512-KA1VPzDGvqqSTlidsrbPdNPW2Zg0bbvK0VzBWw9iUPn4UM7N8xbD9A3yAdYbapcj5gdTN0RGkRFUOdbk51b8UQ==
   dependencies:
     bootstrap-3-typeahead "4.0.2"
     react "^15.2.0"
@@ -175,10 +175,10 @@
     prettier-bytes "^1.0.4"
     simple-sha1 "^3.0.1"
 
-"@internetarchive/dweb-transports@^0.2.17":
-  version "0.2.17"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.17.tgz#82efd9c9714b04c6cdbcc183cfe52c287949f15c"
-  integrity sha512-zSeN1YLBHJauUf/6gLVMdQLvRw6+Pf3/UW/s/di3F02jjvL/qv4esrjrxz8/1Rg0MmTSmqecyrj99+QlqTKWVw==
+"@internetarchive/dweb-transports@^0.2.19":
+  version "0.2.19"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.19.tgz#94a38758b8c9a93fcf84319fa63a6bd74b35152f"
+  integrity sha512-XQJOmG+x3RF/skn0p3mBcv45vh/grmG0mLqulACJDCJMz/QNqdAdQWL74LDUjIu9cXFKlcSOdnw37BdeW0Zpzg==
   dependencies:
     "@stratumn/canonicaljson" "^1.0.3"
     async "^2.6.3"

@@ -13,7 +13,7 @@
     "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
     "@internetarchive/dweb-archive-dist": "^0.2.22",
     "@internetarchive/dweb-archivecontroller": "^0.2.7",
-    "@internetarchive/dweb-transports": "^0.2.17",
+    "@internetarchive/dweb-transports": "^0.2.19",
     "@stratumn/canonicaljson": "^1.0.3",
     "async": "^2.6.2",
     "child_process": "^1.0.2",
