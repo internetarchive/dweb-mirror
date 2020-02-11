@@ -480,7 +480,8 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
     }
   }
 
-  // Try Read or Net - order depends on noCache
+  // Try Read or Net - order depends on noCache, throws error if couldnt read it, or get from net.
+  // returns true if should save the result locally
   function tryReadOrNet(cb1) {
     if (!this.itemid || this.metadata || this.is_dark) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
       cb1(null, false); // Didnt fetch so nothing to save
@@ -499,7 +500,11 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
       tryRead.call(this, (err) => {
         if (err) { // noCache, or not cached
           tryNet.call(this, (err1) => {
-            cb1(err1, true); // If net succeeded then save
+            if (err1) {
+              cb1(new Error(`Unable to fetch metadata locally: ${err.message} or from net ${err1.message}`), false);
+            } else {
+              cb1(null, true);
+            }
           });
         } else {
           // cached but check for explicit requirement to copy
@@ -1025,7 +1030,7 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
           }
           cb3(null);
         })
-      ], cb1);
+      ],(err,res)=>cb1(null) ); // ignore error just dont add any downloaded field (e.g. if no metaata)
     },
     cb);
 };
