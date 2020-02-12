@@ -5,7 +5,7 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
-* 0.2.78: archivecontroller 0.2.8 to get query build fix
+* 0.2.79: archivecontroller 0.2.8 to get query build fix
 * 0.2.77: bug when no metadata for members; OLIP docs
 * 0.2.76: CrawlManager bugs; opensearch;
 * 0.2.75: Crawls / pages / palmleaf; installation improvements (OLIP, Mediawiki)
