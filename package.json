@@ -12,7 +12,7 @@
     "@futurepress/epubjs-reader": "git+https://github.com/futurepress/epubjs-reader.git",
     "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
     "@internetarchive/dweb-archive-dist": "^0.2.22",
-    "@internetarchive/dweb-archivecontroller": "^0.2.7",
+    "@internetarchive/dweb-archivecontroller": "^0.2.8",
     "@internetarchive/dweb-transports": "^0.2.19",
     "@stratumn/canonicaljson": "^1.0.3",
     "async": "^2.6.2",
@@ -52,6 +52,11 @@
     "type": "git",
     "url": "git://github.com/internetarchive/dweb-mirror.git"
   },
-  "scripts": {},
-  "version": "0.2.77"
+  "scripts": {
+    "postpublish": "echo 'post publish script to build'",
+    "dependers":  "grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json",
+    "editdependers":  "vi `grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json`",
+    "postpublish":  "yarn run dependers"
+  },
+  "version": "0.2.78"
 }
