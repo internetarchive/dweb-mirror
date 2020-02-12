@@ -378,10 +378,10 @@ ArchiveItem.prototype.fetch_page = function ({
       if (zip) zipfile = zip.split('/')[4];
       // Reconstruct url as we will quantize the scale
       const urls = (zip && file)
-        ? `https://${ai.server}/BookReader/BookReaderImages.php?${parmsFrom({ zip, file, scale, rotate })}`
+        ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderImages.php?${parmsFrom({ zip, file, scale, rotate })}`
         : page
-        ? `https://${ai.server}/BookReader/BookReaderPreview.php?${parmsFrom({ subPrefix, page, scale, rotate, id: this.itemid, itemPath: this.dir, server: this.server })}`
-        : undefined; // THis would be an error
+        ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderPreview.php?${parmsFrom({ subPrefix, page, scale, rotate, id: this.itemid, itemPath: this.dir, server: 'www-dweb-cors.dev.archive.org' })}`
+        : undefined; // This would be an error
       if (!urls) {
         debug('Failure to build URLs for bookreader %o', { identifier: this.itemid, zip, file, page, scale, rotate });
         cbw(new Error('insufficient info to build URL'));
