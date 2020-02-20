@@ -146,7 +146,8 @@ directories found, but are read from any of the locations.
 If your disk space is getting full, its perfectly safe to delete any
 subdirectories (except `archiveorg/.hashstore`), and the server will refetch anything else it needs 
 next time you browse to the item while connected to the internet. 
-Its also safe to move directories to an attached USB 
+
+It is also safe to move directories to an attached USB 
 (underneath a `archiveorg` directory at the top level of the disk) 
 It is also safe to move attached USB's from one device to another.
 

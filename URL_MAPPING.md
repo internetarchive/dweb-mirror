@@ -6,8 +6,8 @@ Last update 2019-12-17
 
 * In express (HTTP server in dweb-mirror) parameters are :xyz 
 
-|from|via|to|notes|
-|-------|----|---|--|-----|
+|from|to|via|notes|
+|----|--|---|-----|
 |/|redirect|/archive/archive.html|
 |/admin/setconfig/IDENTIFIER/LEVEL|config.writeUserTaskLevel|info
 |/admin/crawl/*/CRAWLID|CrawlManager|crawl status or info
@@ -32,7 +32,7 @@ Last update 2019-12-17
 |/download/IDENTIFIER/*|streamArchiveFile Routing|https://archive.org/cors/IDENTIFIER/*
 |/embed/IDENTIFIER?output=json|sendPlaylist Routing|https://www-dweb-cors.dev.archive.org/embed/IDENTIFIER?output=json
 |/epubreader/*|_sendFileFromEpubreader|config.epubreader.directory/*
-|/favicon.ico|sendFile|config.archiveui.directory/favicon.ico
+|/favicon.ico|sendFile|config.archiveui.directory/favicon.ico|
 |/images/*|sendFileUrlSubdir|config.archiveui.directory/images/*
 |/includes/*|sendFileUrlSubdir|config.archiveui.directory/includes/*
 |/info|sendInfo|{info}

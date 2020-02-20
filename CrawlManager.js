@@ -36,12 +36,78 @@ const MirrorFS = require('./MirrorFS');
         { sort: "-downloads", rows: 200, level: "tile" } ] }  // and next 200 items and get their thumbnails only
   ]
 
+TODO - some duplication between this and above.
+The crawl is initialized from a data-structure, or indirectly from YAML. Syntax of object is
+[ {
+    identifier:     Archive identifier OR array of them OR `` for Home
+    level:          any of "tile" "metadata" "details" "all"
+    query:          Alternative to identifier, specify a query
+    search: {       How to search on this item (if its a query or mediatype=collection)
+        sort:       Sort order e.g. "-downloaded" or "titleSorter"
+        rows:       Integer - number of rows to read
+        level:      At what level ("tile" is sufficent to paint the query results)
+        search:     This recurses, and applies a search to do on each search result
+        related: {  How many, and at how much detail to explore related items.
+            rows, level, search, related }  As for the search field.
 
+Configuration file example
+apps:
+  crawl:
+    tasks:
+      # Get 40 search results for Prelinger, first 10 at details (sufficient to display), then 30 at tile
+      # and get the tiles for the 6 most related items
+      - identifier: "prelinger"
+        level: "details"
+        search:
+          - sort: "-downloads"
+            rows: 10
+            level: "tile"
+
+          - sort: "-downloads"
+            rows: 30
+            level: "tile"
+        related:
+          - rows: 6
+            level: "tile"
  */
+/**
+ * Common parameters:
+ * crawlmanager: instance of CrawlManager TODO camelCase it
+ */
+
 
 // TODO may want to add way to specify certain media types only (in search{}?) but do not currently have an application for that.
 
 class CrawlManager {
+  // Manages crawls, each crawl (a group of tasks going to one device) is a CrawlManager instance.
+  /**
+   _levels: ["tile", "metadata", "details", "all"]  Allowable task levels, in order.
+   crawls: [CRAWLMANAGER]  Array of CrawlManagers for each crawl run so far since startup (TODO will start culling),
+   ```
+   Each instance of CrawlManager has the following attributes:
+   ```
+   _taskQ          (async queue) of tasks to run (from async package)
+   _uniqItems      { identifier: [ task* ] } Dictionary of tasks carried out per item, used for checking uniqueness and avoiding loops
+   (identifier also has pseudo-identifiers like _SEARCH_123abc
+   _uniqFiles      { identifier: [ task* ] } Dictionary of tasks carried out per file
+   callbackDrainOnce (bool) True if should only call drain callback first time queue empties out.
+   completed       Count of tasks completed (for reporting)
+   concurrency     (int) Sets the number of tasks that can be processed at a time
+   copyDirectory   If set, the crawl will make a full copy here, for example on a USB drive
+   debugidentifier Will be set to a global variable to help conditional debugging
+   defaultDetailsSearch    Default search to perform as part of "details" or "full" (usually sufficient to paint tiles)
+   defaultDetailsRelated   Default crawl on related items when doing "details" or "full" (usually sufficient to paint tiles)
+   errors          [{task, error}] Array of errors encountered to report on at the end.
+   initialItemTaskList: [TASK] Tasks to run each time crawl runs
+   limitTotalTasks (int) If set, limits the total number of tasks that can be handled in a crawl, this is approx the number of items plus number of files
+   maxFileSize     (int) If set, constrains maximum size of any one file
+   name            (string) Name of the crawl - for display purposes
+   noCache         If true will ignore the cache, this is useful to make sure hits server to ensure it precaches/pushes to IPFS etc
+   pushedCount     Count of tasks pushed onto the queue, used for checking against limitTotalTasks
+   skipFetchFile   If true will just comment on file, not actually fetch it (including thumbnails)
+
+   */
+
   constructor({
     initialItemTaskList = [], copyDirectory = undefined, debugidentifier = undefined, skipFetchFile = false,
     noCache = false, maxFileSize = undefined, concurrency = 1, limitTotalTasks = undefined,
@@ -99,11 +165,12 @@ class CrawlManager {
     /*
         task:   { CrawlItem | CrawlFile } or [ task ]
         Push a task onto the queue
+        Add a task to _taskQ provided performing some checks first (esp limitTotalTasks)
      */
     if (!this.limitTotalTasks || (this.pushedCount <= this.limitTotalTasks)) {
       this._taskQ.push(task);
     } else {
-      debug("ERROR raise limitTotalTasks")
+      debug('ERROR raise limitTotalTasks');
       this.errors.push({ task, error: new Error(`Skipping ${task.debugname} as reached maximum of ${this.limitTotalTasks} tasks`), date: (new Date(Date.now()).toISOString()) });
     }
   }
@@ -111,7 +178,7 @@ class CrawlManager {
   pushTask(task) {
     /*
         task:   { identifier, ... } args to CrawlItem  or [task*]
-        Create a new CrawlItem
+        Create a new subclass of Crawlable and _push it
         If identifier is an array, then expand into multiple tasks.
         If task is an array, iterate over it
      */
@@ -126,6 +193,9 @@ class CrawlManager {
     }
   }
 
+  /**
+   * Set any of the attributes, doing sme minimal preprocesssing first
+   */
   setopts(opts = {}) {
     Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);
     // if (opts.copyDirectory) { } // If Crawling to a directory - no action reqd any more since MirrorFS now creates hashstore lazily
@@ -166,6 +236,9 @@ class CrawlManager {
     CM.drainedCb = cb; // Whether its called on each drain, or just once depends on callbackDrainOnce
   }
 
+  /**
+   * Called when final task processed, to report on results and if set call the drainedCb
+   */
   drained() {
     debug('Crawl finished %d tasks with %d errors', this.completed, this.errors.length);
     this.errors.forEach(e => debug('ERR:%o %s %o %o %s',
@@ -176,20 +249,33 @@ class CrawlManager {
   }
 
   // CONTROL FUNCTIONS UNDER DEV
+  /**
+   * Start crawl from beginning
+   */
   restart() { // UI [<<]
     this.empty(); // Note there may be some un-stoppable file retrievals happening
     this.clearState();
     this.pushTask(this.initialItemTaskList); // Push original tasks onto list
   }
 
+  /**
+   * Pause crawl (note restart wont start it going again)
+   */
   pause() { // UI  [||]
     this._taskQ.pause();
   }
 
+  /**
+   * Unpause a crawl
+   */
   resume() { // UI [>]
     this._taskQ.resume();
   }
 
+  /**
+   * Clear out a taskQ on a crawl
+   * @param identifier
+   */
   empty({ identifier = undefined } = {}) { // UI [X]
     this._taskQ.remove(task => (
       identifier
@@ -197,6 +283,10 @@ class CrawlManager {
         : true)); // Passed {data, priority} but removing all anyway
   }
 
+  /**
+   * Report the status of a crawl as some JSON:
+   * @returns {{opts: *, initialItemTaskList: *, name: *, queue: {running: *, paused: *, workersList: *, length: *, completed: number, pushed: *, concurrency: *}, errors: {date: *, task: (CrawlItem|CrawlItem), error: {name: *, message: *}}[]}}
+   */
   status() {
     return {
       name: this.name,
@@ -219,6 +309,13 @@ class CrawlManager {
     return this.crawls.map(crawl => crawl.status());
   }
 
+  /**
+   * Handle a status change, by removing any queued tasks, debouncing (waiting in case user clicks again) and then running whatever final task chosen
+   * Note that config should be a live pointer, that can be accessed when the task is queued.
+   * @param identifier
+   * @param delayTillReconsider
+   * @param config
+   */
   suspendAndReconsider({ identifier = undefined, delayTillReconsider = 0, config = undefined } = {}) {
     // Handle a status change, by removing any queued tasks, debouncing (waiting in case user clicks again) and then running whatever final task chosen
     this.empty({ identifier }); // remove identifier from queue
@@ -237,6 +334,14 @@ class CrawlManager {
       || new CrawlManager(Object.assign({}, config.apps.crawl.opts, { copyDirectory, debugidentifier: copyDirectory, name: copyDirectory }));
   }
 
+  /**
+   * Called to do a one-time crawl of an item
+   * @param identifier
+   * @param query
+   * @param config
+   * @param copyDirectory
+   * @param cb
+   */
   // Test is curl -Lv http://localhost:4244/admin/crawl/add/AboutBan1935?copyDirectory=/Volumes/Transcend/archiveorgtest20190701
   static add({
     identifier = undefined, query = undefined, config = undefined, copyDirectory = undefined
@@ -265,9 +370,12 @@ CrawlManager.optsallowed = ['debugidentifier', 'skipFetchFile', 'noCache', 'maxF
 // q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function(err) { console.log('finished processing item'); }); // add some items to the queue (batch-wise)
 // q.unshift({name: 'bar'}, function (err) { console.log('finished processing bar'); });// add some items to the front of the queue
 
+/**
+ * Synonymous with task, its the parent class for other tasks
+ */
 class Crawlable {
   constructor(debugname, parent) {
-    /* Common between CrawlFile and CrawlItem
+    /* Common between CrawlFile and CrawlItem - only ever called as `super()`
         debugname   str name of this object (for debugging)
         parent      [str*] names of parents (for debugging) (oldest first)
      */
@@ -301,6 +409,11 @@ class CrawlFile extends Crawlable {
     Object.assign(this, opts); // Handle opts in process as may be async
   }
 
+  /**
+   * Process a ArchiveFile, retrieve it if not already cached, depends on state of skipFetchFile & maxFileSize
+   * cb(err) Called when item processed - errors should be reported when encountered and then at the end of the crawl.
+   * @param cb
+   */
   process(crawlmanager, cb) {
     const copyDirectory = crawlmanager.copyDirectory;
     if (!this.file) {
@@ -338,6 +451,9 @@ class CrawlFile extends Crawlable {
     }
   }
 
+  /**
+   * returns true iff have not already tried this file on this crawl.
+   */
   isUniq(crawlmanager) {
     const key = [this.file.itemid, this.file.metadata.name].join('/');
     const prevTasks = crawlmanager._uniqFiles[key];
@@ -349,8 +465,7 @@ class CrawlFile extends Crawlable {
 }
 
 class CrawlPage extends Crawlable {
-  constructor(opts, parent) {
-    /*
+    /**
         requires: parent + archiveitem + identifier + (page || scale+rotate+zip+file)
         identifier  Identifier of item
         archiveitem ArchiveItem
@@ -361,9 +476,10 @@ class CrawlPage extends Crawlable {
           zip     name of directory
           file    file inside zip
         }
-        parent  [str*] see Crawlable
+        debugname str see Crawlable
+        parent    [str*] see Crawlable
      */
-    // noinspection JSUnusedLocalSymbols
+  constructor(opts, parent) {
     const {
       identifier = undefined, pageParms
     } = opts;
@@ -372,6 +488,11 @@ class CrawlPage extends Crawlable {
     Object.assign(this, opts); // Handle opts in process as may be async
   }
 
+  /**
+   * Process a Page of an ArchiveItem, retrieve it if not already cached, depends on state of skipFetchFile & maxFileSize
+   * @param crawlmanager
+   * @param cb(err) Called when item processed - errors should be reported when encountered and then at the end of the crawl.
+   */
   process(crawlmanager, cb) {
     console.assert(this.archiveitem, 'Crawl of page needs archiveitem');
     if (this.isUniq(crawlmanager)) {
@@ -389,6 +510,10 @@ class CrawlPage extends Crawlable {
     }
   }
 
+  /**
+   * @param crawlmanager
+   * @returns {boolean} True if have not already tried this page on this crawl.
+   */
   isUniq(crawlmanager) {
     const key = [this.identifier, this.pageParms.page || this.pageParms.zip, this.pageParms.file, this.pageParms.scale, this.pageParms.rotate].join('/');
     const prevTasks = crawlmanager._uniqFiles[key];
@@ -399,6 +524,14 @@ class CrawlPage extends Crawlable {
   }
 }
 
+/**
+ * Represents an item that needs crawling,
+ *
+ * identifier  Archive Identifier
+ * identifier, level, query, search, related:  see config
+ * member      Pointer to ArchiveMember if known
+ * crawlmanager CrawlManager of this task
+ */
 class CrawlItem extends Crawlable {
   constructor({
     identifier = undefined, query = undefined, level = undefined, member = undefined, related = undefined, search = undefined, crawlmanager
@@ -424,9 +557,15 @@ class CrawlItem extends Crawlable {
     }
   }
 
+  /**
+   * Create a new CrawlItem and queue it, handles different kinds of members, including saved searches and those in fav-*
+   * @param member
+   * @param taskparms
+   * @param parent
+   * @param crawlmanager
+   * @returns {CrawlItem}
+   */
   static fromSearchMember(member, taskparms, parent, crawlmanager) {
-    // create a new CrawlItem and add to taskQ
-    // Handles weird saved-searches in fav-xxx {mediatype: search, identifier: query}
     return new CrawlItem({
       member,
       crawlmanager,
@@ -473,6 +612,9 @@ class CrawlItem extends Crawlable {
       && this._relatedLessThanOrEqual(this.related, task.related);
   }
 
+  /**
+   * @returns {boolean} True if the item has not been crawled this time at a greater or equal depth.
+   */
   isUniq(crawlmanager) {
     const key = this.item._namepart();
     const prevTasks = crawlmanager._uniqItems[key];
@@ -524,6 +666,9 @@ class CrawlItem extends Crawlable {
     cb();
   }
 
+  /**
+   * Process a task to crawl an item, complexity depends on its `.level` but can include fetch_metadata, fetch_query, saveThumbnail, crawling some or all of .files and relatedItems.
+   */
   process(crawlmanager, cb) {
     debug('CrawlManager: processing "%s" %s via %o %o', this.debugname, this.level, this.parent, this.search || '');
     this.item = new ArchiveItem({ identifier: this.identifier, query: this.query });

@@ -19,16 +19,25 @@ const { ArchiveItem, ArchiveMember, dwebMagnetLinkFrom, RawBookReaderResponse, p
 // Other files from this repo
 const MirrorFS = require('./MirrorFS');
 
+
 /**
- * Common arguments:
- * noStore:            Like HTTP Cache-Control: no-store, don't store the result
- * noCache:            Like HTTP Cache-Control: no-cache, don't return cached copy (but can store response)
- * skipNet             dont load from net (only cache)
- * wantStream  Want results streamed (typically false if crawling)
- * wantSize  Just want the size in bytes (downloaded)
- * skipFetchFile Dont actually download the page
- * copyDirectory Where to cache it
+ * Common arguments across all API functions
+ *
+ * copyDirectory   points at top level of a cache where want a copy
+ * relFilePath     path to file or item inside a cache IDENTIFIER/FILENAME
+ * noCache         ignore anything in the cache - forces re-fetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
+ * noStore         dont store results in cache
+ * skipFetchFile   as an argument causes file fetching to be suppressed (used for testing only)
+ * skipNet         dont try and use the net for anything
+ * wantStream      Return results as a stream, just like received from the upstream.
+ * wantSize        Return the size as a byte-count.
+ * copyDirectory   Specify alternate directory to store results in rather than config.directories[0]
+ * darkOk          True if a dark item is a valid response (if false, and item is dark will throw an error)
+ * cb(err, res)    Unless otherwise documented callbacks return an error, (subclass of Error) or null, and optional return data.
+ *                 Some functions also support an absent cb as returning a Promise, otherwise cb is required
+ *                 feel free to add Promise support to any function lacking it, search for "Promise pattern v2" for examples of how to do this consistently.
  */
+
 
 function traceStream(s, { name = '', func = '' } = {}) {
   if (s) { // Only trace if its a stream (simplifies calling)
@@ -73,7 +82,14 @@ function _save1file(key, obj, namepart, { copyDirectory = undefined }, cb) {
 }
 
 
-// noinspection JSUnresolvedVariable
+/**
+ * Save metadata for this file as JSON in multiple files (see File Outline)
+ *
+ * If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
+ *
+ * @param copyDirectory
+ * @param cb(err, this) Errors if cant fetch metadata, or save failed
+ */
 ArchiveItem.prototype.save = function ({ copyDirectory = undefined } = {}, cb) {
   /* SEE-OTHER-ADD-METADATA-API-TOP-LEVEL in dweb-mirror and dweb-archivecontroller
       Save metadata for this file as JSON in multiple files.
@@ -116,6 +132,11 @@ ArchiveItem.prototype.save = function ({ copyDirectory = undefined } = {}, cb) {
     );
   }
 };
+/**
+ * Save `.bookreader` to `IDENTIFIER.bookreader.json`.
+ *
+ * If `.bookreader` is undefined it will attempt to retrieve first.
+ */
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.saveBookReader = function ({ copyDirectory = undefined } = {}, cb) {
   /*
@@ -174,13 +195,11 @@ function _parse_common(namepart, part, { copyDirectory = undefined }, cb) {
   });
 }
 
-// noinspection JSUnresolvedVariable
-// noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
+/**
+ * Read metadata, playlist, reviews, files and extra from corresponding files - see `Files on disk`
+ * cb(err, {files, files_count, metadata, reviews, collection_titles, dir, speech_vs_music_asr, is_dark, server})  data structure fields of ArchiveItem
+ **/
 ArchiveItem.prototype.read = function ({ copyDirectory = undefined }, cb) {
-  /*
-      Read metadata, reviews, files and extra etc from corresponding files
-      cb(err, {files, files_count, metadata, reviews, collection_titles, dir, speech_vs_music_asr, is_dark, server})  data structure fields of ArchiveItem
-  */
   const namepart = this.itemid;
   const res = {};
   function _parse(part, cb1) { _parse_common(namepart, part, { copyDirectory }, cb1); }
@@ -228,15 +247,14 @@ ArchiveItem.prototype.read = function ({ copyDirectory = undefined }, cb) {
     cb(err, res));
 };
 
-// noinspection JSUnusedGlobalSymbols,JSUnresolvedVariable
+/**
+ * Read bookreader data from file and place in bookreader field on item
+ * File has: `{ data, brOptions, lendingInfo, possibly metadata }`
+ * item has bookreader: { data, brOptions, lendingInfo }
+ * API returns { data: { data, brOptions, lendingInfo, possibly metadata } }
+ * cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
+ */
 ArchiveItem.prototype.read_bookreader = function ({ copyDirectory = undefined }, cb) {
-  /*
-     Read bookreader data from file and place in bookreader field on item
-     file = { data, brOptions, lendingInfo, possibly metadata }
-     item has bookreader: { data, brOptions, lendingInfo }
-     API returns { data: { data, brOptions, lendingInfo, possibly metadata } }
-     cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
-  */
   const namepart = this.itemid; // Possible undefined
   function _parse(part, cb1) { _parse_common(namepart, part, { copyDirectory }, cb1); }
   _parse('bookreader', (err, o) => { // { data, brOptions, lendingInfo }
@@ -248,26 +266,25 @@ ArchiveItem.prototype.read_bookreader = function ({ copyDirectory = undefined },
     }
   });
 };
-// noinspection JSUnresolvedVariable
+
+ /**
+  * Fetch the bookreader data for this item if it hasn't already been.
+  * More flexible version than dweb-archive.ArchiveItem
+  * Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
+  * opts = {
+  *   noCache             Dont check cache, refetch from server, and store locally
+  *   noStore             Dont store result
+  *   copyDirectory       Where to store result if not default
+  * }
+  * Alternatives/Strategy:
+  * cached:             return from cache
+  * !cached:            Load from net, save to cache
+  *
+  * cb(err, this) or if undefined, returns a promise resolving to 'this'
+  * Errors              TransportError (404)
+  * Result is ai.bookreader = { brOptions, data, lendingInfo}
+  **/
 ArchiveItem.prototype.fetch_bookreader = function (opts = {}, cb) { // TODO-API
-  /*
-  Fetch the bookreader data for this item if it hasn't already been.
-  More flexible version than dweb-archive.ArchiveItem
-  Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
-  opts = {
-    noCache             Dont check cache, refetch from server, and store locally
-    noStore             Dont store result
-    copyDirectory       Where to store result if not default
-  }
-  Alternatives:
-  cached:             return from cache
-  !cached:            Load from net, save to cache
-
-  cb(err, this) or if undefined, returns a promise resolving to 'this'
-  Errors              TransportError (404)
-
-  Result is ai.bookreader = { brOptions, data, lendingInfo}
-   */
   if (typeof opts === 'function') { cb = opts; opts = {}; } // Allow opts parameter to be skipped
   const { noCache, noStore, copyDirectory = undefined } = opts;
   // noinspection JSUnresolvedVariable
@@ -331,6 +348,20 @@ ArchiveItem.prototype.fetch_bookreader = function (opts = {}, cb) { // TODO-API
   }
 };
 
+
+/**
+ * Fetch a page from the item, caching it
+ *
+ * @param zip Name of file holding the image
+ * @param file file within zip
+ * @param scale factor to shrink raw image by (2 is about right for a full screen) floats will be quantized
+ * @param rotate 0 for normal, unsure what other values are
+ * @param page usually "cover_t.jpg" to get the page
+ *             or leaf1_w2000 - from mediawiki
+ *             or leaf1 - from BookreaderPreview.php/... when book is lendable, not free
+ * other parameters - see common Arguments above
+ * @param cb(err, data || stream || size) returns either data, or if wantStream then a stream
+ */
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_page = function ({
   wantStream = false, wantSize = false, noCache = false,
@@ -339,20 +370,9 @@ ArchiveItem.prototype.fetch_page = function ({
   itemPath = undefined, subPrefix = undefined,
   copyDirectory = undefined
 } = {}, cb) { // TODO-API noCache
-  /* Fetch a page from the item, caching it
 
-      page      usually "cover_t.jpg" to get the page
-                or leaf1_w2000 - from mediawiki
-                or leaf1 - from BookreaderPreview.php/... when book is lendable, not free
-      scale     factor to shrink raw image by (2 is about right for a full screen) floats will be quantized
-      rotate    0 for normal, unsure what other values are
-      zip       Name of file holding the image
-      file      file within zip
-      noCache, wantStream, wantSize, skipNet, skipFetchFile, copyDirectory see common arguments
-      cb(err, data || stream || size) returns either data, or if wantStream then a stream
-   */
   let zipfile;
-  debug('fetch_page:%s%s subPrefix=%s zip=%s file=%s page=%s scale=%s rotate=%s', skipNet ? " (skipNet)" : "", skipFetchFile ? " (skipFetchFile)" : "", subPrefix, zip, file, page, scale, rotate);
+  debug('fetch_page:%s%s subPrefix=%s zip=%s file=%s page=%s scale=%s rotate=%s', skipNet ? ' (skipNet)' : '', skipFetchFile ? ' (skipFetchFile)' : '', subPrefix, zip, file, page, scale, rotate);
   // page = cover_t.jpg - bookreader cover page
   // page=leaf1_w2000 meaning page 1, with ideal width 2000 pixels, comes from Palmleaf wiki
   // page=leaf1 scale=10.1234 subPrefix=IDENTIFIER zipfile=undefined from BookReaderPreview call made when book unavailable
@@ -434,10 +454,9 @@ ArchiveItem.prototype.fetch_page = function ({
 };
 
 
-// noinspection JSUnresolvedVariable
 ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API opts:cacheControl
   /*
-  Fetch the metadata for this item if it hasn't already been.
+  Fetch the metadata for this item if it hasn't already been, cache Locally
   More flexible version than dweb-archive.ArchiveItem
   Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_metadata
   Note that it adds information about the crawl and downloaded status
@@ -480,7 +499,7 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
     }
   }
 
-  // Try Read or Net - order depends on noCache, throws error if couldnt read it, or get from net.
+  // Try Read or Net - order depends on noCache, throws error if could not read it, or get from net.
   // returns true if should save the result locally
   function tryReadOrNet(cb1) {
     if (!this.itemid || this.metadata || this.is_dark) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
@@ -539,21 +558,25 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
 };
 
 // noinspection JSUnresolvedVariable
+/**
+ * Fetch the next page of the query for this item.
+ * A more flexible version than dweb-archive.ArchiveItem.fetch_query
+ * which is monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_query.
+ * @param opts {
+ *   skipNet, noCache, noStore,     see common argument documentation at top of this file
+ *   wantFullResp, copyDirectory    see _fetch_query
+ * }
+ * @param cb
+ * @returns {Promise<unknown>}
+ * Strategy is:
+ * Read <IDENTIFIER>_members_cached.json if it exists into .members
+ * Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
+ * Run _fetch_query which will also handled fav-*'s `members.json` files, and `query` metadata field.
+ * Write the result back to `<IDENTIFIER>_members_cached.json`
+ * Write each member to its own `<IDENTIFIER>_member.json`
+ */
 ArchiveItem.prototype.fetch_query = function (opts = {}, cb) {
-  /*  Monkeypatch ArchiveItem.fetch_query to make it check the cache
-      cb(err, [ArchiveMember])
 
-      opts = { skipNet, noCache, noStore,     see common argument documentation at top of this file
-                wantFullResp, copyDirectory }                see _fetch_query
-
-
-      Strategy is:
-      * Read <IDENTIFIER>_members_cached.json if it exists into .members
-      * Expand each of `.members` from its `<IDENTIFIER>_member.json` if necessary and file exists.
-      * Run _fetch_query which will also handled fav-*'s `members.json` files, and `query` metadata field.
-      * Write the result back to `<IDENTIFIER>_members_cached.json`
-      * Write each member to its own `<IDENTIFIER>_member.json`
-   */
   if (typeof opts === 'function') { cb = opts; opts = {}; } // Allow opts parameter to be skipped
   /* eslint-disable-next-line prefer-const */ /* as cant have let and const mixed in destructuring */
   let { noCache, noStore, skipNet, copyDirectory } = opts;
@@ -929,7 +952,7 @@ ArchiveItem.prototype.pageQuantizedScale = function (idealScale) {
 
 /**
  * Return an object suitable for passing to fetch_page to check size
- * @param manifestPage  one page data from manifest (IDENTIFIER_bookreader.json)
+ * @param pageManifest  one page data from manifest (IDENTIFIER_bookreader.json)
  * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage (override manifest)
  *  idealWidth if present is used to calculate the optimum quantized scale (next larger file)
  *  scale if present is quantized
@@ -939,7 +962,7 @@ ArchiveItem.prototype.pageQuantizedScale = function (idealScale) {
 ArchiveItem.prototype.pageParms = function (pageManifest, fetchPageOpts) {
   const url = new URL(pageManifest.uri);
   const idealScale = fetchPageOpts.scale || (pageManifest.width / (fetchPageOpts.idealWidth || 800));
-  const res = Object.assign({},
+  return Object.assign({},
       { rotate: 0, // default rotation
         // From the url in pageManifest
         zip: url.searchParams.get('zip'),
@@ -948,7 +971,6 @@ ArchiveItem.prototype.pageParms = function (pageManifest, fetchPageOpts) {
       },
     fetchPageOpts, // Override parameters and add new ones like skipNet
     { scale: this.pageQuantizedScale(idealScale) }); // Use quantizedScale derived above SEE also checkWhereValidFileRotatedScaled
-  return res;
 };
 ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undefined }, cb) {
   // For texts, Add .downloaded info on all pages, and summary on Item
@@ -1030,11 +1052,16 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
           }
           cb3(null);
         })
-      ],(err,res)=>cb1(null) ); // ignore error just dont add any downloaded field (e.g. if no metaata)
+      ], (err, res) => cb1(null)); // ignore error just dont add any downloaded field (e.g. if no metadata)
     },
     cb);
 };
 
+/**
+ * Add summary of downloaded info
+ * { downloaded: {files_all_size, files_all_count, files_size, files_count, files_details}}
+ * @param cb
+ */
 ArchiveItem.prototype.summarizeFiles = function (cb) {
   // See ALMOST-IDENTICAL-CODE-SUMMARIZEFILES
   const filesDownloaded = this.files.filter(af => af.downloaded);
@@ -1105,6 +1132,13 @@ ArchiveItem.prototype.addCrawlInfoMembers = function ({ config, copyDirectory = 
 };
 
 // noinspection JSUnresolvedVariable
+/**
+ * Add Crawl Info using all the other crawl and downloaded info, using the config
+ * item.crawl and .downloaded is set to result
+ * @param config  MirrorConfig object
+ * @param copyDirectory
+ * @param cb
+ */
 ArchiveItem.prototype.addCrawlInfo = function ({ config, copyDirectory = undefined } = {}, cb) {
   // In place add
   // Note that .itemid &| .metadata may be undefined

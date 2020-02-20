@@ -645,6 +645,7 @@ function mirrorHttp(config, cb0) {
     res.json(req.headers);
   });
 
+  /*
   // For debugging routing
   app.use('/xyzzy', (req, res, next) => {
     // Expect for .get /xyzzy/*: /xyzzy/foo url=original=path=/xyzzy/foo baseUrl=undefined
@@ -652,6 +653,7 @@ function mirrorHttp(config, cb0) {
     debug('xyzzy: .url=%s, .baseUrl=%s, .originalUrl=%s .path=%s .route=%s', req.url, req.baseUrl, req.originalUrl, req.path, req.route);
     next();
   });
+*/
 
   // ----------- Below here are intentionally at the end -------
   // Lastly try a file - this will get archive.html, dweb-archive-bundle.js, favicon.ico, dweb-archive-styles.css

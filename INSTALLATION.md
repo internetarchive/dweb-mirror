@@ -31,7 +31,7 @@ If anything here doesn't work please email mitra@archive.org
 or it would be even more helpful to post a question or fix
 on https://github.com/internetarchive/dweb-mirror/issues
  
-There are some platform specific topics including:
+There are some platform specific topics on GitHub including:
 * OrangePi: [dweb-mirror issue#224](https://github.com/internetarchive/dweb-mirror/issues/224) 
 * RaspberryPi: [dweb-mirror issue#110](https://github.com/internetarchive/dweb-mirror/issues/110).
 * Rachel: [dweb-mirror issue#93](https://github.com/internetarchive/dweb-mirror/issues/93).
