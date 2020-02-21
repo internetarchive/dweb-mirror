@@ -1,7 +1,9 @@
 /*
-// Monkey patches dweb-archivecontroller,
-// Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadata is used to use the cache
+ * Monkey patches dweb-archivecontroller,
+ * Note cant merge into dweb-archivecontroller as wont work in browser; and cant create subclass as want everywhere e.g. archivefile.fetch_metadata is used to use the cache
  */
+/* eslint-disable func-names, no-use-before-define, consistent-return */
+// func-names disabled because monkeypatching, consistent-return, no-use-before-define disabled because of promisify pattern
 
 // Generic NPM modules
 const path = require('path');
@@ -22,7 +24,7 @@ const MirrorFS = require('./MirrorFS.js');
  * relFilePath     path to file or item inside a cache IDENTIFIER/FILENAME
  * noCache         ignore anything in the cache - forces refetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
  * noStore         dont store results in cache
- * skipFetchFile   as an argument causes file fetching to be supressed (used for testing only)
+ * skipFetchFile   as an argument causes file fetching to be suppressed (used for testing only)
  * skipNet         dont try and use the net for anything
  * wantStream      Return results as a stream, just like received from the upstream.
  * wantSize        Return the size as a byte-count.
@@ -69,10 +71,10 @@ ArchiveMember.read = function ({
       let o;
       try {
         o = canonicaljson.parse(jsonstring); // No reviver function, which would allow postprocessing
-      } catch (err) {
+      } catch (err1) {
         // It is on the other hand an error for the JSON to be unreadable
-        debug('Failed to parse json at %s: part %s %s', namepart, part, err.message);
-        cb(err);
+        debug('Failed to parse json at %s: part %s %s', namepart, part, err1.message);
+        cb(err1);
       }
       cb(null, o);
     }
@@ -106,20 +108,20 @@ ArchiveMember.prototype.read = function ({ copyDirectory }, cb) {
 // noinspection JSUnresolvedVariable
 ArchiveMember.prototype.save = function ({ copyDirectory = undefined } = {}, cb) {
   if (cb) { try { f.call(this, cb); } catch (err) { cb(err); } } else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) { reject(err); } else { resolve(res); } }); } catch (err) { reject(err); } }); } // Promisify pattern v2
-  function f(cb) {
+  function f(cb0) {
     if (!(copyDirectory || MirrorFS.directories.length)) {
-      cb(new Error('Nowhere to save to'));
+      cb0(new Error('Nowhere to save to'));
     } else {
       const namepart = this.identifier; // Its also in this.item.metadata.identifier but only if done a fetch_metadata
       const savedkeys = gateway.url_default_fl;
       // noinspection JSUnusedLocalSymbols
-      const jsonToSave = canonicaljson.stringify(ObjectFilter(this, (k, v) => savedkeys.includes(k)));
+      const jsonToSave = canonicaljson.stringify(ObjectFilter(this, (k, unusedV) => savedkeys.includes(k)));
       const relFilePath = path.join(namepart, namepart + '_member.json');
       MirrorFS.writeFile({ relFilePath, copyDirectory }, jsonToSave, (err) => {
         if (err) {
-          debug('Unable to write metadata to %s: %s', relFilePath, err.message); cb(err);
+          debug('Unable to write metadata to %s: %s', relFilePath, err.message); cb0(err);
         } else {
-          cb(null, this);
+          cb0(null, this);
         }
       });
     }
@@ -128,8 +130,8 @@ ArchiveMember.prototype.save = function ({ copyDirectory = undefined } = {}, cb)
 
 
 ArchiveMember.prototype.saveThumbnail = function ({
-  skipFetchFile = false, noCache = false, wantStream = false, copyDirectory = undefined
-} = {}, cb) { // TODO-API
+    skipFetchFile = false, noCache = false, wantStream = false, copyDirectory = undefined
+  } = {}, cb0) { // TODO-API
   /*
   Save a thumbnail to the cache, note must be called after fetch_metadata
   wantStream      true if want stream instead of ArchiveItem returned
@@ -137,7 +139,7 @@ ArchiveMember.prototype.saveThumbnail = function ({
   noCache         true if should not check cache
   resolve or cb(err.res)  this on completion or stream on opening
   */
-  if (cb) { try { f.call(this, cb); } catch (err) { cb(err); } } else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) { reject(err); } else { resolve(res); } }); } catch (err) { reject(err); } }); } // Promisify pattern v2
+  if (cb0) { try { f.call(this, cb0); } catch (err) { cb0(err); } } else { return new Promise((resolve, reject) => { try { f.call(this, (err, res) => { if (err) { reject(err); } else { resolve(res); } }); } catch (err) { reject(err); } }); } // Promisify pattern v2
   function f(cb) {
     const namepart = this.identifier; // Its also in this.metadata.identifier but only if done a fetch_metadata
 
