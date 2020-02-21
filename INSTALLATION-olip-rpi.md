@@ -4,9 +4,9 @@ If you not installing dweb-archive+IIAB on a Raspberry Pi then one of these docu
 will be much easier to follow. 
 
  * Mac OSX [INSTALLATION-osx.md](./INSTALLATION-osx.md)
- * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-raspberrypi.md](./INSTALLATION-iiab-raspberrypi.md)
- * Offline Internet Platform (OLIP) on Rasberry Pi [INSTALLATION-olip.md](./INSTALLATION-iiab-olip.md)
- * Raspberry Pi without IIAB or OLIP [INSTALLATION-raspberrypi.md](./INSTALLATION-raspberrypi.md)
+ * Internet In A Box (IIAB) on Rasberry Pi [INSTALLATION-iiab-rpi.md](./INSTALLATION-iiab-rpi.md)
+ * Offline Internet Platform (OLIP) on Rasberry Pi [INSTALLATION-olip.md](INSTALLATION-olip-rpi.md)
+ * Raspberry Pi without IIAB or OLIP [INSTALLATION-rpi.md](./INSTALLATION-rpi.md)
  * Rachel on the 3+ [INSTALLATION-rachel.md](./INSTALLATION-rachel.md) 
  * Rachel on the RPI [INSTALLATION-rachel-rpi.md](./INSTALLATION-rachel-rpi.md) 
  * Mac OSX Developer [INSTALLATION-osx-dev.md](INSTALLATION-dev.md)
