@@ -36,7 +36,7 @@ const MirrorFS = require('./MirrorFS.js');
 
 // SEE ALMOST-SAME-CODE-NAMEPART in ArchiveMember._namepart and ArchiveItem._namepart
 // noinspection JSUnresolvedVariable
-ArchiveMember._namepart = function ({ identifier, query, sort }) {
+ArchiveMember._namepart = function ({ identifier, query, sort = [] }) {
   // The name used for the directory and file prefixes, normally the item identifier, but some special cases
   if (!identifier && query) {
     // Goal here is a string that: gives an indication of what it is; is filesystem safe; doesnt map similar but different queries to same string
