@@ -450,9 +450,10 @@ function mirrorHttp(config, cb0) {
 
   // Keep these lines in alphabetical order
   // unless there is a reason not to (e.g. because capture specific before generic) in which case document in order!
-  // If there is a redir.html file it will use it, otherwise it will do a standard redirect)
   app.get('/', (req, res, next) => {
-    res.sendFile(config.archiveui.directory + '/redir.html', (unusedErr) => { next(); });
+    res.sendFile(config.archiveui.directory + '/redir.html', (unusedErr) => { // Try standard redir.html
+      if (unusedErr) next();  // if no redir.html file then do a standard redirect.
+    });
   });
   app.get('/', redirectWithQuery({ identifier: 'local' }));
   // Note app.get('/*'... is at the end after catch everything else

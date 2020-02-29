@@ -57,5 +57,5 @@
     "dependers":  "grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json",
     "editdependers":  "vi `grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json`"
   },
-  "version": "0.2.82"
+  "version": "0.2.83"
 }
