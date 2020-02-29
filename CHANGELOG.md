@@ -5,6 +5,7 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.84: pickup dweb-archive 0.2.25
 * 0.2.83: Catch double header issue if redir.html is present
 * 0.2.82:
   * Support CrawlConfig dropdown

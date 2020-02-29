@@ -151,10 +151,10 @@
   dependencies:
     jquery "^3.4.1"
 
-"@internetarchive/dweb-archive-dist@^0.2.24":
-  version "0.2.24"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.24.tgz#df3c1e74428b189ce516bd7e724fafb6a2a0ad29"
-  integrity sha512-NHu64EFp0H304e62xZw7rur5kpYZpjpbl1YaZDHbsHDNhtFZjIh13GDvfRCHcfaAdD+0rA04wVYvYDtdIKjt3g==
+"@internetarchive/dweb-archive-dist@^0.2.25":
+  version "0.2.25"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.25.tgz#6221820c3fcfef0ca4536253aecda6c85e90c7ef"
+  integrity sha512-WanbYBKxeP58kMbtbJHXWy6moZuveDeOdqlOGRSXE2Bj4/aq/hbBdLnAqNLP0rM7TdlLfvsVGTjVgFiSVIdUXg==
   dependencies:
     bootstrap-3-typeahead "4.0.2"
     react "^15.2.0"
