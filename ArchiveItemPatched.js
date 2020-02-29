@@ -1070,9 +1070,9 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
 ArchiveItem.prototype.summarizeFiles = function (cb) {
   // See ALMOST-IDENTICAL-CODE-SUMMARIZEFILES
   const filesDownloaded = this.files.filter(af => af.downloaded);
-  const filesDetails = (!this.is_dark) && (!['tv'].includes(this.subtype()) && (!this.files.length || this.minimumForUI())); // false || [ArchiveFile]
+  const filesDetails = (!this.is_dark) && !['tv'].includes(this.subtype()) && (this.files.length ? this.minimumForUI() : []); // false || [ArchiveFile]
   this.downloaded.files_all_size = this.files.reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0);
-  this.downloaded.files_details_size = this.files.filter(af => filesDetails.includes(af)).reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0);
+  this.downloaded.files_details_size = filesDetails ?  filesDetails.reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0) : undefined;
   this.downloaded.files_all_count = this.files.length;
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;

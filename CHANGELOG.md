@@ -5,7 +5,7 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
-* 0.2.81:
+* 0.2.82:
   * Support CrawlConfig dropdown
   * metadata/local etc;
   * use dweb-cors to access data nodes
