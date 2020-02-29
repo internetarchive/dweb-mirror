@@ -985,6 +985,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
           cb(null); // No book info, presume not downloaded
         } else {
           if ((typeof this.downloaded !== 'object') || (this.downloaded === null)) this.downloaded = {}; // Could be undefined (legacy boolean or null as called for each member
+          let cover_t_size = 0;
           waterfall([
             cb0 => parallel([
               cb1 => this.fetch_page({
@@ -992,7 +993,10 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
                 wantSize: true,
                 page: 'cover_t.jpg',
                 skipNet: true
-              }, cb1), // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
+              }, (err, res) => {
+                cover_t_size = res;
+                cb1(err, res);
+              }), // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
               cb1 => each(
                 [].concat(...this.bookreader.brOptions.data),
                 (pageManifest, cb2) => {
@@ -1015,9 +1019,10 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
             cb0 => {
               // Note .flat is not valid till node 11.x
               const downloadedPages = this.pageManifests().filter(pg => pg.downloaded);
-              this.downloaded.pages_size = downloadedPages.reduce((sum, pg) => sum + pg.size, 0);
+              this.downloaded.pages_size = downloadedPages.reduce((sum, pg) => sum + pg.size, 0) + cover_t_size;
+              this.downloaded.pages_all_count = this.pageManifests().length;
               this.downloaded.pages_count = downloadedPages.length;
-              this.downloaded.pages_details = downloadedPages.length === this.pageManifests().length;
+              this.downloaded.pages_details = downloadedPages.length === this.downloaded.pages_all_count;
               _save1file('bookreader', this.bookreader, this._namepart(), { copyDirectory }, cb0);
             },
           ], cb);
@@ -1065,13 +1070,15 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
 ArchiveItem.prototype.summarizeFiles = function (cb) {
   // See ALMOST-IDENTICAL-CODE-SUMMARIZEFILES
   const filesDownloaded = this.files.filter(af => af.downloaded);
+  const filesDetails = (!this.is_dark) && (!['tv'].includes(this.subtype()) && (!this.files.length || this.minimumForUI())); // false || [ArchiveFile]
   this.downloaded.files_all_size = this.files.reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0);
+  this.downloaded.files_details_size = this.files.filter(af => filesDetails.includes(af)).reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0);
   this.downloaded.files_all_count = this.files.length;
   this.downloaded.files_size = filesDownloaded.reduce((sum, af) => sum + (parseInt(af.metadata.size, 10) || 0), 0);
   this.downloaded.files_count = filesDownloaded.length;
   // files_details is false for is_dark; searches have no files so true; cant download tv so false; otherwise looks at minimumForUI
   // note until crawlEpubs is the default it doesnt check for the presence of the .epub file
-  this.downloaded.files_details = (!this.is_dark) && (!['tv'].includes(this.subtype()) && (!this.files.length || this.minimumForUI().every(af => af.downloaded)));
+  this.downloaded.files_details = filesDetails && filesDetails.every(af => af.downloaded);
   cb(null);
 };
 

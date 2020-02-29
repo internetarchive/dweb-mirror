@@ -344,7 +344,12 @@ class CrawlManager {
    */
   // Test is curl -Lv http://localhost:4244/admin/crawl/add/AboutBan1935?copyDirectory=/Volumes/Transcend/archiveorgtest20190701
   static add({
-    identifier = undefined, query = undefined, config = undefined, copyDirectory = undefined
+    identifier = undefined,
+    query = undefined,
+    config = undefined,
+    rows = undefined,
+    level = 'details',
+    copyDirectory = undefined
   }, cb) {
     // Called by mirrorHttp to do a one-time crawl of an item
     const crawlmanager = copyDirectory
@@ -354,9 +359,9 @@ class CrawlManager {
     if (identifier === 'local') {
       crawlmanager.pushTask(config.apps.crawl.tasks); // Push the default tasks, these might or might not be the crawlmanger.initialTaskList
     } else {
-      crawlmanager._push(new CrawlItem({
-        identifier, query, level: 'details', crawlmanager
-      }, []));
+      const task = { identifier, query, level, crawlmanager };
+      if (rows) { task.search = {rows, level}};
+      crawlmanager._push(new CrawlItem(task, []));
     }
     cb(null); // No errors currently
   }

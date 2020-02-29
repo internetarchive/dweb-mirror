@@ -3,31 +3,31 @@
  * and to avoid including overweight XML libraries,
  * I will output stuff via templates
  */
+const debug = require('debug')('dweb-mirror:search');
 const ArchiveItem = require('./ArchiveItemPatched');
+
 const ItemsPerPage = 75;
 
 function doQuery(o, opts, config, cb) {
-  o.fetch_metadata(opts, (err, unused) => { // Not passing noCache as query usually after a fetch_metadata
+  o.fetch_metadata(opts, (err, unusedAI) => { // Not passing noCache as query usually after a fetch_metadata
     if (err) {
       debug('streamQuery could not fetch metadata for %s', o.itemid);
       cb(err);
     } else {
-      o.fetch_query({copyDirectory: opts.copyDirectory, wantFullResp: true, noCache: opts.noCache}, (err, resp) => { // [ArchiveMember*]
-        if (err) {
-          debug('streamQuery for q="%s" failed with %s', o.query, err.message);
-          cb(err);
-        } else {
+      o.fetch_query({ copyDirectory: opts.copyDirectory, wantFullResp: true, noCache: opts.noCache }, (err1, resp) => { // [ArchiveMember*]
+        if (err1) {
+          debug('streamQuery for q="%s" failed with %s', o.query, err1.message);
+          cb(err1);
+        } else if (!opts.wantCrawlInfo) {
           // Note we are adding crawlinfo to o - the ArchiveItem, but the resp.response.docs
           // is an array of pointers into same objects so its getting updated as well
-          if (!opts.wantCrawlInfo) {
+          cb(null, resp);
+        } else {
+          o.addCrawlInfo({ config, copyDirectory: opts.copyDirectory }, (unusederr, unusedmembers) => {
+            resp.response.downloaded = o.downloaded;
+            resp.response.crawl = o.crawl;
             cb(null, resp);
-          } else {
-            o.addCrawlInfo({config, copyDirectory: opts.copyDirectory}, (unusederr, unusedmembers) => {
-              resp.response.downloaded = o.downloaded;
-              resp.response.crawl = o.crawl;
-              cb(null, resp);
-            });
-          }
+          });
         }
       });
     }

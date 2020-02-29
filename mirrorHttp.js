@@ -499,7 +499,7 @@ function mirrorHttp(config, cb0) {
   app.get('/admin/crawl/empty/:crawlid', crawlManager('empty'));
   app.get('/admin/crawl/status', (req, res) => res.json(CrawlManager.status()));
   app.get('/admin/crawl/add', (req, res, next) => {
-    // Expect opts identifier, query, copyDirectory, but could be adding search, related, in future
+    // Expect opts identifier, query, rows, level, copyDirectory, but could be adding search, related, in future
     // Order is significant, config should NOT be overridable by query parameters.
     CrawlManager.add({ ...req.query, config }, err => {
       if (err) { // No errors expected
