@@ -5,6 +5,10 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.80:
+  * Support CrawlConfig dropdown
+  * metadata/local etc;
+  * use dweb-cors to access data nodes
 * 0.2.79: archivecontroller 0.2.8 to get query build fix
 * 0.2.77: bug when no metadata for members; OLIP docs
 * 0.2.76: CrawlManager bugs; opensearch;
