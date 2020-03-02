@@ -11,8 +11,8 @@
   "dependencies": {
     "@futurepress/epubjs-reader": "git+https://github.com/futurepress/epubjs-reader.git",
     "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
-    "@internetarchive/dweb-archive-dist": "^0.2.25",
-    "@internetarchive/dweb-archivecontroller": "^0.2.9",
+    "@internetarchive/dweb-archive-dist": "^0.2.26",
+    "@internetarchive/dweb-archivecontroller": "^0.2.10",
     "@internetarchive/dweb-transports": "^0.2.19",
     "@stratumn/canonicaljson": "^1.0.3",
     "async": "^2.6.2",
@@ -57,5 +57,5 @@
     "dependers":  "grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json",
     "editdependers":  "vi `grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json`"
   },
-  "version": "0.2.84"
+  "version": "0.2.85"
 }
