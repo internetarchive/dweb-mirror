@@ -151,19 +151,19 @@
   dependencies:
     jquery "^3.4.1"
 
-"@internetarchive/dweb-archive-dist@^0.2.25":
-  version "0.2.25"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.25.tgz#6221820c3fcfef0ca4536253aecda6c85e90c7ef"
-  integrity sha512-WanbYBKxeP58kMbtbJHXWy6moZuveDeOdqlOGRSXE2Bj4/aq/hbBdLnAqNLP0rM7TdlLfvsVGTjVgFiSVIdUXg==
+"@internetarchive/dweb-archive-dist@^0.2.26":
+  version "0.2.26"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archive-dist/-/dweb-archive-dist-0.2.26.tgz#b340d8b545aa4a79c69086f88e9713e431aedea0"
+  integrity sha512-2a8B6/cOY6XwWI16iSlxYmHmZTviBxJ9yfd83S4/F+FsKMtk0ViAVZAFOAJBjA37OL9YdnJd0eG6A8j5hWLuUQ==
   dependencies:
     bootstrap-3-typeahead "4.0.2"
     react "^15.2.0"
     react-dom "15.2.0"
 
-"@internetarchive/dweb-archivecontroller@^0.2.9":
-  version "0.2.9"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archivecontroller/-/dweb-archivecontroller-0.2.9.tgz#dcdce71032641daa4e8fd93dff4a2b908e4e1fb4"
-  integrity sha512-+5FoQR5c8fjoD1lm+8XAqVQ8AnEuFPghq8vPP74XGmRNDY+D8+UYLHmeaVq+saTLLBHF2zg77C15OSliPHCUCg==
+"@internetarchive/dweb-archivecontroller@^0.2.10":
+  version "0.2.10"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-archivecontroller/-/dweb-archivecontroller-0.2.10.tgz#f39a073debd967539122b3649b82d308a026b729"
+  integrity sha512-TbZkKvjsgYAfZ3x6SNHFep06jjoAgWaQ43dKhSFPUk3LLCDwlm5orAZOe1TKFkRUliAVtYOAlKsyRzs/kB/HOQ==
   dependencies:
     "@babel/core" "^7.2.2"
     "@stratumn/canonicaljson" "^1.0.2"
