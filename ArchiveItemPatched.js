@@ -52,13 +52,13 @@ function traceStream(s, { name = '', func = '' } = {}) {
 // noinspection JSUnresolvedVariable
 ArchiveItem.prototype._namepart = function () {
   // The name used for the directory and file prefixes, normally the item identifier, but some special cases
-  if (!this.itemid && this.query) {
+  if (!this.identifier && this.query) {
     // Goal here is a string that: gives an indication of what it is; is filesystem safe; doesnt map similar but different queries to same string
     // Npm's sanitize-filename does a reasonable job BUT it maps all unsafe chars to same result,
     // encodeURLcomponent probably does a reasonable job, except for *
     return encodeURIComponent(`_SEARCH_${this.query}_${this.sort.join('_')}`).replace(/\*/g, '%2A');
-  } else if (this.itemid) {
-    return this.itemid;
+  } else if (this.identifier) {
+    return this.identifier;
   } else {
     return undefined; // Should be caught at higher level to decide not to use cache
   }
@@ -104,7 +104,7 @@ ArchiveItem.prototype.save = function ({ copyDirectory = undefined } = {}, cb) {
 
       If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
   */
-  if (!this.itemid) {
+  if (!this.identifier) {
     // Must be a Search so dont try and save files - might save members
     debug('Search so not saving');
     cb(null, this);
@@ -143,7 +143,7 @@ ArchiveItem.prototype.saveBookReader = function ({ copyDirectory = undefined } =
       Save BookReader for this file as JSON
       .bookreader -> <IDENTIFIER>.bookreader.json =
   */
-  if (!this.itemid) {
+  if (!this.identifier) {
     // Must be a Search so dont try and save files or bookreader - might save members
     debug('Search so not saving bookReader');
     cb(null, this);
@@ -154,7 +154,7 @@ ArchiveItem.prototype.saveBookReader = function ({ copyDirectory = undefined } =
       // noinspection JSUnusedLocalSymbols
       this.fetch_bookreader({ copyDirectory }, (err, unusedAi) => {
         if (err) {
-          debug('ERROR: Cant save because could not fetch bookreader for %s: %s', this.itemid, err.message);
+          debug('ERROR: Cant save because could not fetch bookreader for %s: %s', this.identifier, err.message);
           cb(err);
         } else {
           f.call(this); // Need the call because it loses track of "this"
@@ -200,7 +200,7 @@ function _parse_common(namepart, part, { copyDirectory = undefined }, cb) {
  * cb(err, {files, files_count, metadata, reviews, collection_titles, dir, speech_vs_music_asr, is_dark, server})  data structure fields of ArchiveItem
  **/
 ArchiveItem.prototype.read = function ({ copyDirectory = undefined }, cb) {
-  const namepart = this.itemid;
+  const namepart = this.identifier;
   const res = {};
   function _parse(part, cb1) { _parse_common(namepart, part, { copyDirectory }, cb1); }
   // This is a set of parallel reads, failure of some cause the whole thing to fail; some require postprocessing; and playlist occurs after metadata&files succeed
@@ -255,7 +255,7 @@ ArchiveItem.prototype.read = function ({ copyDirectory = undefined }, cb) {
  * cb(err, {data { data, metadata, brOptions, lendingInfo, metadata}} format returned from BookReader api
  */
 ArchiveItem.prototype.read_bookreader = function ({ copyDirectory = undefined }, cb) {
-  const namepart = this.itemid; // Possible undefined
+  const namepart = this.identifier; // Possible undefined
   function _parse(part, cb1) { _parse_common(namepart, part, { copyDirectory }, cb1); }
   _parse('bookreader', (err, o) => { // { data, brOptions, lendingInfo }
     if (err) {
@@ -336,8 +336,8 @@ ArchiveItem.prototype.fetch_bookreader = function (opts = {}, cb) { // TODO-API
   }
   function f(cb1) {
     if (this.is_dark && !opts.darkOk) {
-      cb1(new Error(`item ${this.itemid} is dark`));
-    } else if (this.itemid && !this.bookreader) { // Check haven't already loaded or fetched metadata
+      cb1(new Error(`item ${this.identifier} is dark`));
+    } else if (this.identifier && !this.bookreader) { // Check haven't already loaded or fetched metadata
       waterfall([
         tryReadOrNet.bind(this),
         trySave.bind(this)
@@ -400,14 +400,14 @@ ArchiveItem.prototype.fetch_page = function ({
       const urls = (zip && file)
         ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderImages.php?${parmsFrom({ zip, file, scale, rotate })}`
         : page
-        ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderPreview.php?${parmsFrom({ subPrefix, page, scale, rotate, id: this.itemid, itemPath: this.dir, server: 'www-dweb-cors.dev.archive.org' })}`
+        ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderPreview.php?${parmsFrom({ subPrefix, page, scale, rotate, id: this.identifier, itemPath: this.dir, server: 'www-dweb-cors.dev.archive.org' })}`
         : undefined; // This would be an error
       if (!urls) {
-        debug('Failure to build URLs for bookreader %o', { identifier: this.itemid, zip, file, page, scale, rotate });
+        debug('Failure to build URLs for bookreader %o', { identifier: this.identifier, zip, file, page, scale, rotate });
         cbw(new Error('insufficient info to build URL'));
       } else {
-        const debugname = `${this.itemid}_${file}`;
-        const relFilePath = `${this.itemid}/_pages/` + (page || `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
+        const debugname = `${this.identifier}_${file}`;
+        const relFilePath = `${this.identifier}/_pages/` + (page || `${zipfile}/scale${Math.floor(scale)}/rotate${rotate}/${file}`);
         if (!(scale && file)) { // This is the cover or a leaf of a preview, its not scaled or rotated
           MirrorFS.cacheAndOrStream({
             urls, wantStream, wantSize, debugname, noCache, relFilePath, skipNet, copyDirectory
@@ -421,7 +421,7 @@ ArchiveItem.prototype.fetch_page = function ({
           // Else we don't have any versions of this page, and failed to stream, so its an error
 
           MirrorFS.checkWhereValidFileRotatedScaled({ file, scale, rotate, noCache, copyDirectory, // Find which valid scale/rotate we have,
-              relFileDir: `${this.itemid}/_pages/${zipfile}` },
+              relFileDir: `${this.identifier}/_pages/${zipfile}` },
             (err, relFilePath2) => { // undefined if not found
               // Use this filepath if find an appropriately scaled one, otherwise use the one we really want from above
               // TODO there is an edge case where find wrongly scaled file, but if copydir is set we'll copy that to relFilePath
@@ -430,7 +430,7 @@ ArchiveItem.prototype.fetch_page = function ({
                   if (err1) {
                     MirrorFS.checkWhereValidFileRotatedScaled({
                         file, scale, rotate, noCache, copyDirectory, // Find which valid scale/rotate we have,
-                        relFileDir: `${this.itemid}/_pages/${zipfile}`,
+                        relFileDir: `${this.identifier}/_pages/${zipfile}`,
                         bestEffort: true
                       },
                       (err2, relFilePath3) => { // undefined if cant find any versions of this page (including smaller)
@@ -502,7 +502,7 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
   // Try Read or Net - order depends on noCache, throws error if could not read it, or get from net.
   // returns true if should save the result locally
   function tryReadOrNet(cb1) {
-    if (!this.itemid || this.metadata || this.is_dark) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
+    if (!this.identifier || this.metadata || this.is_dark) { // Check haven't already loaded or fetched metadata (is_dark wont have a .metadata)
       cb1(null, false); // Didnt fetch so nothing to save
     } else if (opts.noCache) { // Can remove that check in tryRead
       tryNet.call(this, (err) => {
@@ -511,7 +511,7 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
         } else {
           tryRead.call(this, (unusedErr1) => {
             // cached but check for explicit requirement to copy
-            cb1(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid)));
+            cb1(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.identifier)));
           });
         }
       });
@@ -527,7 +527,7 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
           });
         } else {
           // cached but check for explicit requirement to copy
-          cb1(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.itemid)));
+          cb1(null, (!!copyDirectory) && (!Object.keys(specialidentifiers).includes(this.identifier)));
         }
       });
     }
@@ -540,14 +540,14 @@ ArchiveItem.prototype.fetch_metadata = function (opts = {}, cb) { // TODO-API op
     }
   }
   function f(cb1) {
-    if (this.itemid && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
+    if (this.identifier && !(this.metadata || this.is_dark)) { // If have not already fetched (is_dark means no .metadata field)
       tryReadOrNet.call(this, (err, doSave) => {
         if (err) {
           cb1(err, this);
         } else {
           trySave.call(this, doSave, (unusedErr) => {
             // ignore errors - on saving (for example if no disk), they will or should have been reported.
-            cb1((this.is_dark && !opts.darkOk) ? new Error(`item ${this.itemid} is dark`) : null, this);
+            cb1((this.is_dark && !opts.darkOk) ? new Error(`item ${this.identifier} is dark`) : null, this);
           });
         }
       });
@@ -728,9 +728,9 @@ ArchiveItem.prototype.saveThumbnail = function ({
   cb(err, this)||cb(err, stream)  Callback on completion with self (mirroring), or on starting with stream (browser)
   */
 
-  const namepart = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+  const namepart = this.identifier; // Its also in this.metadata.identifier but only if done a fetch_metadata
 
-  if (!namepart || Object.keys(specialidentifiers).includes(namepart)) { // Skip thumbnail if no itemid, or special with no thumbnail
+  if (!namepart || Object.keys(specialidentifiers).includes(namepart)) { // Skip thumbnail if no identifier, or special with no thumbnail
     cb(null, wantStream ? undefined : this);
   } else {
     // TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
@@ -768,10 +768,10 @@ ArchiveItem.prototype.saveThumbnail = function ({
         }
       };
       recursable(null, null);
-    } else { // No existing __ia_thumb.jpg or ITEMID_itemimage.jpg so get from services or thumbnail
+    } else { // No existing __ia_thumb.jpg or IDENTIFIER_itemimage.jpg so get from services or thumbnail
       // noinspection JSUnresolvedVariable
-      const urls = `https://archive.org/services/img/${this.itemid}`;
-      const relFilePath = path.join(this._namepart(), '__ia_thumb.jpg'); // TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+      const urls = `https://archive.org/services/img/${this.identifier}`;
+      const relFilePath = path.join(this._namepart(), '__ia_thumb.jpg'); // TODO-THUMBNAILS Assumes using __ia_thumb.jpg instead of IDENTIFIER_itemimage.jpg
       const debugname = relFilePath;
       MirrorFS.cacheAndOrStream({
         relFilePath, skipFetchFile, wantStream, noCache, debugname, copyDirectory, urls
@@ -797,7 +797,7 @@ ArchiveItem.prototype.fetch_playlist = function ({ wantStream = false, noCache =
   noCache         true if want to ignore local cache, noStore not to save result (not currently used)
   cb(err, stream|obj)  Callback on completion with related items object (can be [])
   */
-  const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+  const { identifier } = this; // Its also in this.metadata.identifier but only if done a fetch_metadata
   if (identifier && this.hasPlaylist()) {
     // noinspection JSUnresolvedVariable
     const relFilePath = path.join(this._namepart(), this._namepart() + '_playlist.json');
@@ -837,7 +837,7 @@ ArchiveItem.prototype.relatedItems = function ({
   !wantStream && !wantMembers => cb(err, { hits: hit: [ {}* ]  }
   cb(err, stream|obj)  Callback on completion with related items object (can be [])
   */
-  const identifier = this.itemid; // Its also in this.metadata.identifier but only if done a fetch_metadata
+  const { identifier } = this; // Its also in this.metadata.identifier but only if done a fetch_metadata
   if (identifier && !Object.keys(specialidentifiers).includes(identifier)) {
     // noinspection JSUnresolvedVariable
     const relFilePath = path.join(this._namepart(), this._namepart() + '_related.json');
@@ -848,7 +848,7 @@ ArchiveItem.prototype.relatedItems = function ({
       noCache,
       copyDirectory,
       wantBuff: !wantStream, // Explicit because default for cacheAndOrStream if !wantStream is to return undefined
-      urls: 'https://be-api.us.archive.org/mds/v1/get_related/all/' + this.itemid,
+      urls: 'https://be-api.us.archive.org/mds/v1/get_related/all/' + this.identifier,
       debugname: identifier + '/' + identifier + '_related.json'
     }, (err, res) => {
       // Note that if wantStream, then not doing expansion and saving, but in most cases called will expand with next call.
@@ -892,7 +892,7 @@ ArchiveItem.addCrawlInfoRelated = function (rels, { copyDirectory, config = unde
         new ArchiveItem({ identifier: hit._id }).addDownloadedInfoFiles({ copyDirectory }, (err, ai) => {
           if (err) {
           // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
-            debug('addCrawlInfoRelated -> addDownloadedInfoMembers failed for %s in %s: %o', this.itemid, hit._id, err);
+            debug('addCrawlInfoRelated -> addDownloadedInfoMembers failed for %s in %s: %o', this.identifier, hit._id, err);
           } else if (!hit._source.downloaded) {
             hit._source.downloaded = ai.downloaded;
           } else {
@@ -927,7 +927,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function ({ copyDirectory }, cb) 
       this.summarizeFiles(cb1);
     },
     cb1 => { // Save file as have changed files info
-      if (!(this.itemid && this.files.length)) {
+      if (!(this.identifier && this.files.length)) {
         cb1(null);
       } else {
         _save1file('files', this.exportFiles(), this._namepart(), { copyDirectory }, cb1);
@@ -935,7 +935,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function ({ copyDirectory }, cb) 
     }
   ], unusedErr => {
     // Done Report error because it could just be because have not downloaded files info via metadata API,
-    // if (err) debug("Failure in addDownloadedInfoFiles for %s %O", this.itemid, err);
+    // if (err) debug("Failure in addDownloadedInfoFiles for %s %O", this.identifier, err);
     // Also dont block
     cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
   });
@@ -1047,7 +1047,7 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
         ], (err, unusedRes) => {
           if (err) {
             // Shouldnt happen since addDownloadedInfoMembers reports and ignores its own errors
-            debug('ERROR: addDownloadedInfoMembers strangely failed for %s in %s: %o', this.itemid, member.identifier, err);
+            debug('ERROR: addDownloadedInfoMembers strangely failed for %s in %s: %o', this.identifier, member.identifier, err);
           } else {
             if ((typeof member.downloaded !== 'object' || member.downloaded === null)) member.downloaded = {};
             Object.assign(member.downloaded, ai.downloaded); // Works even if ai.downloaded undefined or null
@@ -1099,11 +1099,11 @@ ArchiveItem.prototype.addDownloadedInfoMembers = function ({ copyDirectory = und
   }
   waterfall([
     cb1 => {
-      if (!this.itemid) {
+      if (!this.identifier) {
         if (!this.downloaded.members_all_count) this.downloaded.members_all_count = this.numFound; // As in result of a search
         cb1(null);
       } else {
-        ArchiveMember.fromIdentifier(this.itemid)
+        ArchiveMember.fromIdentifier(this.identifier)
           .read({ copyDirectory }, (err, o) => {
             if (!err) {
               this.downloaded.members_all_count = o.item_count; // Unfortunately missing from item extras
@@ -1148,8 +1148,8 @@ ArchiveItem.prototype.addCrawlInfoMembers = function ({ config, copyDirectory = 
  */
 ArchiveItem.prototype.addCrawlInfo = function ({ config, copyDirectory = undefined } = {}, cb) {
   // In place add
-  // Note that .itemid &| .metadata may be undefined
-  Object.assign(this, { crawl: config.crawlInfo({ identifier: this.itemid, query: this.query, mediatype: this.metadata && this.metadata.mediatype }) });
+  // Note that .identifier &| .metadata may be undefined
+  Object.assign(this, { crawl: config.crawlInfo({ identifier: this.identifier, query: this.query, mediatype: this.metadata && this.metadata.mediatype }) });
   if ((typeof this.downloaded !== 'object') || (this.downloaded === null)) { // Could be undefined, or legacy boolean
     this.downloaded = {};
   }
@@ -1178,10 +1178,10 @@ ArchiveItem.prototype.addCrawlInfo = function ({ config, copyDirectory = undefin
  */
 ArchiveItem.prototype.addMagnetLink = function ({ copyDirectory = undefined } = {}, cb) {
   if (!this.magnetlink && !this.is_dark && !(this.metadata && this.metadata.noarchivetorrent) && this.files) {
-    const torrentFileName = this.itemid + '_archive.torrent';
+    const torrentFileName = this.identifier + '_archive.torrent';
     const torrentFile = this.files.find(f => f.metadata.name === torrentFileName);
     if (torrentFile) {
-      const dwebTorrentUrl = `http://www-dweb-torrent.dev.archive.org/${this.itemid}_archive.torrent`; // For Webtorrent etc to find torrent file
+      const dwebTorrentUrl = `http://www-dweb-torrent.dev.archive.org/${this.identifier}_archive.torrent`; // For Webtorrent etc to find torrent file
       torrentFile.cacheAndOrStream({ wantBuff: true, copyDirectory }, (err, buffer) => {
         if (err) {
           debug('WARNING unable to add magnet link: %s', err.message); // For example because forbidden

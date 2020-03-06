@@ -41,13 +41,13 @@ ArchiveFile.prototype.cacheAndOrStream = function ({
     skipFetchFile = false, skipNet = false, wantStream = false, noCache = false, wantSize = false, wantBuff = false,
     copyDirectory = undefined, start = 0, end = undefined
   } = {}, cb) {
-  const itemid = this.itemid; // Not available in events otherwise
+  const { identifier } = this; // Not available in events otherwise
   const filename = this.metadata.name;
-  const debugname = [itemid, filename].join('/');
+  const debugname = [identifier, filename].join('/');
   MirrorFS.cacheAndOrStream({ // Try first time without Urls, keep local - note noCache will make this return error unless sha1 specified as no urls either.
     skipFetchFile, wantStream, wantBuff, start, end, debugname, noCache, copyDirectory, wantSize,
     sha1: this.metadata.sha1,
-    relFilePath: path.join(itemid, filename),
+    relFilePath: path.join(identifier, filename),
     expectsize: this.metadata.size,
     ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
   }, (err, streamOrUndefinedOrSizeOrBuff) => {
@@ -63,7 +63,7 @@ ArchiveFile.prototype.cacheAndOrStream = function ({
             skipFetchFile, wantStream, wantSize, wantBuff, start, end, debugname, noCache, copyDirectory,
             urls: routed(urls),
             sha1: this.metadata.sha1,
-            relFilePath: path.join(itemid, filename),
+            relFilePath: path.join(identifier, filename),
             expectsize: this.metadata.size,
             ipfs: this.metadata.ipfs // Will usually be undefined as not currently retrieving
           }, (err2, streamOrUndefinedOrSizeOrBuff1) => {

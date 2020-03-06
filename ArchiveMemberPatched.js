@@ -147,7 +147,7 @@ ArchiveMember.prototype.saveThumbnail = function ({
       cb(null, this);
     } else {
       // TODO-THUMBNAILS use new ArchiveItem.thumbnailFile that creates a AF for a pseudofile
-      const relFilePath = path.join(this.identifier, '__ia_thumb.jpg'); // Assumes using __ia_thumb.jpg instead of ITEMID_itemimage.jpg
+      const relFilePath = path.join(this.identifier, '__ia_thumb.jpg'); // Assumes using __ia_thumb.jpg instead of identifier_itemimage.jpg
       const debugname = namepart + '/__ia_thumb.jpg';
       MirrorFS.cacheAndOrStream({
         relFilePath,

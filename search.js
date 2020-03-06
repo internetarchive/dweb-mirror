@@ -11,7 +11,7 @@ const ItemsPerPage = 75;
 function doQuery(o, opts, config, cb) {
   o.fetch_metadata(opts, (err, unusedAI) => { // Not passing noCache as query usually after a fetch_metadata
     if (err) {
-      debug('streamQuery could not fetch metadata for %s', o.itemid);
+      debug('streamQuery could not fetch metadata for %s', o.identifier);
       cb(err);
     } else {
       o.fetch_query({ copyDirectory: opts.copyDirectory, wantFullResp: true, noCache: opts.noCache }, (err1, resp) => { // [ArchiveMember*]

@@ -1,5 +1,5 @@
 /* global DwebTransports */
-/* Serve the mirrored files via HTTP
+/* Serve the mirrored files via HTTP XXX
 
 This is intended as a fairly generic server for a number of cases, with some configuration to allow for different situations,
 
@@ -90,7 +90,7 @@ function mirrorHttp(config, cb0) {
     if (Object.keys(specialidentifiers).includes(identifier)) {
       ai.metadata = {};
       Object.entries(specialidentifiers[identifier]).forEach(kv => ai.metadata[kv[0]] = kv[1]); // Copy over
-      if (ai.itemid === 'local') {
+      if (ai.identifier === 'local') {
         ArchiveMember.expandMembers(
           canonicalizeTasks(config1.apps.crawl.tasks)
             .map(t => new ArchiveMember({
@@ -249,11 +249,11 @@ function mirrorHttp(config, cb0) {
     // req.opts { start, end, noCache, copyDirectory }
     try {
       const filename = req.params[0]; // Use this form since filename may contain '/' so can't use :filename
-      const itemid = req.params.itemid;
+      const identifier = req.params.identifier;
       const opts = Object.assign({}, req.opts, { wantStream: true });
       let af; // Passed out from waterfall to end
-      debug('Sending ArchiveFile %s/%s', itemid, filename);
-      const ai = new ArchiveItem({ identifier: itemid });
+      debug('Sending ArchiveFile %s/%s', identifier, filename);
+      const ai = new ArchiveItem({ identifier });
       waterfall([
         (cb) => ai.fetch_metadata({ copyDirectory: req.opts.copyDirectory }, cb), // Dont pass on noCache, we'll be streaming after already fetched
         (archiveitem, cb) => ArchiveFile.new({ archiveitem, filename, copyDirectory: req.opts.copyDirectory }, cb),
@@ -266,7 +266,7 @@ function mirrorHttp(config, cb0) {
       (err, s) => { // Have stream of file or error
         if (err) {
           // Failed - report
-          debug('ERROR: streamArchiveFile failed for %s/%s: %s', itemid, filename, err.message);
+          debug('ERROR: streamArchiveFile failed for %s/%s: %s', identifier, filename, err.message);
           res.status(404).send(err.message);
         } else {
           // Succeeded - pipe back to user with headers
@@ -277,7 +277,7 @@ function mirrorHttp(config, cb0) {
           res.set('Content-Type', af.mimetype()); // Not sure what happens if doesn't find it.
           // Uncomment first .pipe to log bytes on way out.
           s
-          // .pipe(ParallelStream.log(m => `${itemid}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {name: "crsdata",  objectMode: false }))
+          // .pipe(ParallelStream.log(m => `${identifier}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {name: "crsdata",  objectMode: false }))
             .pipe(res);
         }
       });
@@ -292,7 +292,7 @@ function mirrorHttp(config, cb0) {
     let wantCrawlInfo;
     let o;
     // especially: `/advancedsearch}?output=json&q=${encodeURIComponent(this.query)}&rows=${this.rows}&page=${this.page}&sort[]=${sort}&and[]=${this.and}&save=yes`;
-    if (req.query.q && req.query.q.startsWith('collection:') && req.query.q.includes('simplelists__items:')) { // Only interested in standardised q=collection:ITEMID..
+    if (req.query.q && req.query.q.startsWith('collection:') && req.query.q.includes('simplelists__items:')) { // Only interested in standardised q=collection:IDENTIFIER..
       // TODO when Aaron has built entry point e.g. members/COLLECTION then rebuild this and dweb-archivecontroller.ArchiveItem._fetch_query to use it
       // Special case: query just looking for members of a collection
       // e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
@@ -347,28 +347,28 @@ function mirrorHttp(config, cb0) {
       s.pipe(res);
     }
 
-    const itemid = req.params.itemid;
-    debug('Sending Thumbnail for %s', itemid);
+    const identifier = req.params.identifier;
+    debug('Sending Thumbnail for %s', identifier);
     const noCache = req.opts.noCache;
 
-    if (Object.keys(specialidentifiers).includes(itemid)) { // See SEE-OTHER-ADD-SPECIAL-PAGE (this should be automatic once added to specialidentifiers)
+    if (Object.keys(specialidentifiers).includes(identifier)) { // See SEE-OTHER-ADD-SPECIAL-PAGE (this should be automatic once added to specialidentifiers)
       res.redirect(url.format({
-        pathname: specialidentifiers[itemid].thumbnaillinks,
+        pathname: specialidentifiers[identifier].thumbnaillinks,
       }));
     } else {
-      MirrorFS.checkWhereValidFile(itemid + '/__ia_thumb.jpg', { noCache, copyDirectory: req.opts.copyDirectory }, (err, existingFilePath) => {
+      MirrorFS.checkWhereValidFile(identifier + '/__ia_thumb.jpg', { noCache, copyDirectory: req.opts.copyDirectory }, (err, existingFilePath) => {
         if (!err) {
           sendJpegStream(fs.createReadStream(existingFilePath));
         } else {
           // We dont already have the file
-          const ai = new ArchiveItem({ identifier: itemid });
+          const ai = new ArchiveItem({ identifier });
           waterfall([
             (cb) => ai.fetch_metadata({ noCache, copyDirectory: req.opts.copyDirectory }, cb),
             (archiveitem, cb2) => archiveitem.saveThumbnail({ noCache, copyDirectory: req.opts.copyDirectory, wantStream: true, }, cb2)
           ],
           (err1, s) => {
             if (err1) {
-              debug('Failed to stream Thumbnail for %s: %s', itemid, err1.message);
+              debug('Failed to stream Thumbnail for %s: %s', identifier, err1.message);
               next(err1);
             } else {
               sendJpegStream(s);
@@ -407,7 +407,7 @@ function mirrorHttp(config, cb0) {
 
   function sendBookReaderJSON(req, res, unusedNext) {
     waterfall([
-      (cb) => new ArchiveItem({ identifier: req.params.identifier || req.query.itemId })
+      (cb) => new ArchiveItem({ identifier: req.params.identifier || req.query.identifier })
         .fetch_metadata(req.opts, cb),
       (ai, cb) => ai.fetch_bookreader(req.opts, cb)
     ], (err, ai) => {
@@ -535,8 +535,8 @@ function mirrorHttp(config, cb0) {
   app.get('/download/:identifier/page/:page', sendBookReaderImages);
   app.get('/download/:identifier', redirectWithQuery({ download: 1 }));
   app.get([
-    '/download/:itemid/*',
-    '/serve/:itemid/*'], streamArchiveFile);
+    '/download/:identifier/*',
+    '/serve/:identifier/*'], streamArchiveFile);
   app.get(['/epubreader/*', '/archive/epubreader/*'], _sendFileFromEpubreader);
   app.get(['/images/*',
     '/includes/*', // matches archive.org & dweb.archive.org but not dweb.me
@@ -565,7 +565,7 @@ function mirrorHttp(config, cb0) {
       }
     });
   });
-  // Note this is metadata/<ITEMID>/<FILE> because metadata/<ITEMID> is caught above
+  // Note this is metadata/IDENTIFIER/FILENAME because metadata/IDENTIFIER is caught above
   // Note wont work as while goes explicitly to dweb.archive.org since pattern metadata/IDENTIFIER/FILE not handled by dweb-archivecontroller/Routing yet
   // this will be diverted to dweb-metadata which cant handle this pattern yet - see https://github.com/internetarchive/dweb-archivecontroller/issues/11
   // TODO should be retrieving. patching into main metadata and saving but note, not using on dweb-mirror when IPFS off
@@ -585,14 +585,14 @@ function mirrorHttp(config, cb0) {
   // Special URL from mediawiki e.g. https://archive.org/stream/bdrc-W1FPL497/bdrc-W1FPL497#page/n2/mode/1up
   // see https://github.com/internetarchive/dweb-mirror/issues/289 as this might be temporary
   app.get([
-    '/download/:itemid/__ia_thumb.jpg',
-    '/services/img/:itemid',
-    '/thumbnail/:itemid' // Deprecated in favor of services/img)
-  ], streamThumbnail); // streamThumbnail will try archive.org/services/img/itemid if all else fails
+    '/download/:identifier/__ia_thumb.jpg',
+    '/services/img/:identifier',
+    '/thumbnail/:identifier' // Deprecated in favor of services/img)
+  ], streamThumbnail); // streamThumbnail will try archive.org/services/img/identifier if all else fails
   app.get(['/bookreader/BookReader/*', '/archive/bookreader/BookReader/*'], _sendFileFromBookreader);
   // e.g. '/BookReader/BookReaderJSIA.php?id=unitednov65unit&itemPath=undefined&server=undefined&format=jsonp&subPrefix=unitednov65unit&requestUri=/details/unitednov65unit')
   app.get('/BookReader/BookReaderJSIA.php', sendBookReaderJSIA);
-  // e.g. http://ia802902.us.archive.org/BookReader/BookReaderJSON.php?itemPath=%2F28%2Fitems%2FArtOfCommunitySecondEdition&itemId=ArtOfCommunitySecondEdition&server=ia802902.us.archive.org
+  // e.g. http://ia802902.us.archive.org/BookReader/BookReaderJSON.php?itemPath=%2F28%2Fitems%2FArtOfCommunitySecondEdition&identifier=ArtOfCommunitySecondEdition&server=ia802902.us.archive.org
   app.get(['/BookReader/BookReaderJSON.php',
     '/books/:identifier/ia_manifest' // e.g. https://api.archivelab.org/books/ArtOfCommunitySecondEdition/ia_manifest
   ], sendBookReaderJSON);

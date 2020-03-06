@@ -460,7 +460,7 @@ class CrawlFile extends Crawlable {
    * returns true iff have not already tried this file on this crawl.
    */
   isUniq(crawlmanager) {
-    const key = [this.file.itemid, this.file.metadata.name].join('/');
+    const key = [this.file.identifier, this.file.metadata.name].join('/');
     const prevTasks = crawlmanager._uniqFiles[key];
     if (prevTasks) { return false; } else {
       crawlmanager._uniqFiles[key] = this;
@@ -645,14 +645,14 @@ class CrawlItem extends Crawlable {
     function _crawlPage(pageManifest, asParent, o) {
       crawlmanager._push(new CrawlPage({
         pageParms: this.item.pageParms(pageManifest, { ...o, skipNet: false }),
-        identifier: this.item.itemid,
+        identifier: this.item.identifier,
         archiveitem: this.item
       }, asParent));
     }
     const asParent = this.asParent();
     if (['details', 'all'].includes(this.level)) { // Details
       crawlmanager._push(new CrawlPage({
-        identifier: this.item.itemid,
+        identifier: this.item.identifier,
         archiveitem: this.item,
         pageParms: {
           page: 'cover_t.jpg',
