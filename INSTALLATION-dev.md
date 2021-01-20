@@ -51,7 +51,7 @@ git clone --branch mitra--release https://github.com/internetarchive/iaux
 git clone https://github.com/internetarchive/dweb-transports
 ```
 
-2. add each package repository to yarn's links, to make development changes accessible
+2. add each package repository to yarn's links, to make development changes accessible.  If you already have these packages linked, change the steps appropriately.
 ```
 yarn --cwd dweb-archivecontroller link
 yarn --cwd epubjs-reader link
@@ -60,7 +60,7 @@ yarn --cwd dweb-transports link
 yarn --cwd iaux link
 ```
 
-3. tell yarn to use the development versions
+3. tell yarn to use the linked development versions
 ```
 yarn --cwd dweb-archive link epubjs-reader
 yarn --cwd dweb-archive link @internetarchive/bookreader
