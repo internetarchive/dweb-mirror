@@ -11,8 +11,9 @@ on the repo (or just send me a corrected version of this file)
 
 ## Automatic Installation
 
-The easiest way to install is to use the installation script, 
-if it fails on your platform, it should exit at the failing step, and you can edit it and run it again.
+The easiest way to install is to use [./install_dev.sh](./install_dev.sh), the installation script.
+If it fails on your platform, it should exit at the failing step, and you can edit it and run it again,
+and contribute your improvements.
 
 ```
 curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_dev.sh | bash
