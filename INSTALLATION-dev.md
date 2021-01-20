@@ -36,10 +36,69 @@ sudo yarn add node-pre-gyp cmake
 ```
 
 You'll need to clone the repositories from Git, 
-use `lerna` and `yarn` to install them and then
-crosslink them. 
+use `lerna` and `yarn` to install them and then crosslink them.
 
 This is non-trivial to get right which is why we built the installer ! 
+
+1. Clone the repositories
+```
+git clone https://github.com/internetarchive/dweb-archivecontroller
+git clone https://github.com/futurepress/epubjs-reader
+git clone https://github.com/internetarchive/bookreader
+git clone https://github.com/internetarchive/dweb-archive
+git clone https://github.com/internetarchive/dweb-mirror
+git clone --branch mitra--release https://github.com/internetarchive/iaux
+git clone https://github.com/internetarchive/dweb-transports
+```
+
+2. add each package repository to yarn's links, to make development changes accessible
+```
+yarn --cwd dweb-archivecontroller link
+yarn --cwd epubjs-reader link
+yarn --cwd bookreader link
+yarn --cwd dweb-transports link
+yarn --cwd iaux link
+```
+
+3. tell yarn to use the development versions
+```
+yarn --cwd dweb-archive link epubjs-reader
+yarn --cwd dweb-archive link @internetarchive/bookreader
+yarn --cwd dweb-archive link @internetarchive/dweb-archivecontroller
+yarn --cwd dweb-archive link @internetarchive/dweb-transports
+yarn --cwd dweb-mirror link epubjs-reader
+yarn --cwd dweb-mirror link @internetarchive/bookreader
+yarn --cwd dweb-mirror link @internetarchive/dweb-archivecontroller
+yarn --cwd dweb-mirror link @internetarchive/dweb-transports
+```
+
+4. run yarn install
+```
+yarn --cwd dweb-archive install
+yarn --cwd dweb-mirror install
+yarn --cwd dweb-transports install
+yarn --cwd iaux install
+```
+
+5. iaux is a multi-repo and needs lerna run
+```
+yarn --cwd iaux run lerna bootstrap
+yarn --cwd iaux run lerna link
+```
+
+6. webpack repos to development versions
+```
+yarn --cwd dweb-archive run webpack --mode development
+yarn --cwd dweb-transports run webpack --mode development
+yarn --cwd epubjs-reader run grunt
+```
+
+7. install http-server
+```
+yarn global add http-server
+```
+
+
 
 ### 3. Edit configuration
 
