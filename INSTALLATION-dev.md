@@ -74,6 +74,7 @@ yarn --cwd dweb-mirror link @internetarchive/dweb-transports
 
 4. run yarn install
 ```
+yarn --cwd dweb-archivecontroller install
 yarn --cwd dweb-archive install
 yarn --cwd dweb-mirror install
 yarn --cwd dweb-transports install
