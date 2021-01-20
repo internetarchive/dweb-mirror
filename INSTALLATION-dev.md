@@ -42,6 +42,8 @@ This is non-trivial to get right which is why we built the installer !
 
 1. Clone the repositories
 ```
+mkdir -p ~/git
+cd ~/git
 git clone https://github.com/internetarchive/dweb-archivecontroller
 git clone https://github.com/futurepress/epubjs-reader
 git clone https://github.com/internetarchive/bookreader
@@ -99,8 +101,6 @@ yarn --cwd epubjs-reader run grunt
 yarn global add http-server
 ```
 
-
-
 ### 3. Edit configuration
 
 If you are doing anything non-standard, then you'll need to create and edit 
@@ -140,7 +140,7 @@ Expect to see errors in the Browser log for
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
 
 Expect, on slower machines/networks, to see no images the first time, 
-refresh after a little while and most should appear. 
+refresh after a little while and most should appear.
 
 ### 5. Test crawling
 
