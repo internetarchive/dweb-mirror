@@ -1,4 +1,5 @@
 #!/bin/bash
+###### INSTALLATION CODE, MOSTLY DUPLICATED in dweb-mirror/install.sh and dweb-mirror/install_dev.sh . TODO: Merge these scripts to take e.g. a --dev argument.
 cat <<EOT
   This script is intended to support development and testing of all of the dweb repo's.
   While its not strictly required to, for example dweb-mirror to work on dweb-archive, the simplicity
@@ -17,8 +18,7 @@ set -e # Break on error
 
 # Define a parent directory they will sit under
 PARENTDIRECTORY=git
-#TODO-EPUB - add install of epubreader (see package.json)
-REPOS="dweb-transports dweb-archivecontroller bookreader dweb-archive dweb-mirror iaux"
+REPOS="dweb-transports dweb-archivecontroller epubjs-reader bookreader dweb-archive dweb-mirror iaux"
 # Note that dweb-transport and dweb-gatewahy are not installed they are only useful when running as a gateway server at the archive.
 
 function step {
@@ -30,6 +30,23 @@ function step {
   #echo "Offline Internet Archive Installer: ${STEPNUMBER}" > /tmp/step
   echo "Offline Internet Archive Installer: ${STEPNAME}"
 }
+
+function install_pkg() {
+  step XXX "Installing $*"
+  if [ "${OPERATINGSYSTEM}" != "darwin" ]
+  then
+    sudo apt-get install -y "$@"
+  else
+    brew install "$@"
+  fi
+}
+
+function check_cmd() {
+  "$@" >/dev/null 2>&1
+}
+
+###### PLATFORM AUTODETECTION CODE, DUPLICATED in dweb-mirror/install.sh, dweb-mirror/install_dev.sh, and dweb-mirror/mediawiki/mediawiki.conf
+
 
 # Convert the portable uname results into go specific environment note Mac has $HOSTTYPE=x86_64 but not sure that is on other platforms
 case `uname -m` in
@@ -74,7 +91,7 @@ if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
   if ! yarn --version 2>/dev/null
   then
-  step XXX "Adding Yarn sources"
+    step XXX "Adding Yarn sources"
     curl -sSL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
@@ -96,25 +113,24 @@ else # Its OSX
   set -e
 fi
 
+
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  step XXX "Installing nodejs yarn git npm"
-  sudo apt-get install -y nodejs yarn git npm
-  # Note previously installing "npm" but no longer using
+  check_cmd yarn --version || install_pkg yarn
+  check_cmd git --version || install_pkg git
   # Note yarn alternative can skip the apt-key & sources steps above and ...
   # curl -o- -L https://yarnpkg.com/install.sh | bash
   # source ~/.bashrc # Fix path
-  set +e
   step XXX "Trying to install libsecret which may fail" # Failed on rachel
-  sudo apt-get install -y libsecret-1-dev # Allow libsecret-1-dev to fail , we migth not need it
-  set -e
+  # Allow libsecret-1-dev to fail , we might not need it
+  install_pkg libsecret-1-dev || echo "Libsecret failed to install, but that is ok"
+  check_cmd netstat --version || install_pkg net-tools # Make debugging so much easier
 else
-  step XXX "Installing wget nodejs yarn"
-  wget --version >>/dev/null || brew install wget
+  check_cmd curl --version || install_pkg curl
   # The brew installer for node is broken (fails to run the npx line in bookreader/package.json), use the line below as found on https://nodejs.org/en/download/package-manager/#macos
-  #node --version >>/dev/null || brew install nodejs
-  node --version >>/dev/null || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
-  yarn --version >>/dev/null || curl -o- -L https://yarnpkg.com/install.sh | bash
+  #check_cmd node --version || install_pkg nodejs
+  check_cmd node --version || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
+  check_cmd yarn --version || curl -o- -L https://yarnpkg.com/install.sh | bash
   source ~/.bashrc # Fix up path
 fi
 
@@ -125,7 +141,7 @@ cd ${PARENTDIRECTORY}
 echo "==== Getting repositories from Git ========================="
 for REPO in ${REPOS}
 do
-  if [ ${REPO} eq "epubjs-reader"]
+  if [ ${REPO} == "epubjs-reader" ] # syntax repaired 2021
   then GITREPO="https://github.com/futurepress/${REPO}"
   else GITREPO="https://github.com/internetarchive/${REPO}"
   fi
@@ -193,13 +209,13 @@ echo "=== Webpacking each repo to development version ==== "
 for i in dweb-archive dweb-transports
 do
   pushd $i
-  webpack --mode development
+  yarn run webpack --mode development
   popd
 done
 for i in epubjs-reader
 do
   pushd $i
-  grunt
+  yarn run grunt
   popd
 done
 echo "==== installing http-server ====="

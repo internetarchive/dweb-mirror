@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+###### INSTALLATION CODE, MOSTLY DUPLICATED in dweb-mirror/install.sh and dweb-mirror/install_dev.sh . TODO: Merge these scripts to take e.g. a --dev argument.
 cat <<EOT
   This script is intended to automate installation of the offline Internet Archive "dweb-mirror"
 
@@ -24,9 +25,23 @@ function step {
   echo "Offline Internet Archive Installer: ${STEPNAME}"
 }
 
+function install_pkg() {
+  step XXX "Installing $*"
+  if [ "${OPERATINGSYSTEM}" != "darwin" ]
+  then
+    sudo apt-get install -y "$@"
+  else
+    brew install "$@"
+  fi
+}
+
+function check_cmd() {
+  "$@" >/dev/null 2>&1
+}
+
 step 00 Determining what kind of box this is
 
-###### PLATFORM AUTODETECTION CODE, DUPLICATED IN in dweb-mirror/install.sh and dweb-mirror/mediawiki/mediawiki.conf
+###### PLATFORM AUTODETECTION CODE, DUPLICATED in dweb-mirror/install.sh, dweb-mirror/install_dev.sh and dweb-mirror/mediawiki/mediawiki.conf
 
 # Convert the portable uname results into go specific environment note Mac has $HOSTTYPE=x86_64 but not sure that is on other platforms
 case `uname -m` in
@@ -74,7 +89,7 @@ echo "CACHEDIR: ${CACHEDIR} INSTALLDIR: ${INSTALLDIR}"
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  if yarn --version 2>/dev/null && yarn --help | grep checksums >/dev/null
+  if check_cmd yarn --version 2>/dev/null && yarn --help | grep checksums >/dev/null
   then
     echo "Yarn - the right one - looks like its installed"
   else
@@ -102,24 +117,22 @@ fi
 
 if [ "${OPERATINGSYSTEM}" != "darwin" ]
 then
-  step XXX "Installing nodejs yarn git"
-  sudo apt-get install -y nodejs yarn git
-  step XXX "Installing npm which sometimes fails if its part of the OS"
-  sudo apt-get install -y npm || npm --version
-  # Note previously installing "npm" but no longer using
+  check_cmd yarn --version || install_pkg yarn
+  check_cmd git --version || install_pkg git
   # Note yarn alternative can skip the apt-key & sources steps above and ...
   # curl -o- -L https://yarnpkg.com/install.sh | bash
   # source ~/.bashrc # Fix path
   step XXX "Trying to install libsecret which may fail" # Failed on rachel
-  sudo apt-get install -y libsecret-1-dev || echo "Libsecret failed to install, but that is ok"
-  sudo apt-get install -y net-tools # Make debugging so much easier
+  # Allow libsecret-1-dev to fail , we might not need it
+  install_pkg libsecret-1-dev || echo "Libsecret failed to install, but that is ok"
+  check_cmd netstat --version || install_pkg net-tools # Make debugging so much easier
 else # Its darwin (Mac OSX)
   step XXX "Installing wget nodejs yarn"
-  wget --version >>/dev/null || brew install wget
+  check_cmd curl --version || install_pkg curl
   # The brew installer for node is broken (fails to run the npx line in bookreader/package.json), use the line below as found on https://nodejs.org/en/download/package-manager/#macos
   #node --version >>/dev/null || brew install nodejs
-  node --version >>/dev/null || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest-v12.x/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
-  yarn --version >>/dev/null || curl -o- -L https://yarnpkg.com/install.sh | bash
+  check_cmd node --version || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest-v12.x/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
+  check_cmd yarn --version || curl -o- -L https://yarnpkg.com/install.sh | bash
   source ~/.bashrc # Fix up path
 fi
 
