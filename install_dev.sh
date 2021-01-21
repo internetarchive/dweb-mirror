@@ -22,6 +22,7 @@ REPOS="dweb-transports dweb-archivecontroller epubjs-reader bookreader dweb-arch
 # Note that dweb-transport and dweb-gatewahy are not installed they are only useful when running as a gateway server at the archive.
 
 function step {
+  # output the step the process is at
   STEPALL=$*
   STEPNUMBER=$1
   shift
@@ -32,6 +33,7 @@ function step {
 }
 
 function install_pkg() {
+  # install a package properly for the current operating system
   step XXX "Installing $*"
   if [ "${OPERATINGSYSTEM}" != "darwin" ]
   then
@@ -42,6 +44,7 @@ function install_pkg() {
 }
 
 function check_cmd() {
+  # silence a command, but preserve its exit status
   "$@" >/dev/null 2>&1
 }
 
@@ -126,7 +129,9 @@ then
   install_pkg libsecret-1-dev || echo "Libsecret failed to install, but that is ok"
   check_cmd netstat --version || install_pkg net-tools # Make debugging so much easier
 else
+  # TODO: change a couple lines below to use only curl or only wget, rather than both, as each one performs the same task as the other
   check_cmd curl --version || install_pkg curl
+  check_cmd wget --version || install_pkg wget
   # The brew installer for node is broken (fails to run the npx line in bookreader/package.json), use the line below as found on https://nodejs.org/en/download/package-manager/#macos
   #check_cmd node --version || install_pkg nodejs
   check_cmd node --version || ( curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/" )
