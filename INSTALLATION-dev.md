@@ -53,28 +53,7 @@ git clone --branch mitra--release https://github.com/internetarchive/iaux
 git clone https://github.com/internetarchive/dweb-transports
 ```
 
-2. add each package repository to yarn's links, to make development changes accessible.  If you already have these packages linked, change the steps appropriately.
-```
-yarn --cwd dweb-archivecontroller link
-yarn --cwd epubjs-reader link
-yarn --cwd bookreader link
-yarn --cwd dweb-transports link
-yarn --cwd iaux link
-```
-
-3. tell yarn to use the linked development versions
-```
-yarn --cwd dweb-archive link epubjs-reader
-yarn --cwd dweb-archive link @internetarchive/bookreader
-yarn --cwd dweb-archive link @internetarchive/dweb-archivecontroller
-yarn --cwd dweb-archive link @internetarchive/dweb-transports
-yarn --cwd dweb-mirror link epubjs-reader
-yarn --cwd dweb-mirror link @internetarchive/bookreader
-yarn --cwd dweb-mirror link @internetarchive/dweb-archivecontroller
-yarn --cwd dweb-mirror link @internetarchive/dweb-transports
-```
-
-4. run yarn install
+2. run yarn install
 ```
 yarn --cwd dweb-archivecontroller install
 yarn --cwd dweb-archive install
@@ -83,10 +62,32 @@ yarn --cwd dweb-transports install
 yarn --cwd iaux install
 ```
 
-5. iaux is a multi-repo and needs lerna run
+3. iaux is a multi-repo and needs lerna run
 ```
 yarn --cwd iaux run lerna bootstrap
 yarn --cwd iaux run lerna link
+```
+
+4. add each package repository to yarn's links, to make development changes accessible.  If you already have these packages linked, change the steps appropriately.
+```
+yarn --cwd dweb-archivecontroller link
+yarn --cwd epubjs-reader link
+yarn --cwd bookreader link
+yarn --cwd dweb-transports link
+yarn --cwd iaux/packages/ia-components link
+```
+
+5. tell yarn to use the linked development versions
+```
+yarn --cwd dweb-archive link epubjs-reader
+yarn --cwd dweb-archive link @internetarchive/bookreader
+yarn --cwd dweb-archive link @internetarchive/dweb-archivecontroller
+yarn --cwd dweb-archive link @internetarchive/dweb-transports
+yarn --cwd dweb-archive link @internetarchive/ia-components
+yarn --cwd dweb-mirror link epubjs-reader
+yarn --cwd dweb-mirror link @internetarchive/bookreader
+yarn --cwd dweb-mirror link @internetarchive/dweb-archivecontroller
+yarn --cwd dweb-mirror link @internetarchive/dweb-transports
 ```
 
 6. webpack repos to development versions
