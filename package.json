@@ -10,7 +10,7 @@
   "name": "@internetarchive/dweb-mirror",
   "dependencies": {
     "@futurepress/epubjs-reader": "git+https://github.com/futurepress/epubjs-reader.git",
-    "@internetarchive/bookreader": "git+https://github.com/internetarchive/bookreader.git",
+    "@internetarchive/bookreader": "^4.40.2",
     "@internetarchive/dweb-archive-dist": "^0.2.28",
     "@internetarchive/dweb-archivecontroller": "^0.2.13",
     "@internetarchive/dweb-transports": "^0.2.21",
@@ -33,7 +33,7 @@
     "readable-stream": "^3.4.0",
     "readable-stream-clone": "git://github.com/mitra42/readable-stream-clone",
     "sha": "^2.0.1",
-    "sharp": "^0.23.4"
+    "sharp": "^0.28.3"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "devDependencies": {
