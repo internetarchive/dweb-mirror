@@ -11,8 +11,9 @@ on the repo (or just send me a corrected version of this file)
 
 ## Automatic Installation
 
-The easiest way to install is to use the installation script, 
-if it fails on your platform, it should exit at the failing step, and you can edit it and run it again.
+The easiest way to install is to use [./install_dev.sh](./install_dev.sh), the installation script.
+If it fails on your platform, it should exit at the failing step, and you can edit it and run it again,
+and contribute your improvements.
 
 ```
 curl -o- -L https://unpkg.com/@internetarchive/dweb-mirror/install_dev.sh | bash
@@ -36,10 +37,74 @@ sudo yarn add node-pre-gyp cmake
 ```
 
 You'll need to clone the repositories from Git, 
-use `lerna` and `yarn` to install them and then
-crosslink them. 
+use `lerna` and `yarn` to install them and then crosslink them.
 
 This is non-trivial to get right which is why we built the installer ! 
+
+1. Clone the repositories
+```
+mkdir -p ~/git
+cd ~/git
+git clone https://github.com/internetarchive/dweb-transports
+git clone https://github.com/internetarchive/dweb-archivecontroller
+git clone https://github.com/futurepress/epubjs-reader
+git clone https://github.com/internetarchive/bookreader
+git clone https://github.com/internetarchive/dweb-archive
+git clone https://github.com/internetarchive/dweb-mirror
+git clone --branch mitra--release https://github.com/internetarchive/iaux
+```
+
+2. run yarn install
+```
+yarn --cwd dweb-transports install
+yarn --cwd dweb-archivecontroller install
+yarn --cwd epubjs-reader install
+yarn --cwd bookreader install
+yarn --cwd dweb-archive install
+yarn --cwd dweb-mirror install
+yarn --cwd iaux install
+```
+
+3. iaux is a multi-repo and needs lerna run
+```
+yarn --cwd iaux run lerna bootstrap
+yarn --cwd iaux run lerna link
+```
+
+4. add each package repository to yarn's links, to make development changes accessible.
+   If you already have these packages linked, change the steps appropriately.
+```
+yarn --cwd dweb-transports link
+yarn --cwd dweb-archivecontroller link
+yarn --cwd epubjs-reader link
+yarn --cwd bookreader link
+yarn --cwd iaux/packages/ia-components link
+```
+
+5. tell yarn to use the linked development versions
+```
+yarn --cwd dweb-archive link @internetarchive/dweb-transports
+yarn --cwd dweb-archive link epubjs-reader
+yarn --cwd dweb-archive link @internetarchive/bookreader
+yarn --cwd dweb-archive link @internetarchive/dweb-archivecontroller
+yarn --cwd dweb-archive link @internetarchive/ia-components
+yarn --cwd dweb-mirror link @internetarchive/dweb-transports
+yarn --cwd dweb-mirror link epubjs-reader
+yarn --cwd dweb-mirror link @internetarchive/bookreader
+yarn --cwd dweb-mirror link @internetarchive/dweb-archivecontroller
+```
+
+6. webpack repos to development versions
+```
+yarn --cwd dweb-transports run webpack --mode development
+yarn --cwd dweb-archive run webpack --mode development
+yarn --cwd epubjs-reader run grunt
+```
+
+7. install http-server
+```
+yarn global add http-server
+```
 
 ### 3. Edit configuration
 
@@ -80,7 +145,7 @@ Expect to see errors in the Browser log for
 * http://localhost:5001/api/v0/version?stream-channels=true  - which is checking for a local IPFS server
 
 Expect, on slower machines/networks, to see no images the first time, 
-refresh after a little while and most should appear. 
+refresh after a little while and most should appear.
 
 ### 5. Test crawling
 

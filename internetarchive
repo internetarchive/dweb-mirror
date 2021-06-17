@@ -276,8 +276,11 @@ function stopServer(cb) {
             cb(null); // Dont pass on failure, still want to stop transports
         });
         server = undefined; // Its obviously not running
+    } else {
+        cb(null);
     }
 }
+
 waterfall([
     cb => MirrorConfig.new(undefined,
         (obj) => { if (typeof obj.directories !== "undefined") MirrorFS.setState({directories: obj.directories}) },
@@ -306,6 +309,10 @@ waterfall([
     if (err) {
         debug("Failed: %s", err.message)
     } else {
-        debug('Completed' + ((!!server) ? " but server still running" : ""));
+        if (server) {
+            debug('Completed, but server still running');
+        } else {
+            debug('Completed');
+        }
     }
 });
