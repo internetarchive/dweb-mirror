@@ -5,6 +5,8 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.89: Fix installation issue with yarn
+* 0.2.88: Fix install issues and dependencies
 * 0.2.86: itemid => identifier; pickup dweb-archive 0.2.27 and dweb-archivecontroller 0.2.11
 * 0.2.85: pickup dweb-archive 0.2.26 and dweb-archivecontroller: 0.2.10
 * 0.2.84: pickup dweb-archive 0.2.25
