@@ -31,7 +31,7 @@
     "parse-torrent": "^7.0.1",
     "prettier-bytes": "^1.0.4",
     "readable-stream": "^3.4.0",
-    "readable-stream-clone": "git://github.com/mitra42/readable-stream-clone",
+    "readable-stream-clone": "https://github.com/mitra42/readable-stream-clone.git",
     "sha": "^2.0.1",
     "sharp": "^0.28.3"
   },
