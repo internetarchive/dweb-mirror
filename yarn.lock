@@ -2669,9 +2669,9 @@ read-pkg@^3.0.0:
     normalize-package-data "^2.3.2"
     path-type "^3.0.0"
 
-"readable-stream-clone@git://github.com/mitra42/readable-stream-clone":
+"readable-stream-clone@https://github.com/mitra42/readable-stream-clone.git":
   version "0.0.4"
-  resolved "git://github.com/mitra42/readable-stream-clone#b8827df9a52ae5d278995ab25548c0206ea0c210"
+  resolved "https://github.com/mitra42/readable-stream-clone.git#b8827df9a52ae5d278995ab25548c0206ea0c210"
 
 readable-stream@^2.0.2, readable-stream@^2.0.6, readable-stream@~2.3.6:
   version "2.3.7"
