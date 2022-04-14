@@ -15,7 +15,7 @@
     "@internetarchive/dweb-archivecontroller": "^0.2.13",
     "@internetarchive/dweb-transports": "^0.2.21",
     "@stratumn/canonicaljson": "^1.0.3",
-    "async": "^2.6.2",
+    "async": "^3.2.2",
     "child_process": "^1.0.2",
     "debug": "^4.1.1",
     "express": "^4.17.1",
