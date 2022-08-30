@@ -1,4 +1,4 @@
---- # Example User configuration for dweb mirror
+# Example User configuration for dweb mirror
 # Note in YAML, indentation is significant, and you can't have multiple spaces after the ":"
 apps:
   crawl:
@@ -17,12 +17,38 @@ apps:
       - sort: "-downloads"
         rows: 10
         level: "tile"
+
     # And get top 40 tiles for Prelinger (as spec in crawl.opts.defaultDetailsSearch)
     - identifier: "prelinger"
       level: "details"
+
     # And retrieve playable movies for AboutBan1935 and Doctorin1946 that Brewster loves to demo
     - identifier:
-      - "AboutBan1935"
-      - "Doctorin1946"
-      level: "details"
-...
+        - AboutBan1935
+        - Doctorin1946
+        - commute
+        - unitednov65unit
+        - mbid-ac2b87af-2774-4575-a72a-db31c8865264
+        - paf2007-09-29..c42-sto2.flac16
+        - bdrc-W3PD1123
+        - thetaleofpeterra14838gut
+        - ArtOfCommunitySecondEdition
+        - EnglishTeluguDictionary
+        - JourneysInPersiaAndKurdistanVolII
+      level: details
+
+    - identifier:
+        - bali-lontar-transcribed
+      level: details
+      search:
+        - sort: '-downloads'
+          rows: 20
+          level: details
+
+    - identifier:
+        - mitratest
+      level: details
+      search:
+        - sort: '-downloads'
+          rows: 200
+          level: details

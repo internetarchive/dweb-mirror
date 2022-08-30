@@ -1,7 +1,7 @@
 # This is the master Dockerfile
 # it should work, but AFAIK noone is currently using dweb-mirror under Docker so if not please send post a bug report or PR
 # In most cases install.sh is a better way to get something running on a box.
-# There is a variation of this in www-dweb-mirror repo running under Kubernates (k8) at https://www-dweb.dev.archive.org
+# There is a deploy of this dweb-mirror repo running under nomad at https://www-dweb-mirror.dev.archive.org
 # There is a variation of this in OLIP https://gitlab.com/bibliosansfrontieres/olip/dweb-mirror
 # The changes in both those dockerfiles are incorporated below, but commented out.
 #
@@ -52,7 +52,7 @@ RUN set -x \
 #if you want bash or ssh:
 #RUN apt-get -yq install bash openssh-server
 
-# OLIP uses following, but `apk` not available on the k8 www-dweb-mirror
+# OLIP uses following, but `apk` is alpine linux
 # Also OLIP is adding python, make g++ and vips-dev which must be for debugging ?
 #RUN set -ex; \
 #    apk --no-cache --update add git
@@ -64,7 +64,7 @@ RUN set -x \
 
 ## Connect to a persistent volume for (potentially large) data caching
 # OLIP - /data/archiveorg as /data is persistent. (Added to configDefaults.yaml#directories)
-# www-dweb-mirror: /root/archiveorg : data intentionally not persistent as used for testing
+# nomad: /root/archiveorg : data intentionally not persistent as used for testing
 RUN mkdir -p /root/archiveorg
 
 ## Copy a user config for dweb-mirror, this should be in one of the locations listed in configDefaults.yaml
@@ -80,18 +80,15 @@ RUN yarn add @internetarchive/dweb-mirror
 RUN yarn add supervisor
 
 ## tell the world which port we use, doesnt actually make docker do anything
-# On dweb-mirror this is 4244 and on www-dweb-archive under kubernetes (K8) is 5000
+# On dweb-mirror this is 4244
 # You can change this, but it MUST match the port in dweb-mirror.config.yaml
 EXPOSE 4244
 
 ##  Nasty hack to unhack this nasty line in archive.js :-) which generates unwanted logs if running on certain CI servers at IA
-# K8 www-dweb-mirror only but has no negative impact on any other setup
+# nomad www-dweb-mirror only but has no negative impact on any other setup
 #var log = location.host.substr(0, 4) !== 'www-' ? function () {} : console.log.bind(console);
 RUN sed -i.BAK -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.js'
 RUN sed -i.BAK -e 's/www-/xwww-/' '/app/node_modules/@internetarchive/dweb-archive-dist/includes/archive.min.js'
-
-## On K8 www-dweb-mirror only After yarn add DM, overwrite redir.html as a redirect breaks the liveness test
-#COPY ./redir.html /app/node_modules/@internetarchive/dweb-archive-dist/redir.html
 
 WORKDIR /app/node_modules/@internetarchive/dweb-mirror
 
