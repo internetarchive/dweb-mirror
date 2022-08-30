@@ -12,3 +12,5 @@ jobs:
           NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NOMAD_VAR_HOSTNAMES: '["www-dweb-mirror.dev.archive.org"]'
+          NOMAD_VAR_CHECK_PROTOCOL: 'tcp'
+          NOMAD_VAR_PORTS: '{ 4244 = "http"}'
