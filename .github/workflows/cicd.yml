@@ -11,4 +11,4 @@ jobs:
           BASE_DOMAIN: 'dev.archive.org'
           NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NOMAD_VAR_HOSTNAMES: '["www-dweb-mirror.dev.archive.org/details/local"]'
+          NOMAD_VAR_HOSTNAMES: '["www-dweb-mirror.dev.archive.org"]'
