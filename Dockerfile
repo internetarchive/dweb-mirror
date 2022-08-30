@@ -29,7 +29,7 @@ FROM node:12
 #ARG ARCH
 #FROM $ARCH/node:12-alpine
 
-MAINTAINER "Mitra Ardron <mitra@archive.org>"
+LABEL maintainers="Mitra Ardron <mitra@archive.org>, Tracey Jaquith <tracey@archive.org>"
 WORKDIR /app
 
 ## Yarn used to need installing, but is now present in alpine docker and node:12 images
