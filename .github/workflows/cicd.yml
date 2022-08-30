@@ -1,0 +1,11 @@
+name: CICD
+on: push
+jobs:
+  cicd:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write, id-token: write }
+    steps:
+      # https://github.com/internetarchive/build
+      - uses: internetarchive/build@v1
+        with:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
