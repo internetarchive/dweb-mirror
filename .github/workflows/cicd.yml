@@ -5,7 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write, id-token: write }
     steps:
-      # https://github.com/internetarchive/build
-      - uses: internetarchive/build@v1
+      # https://github.com/internetarchive/cicd
+      - uses: internetarchive/cicd@v1
         with:
+          BASE_DOMAIN: 'dev.archive.org'
+          NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOMAD_VAR_HOSTNAMES: '["www-dweb-mirror.dev.archive.org/details/local"]'
