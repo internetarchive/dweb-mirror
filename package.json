@@ -33,7 +33,7 @@
     "readable-stream": "^3.4.0",
     "readable-stream-clone": "https://github.com/mitra42/readable-stream-clone.git",
     "sha": "^2.0.1",
-    "sharp": "^0.30.5"
+    "sharp": "^0.31.2"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "devDependencies": {
