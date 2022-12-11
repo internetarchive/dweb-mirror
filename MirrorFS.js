@@ -166,10 +166,30 @@ class MirrorFS {
       .on('end', () => { if (!errState) cb(null, options.format === 'multihash58' ? multihash58sha1(hash.digest()) : hash.digest('hex')); });
   }
 
+  /*
+  static _hashstream_TransformStream({algorithm = 'sha1' } = {}) {
+    // Had a problem with some libraries -e.g. fetch now returning a ReadableStream instead of a ReadStream (like node)
+    // This was part of a solution to the problem, this part worked but overall solution failed, keeping in case try again
+    // new kinds of ReadableStreams https://developer.mozilla.org/en-US/docs/Web/API/TransformStream/TransformStream
+    const hash = crypto.createHash(algorithm);
+    const stream = new TransformStream({
+      start() {}, // required
+      async transform(chunk, controller) {
+        hash.update(chunk);
+        controller.enqueue(chunk);
+      },
+      flush() {
+        stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with with sha1 in metadata
+      }
+    })
+    return stream;
+  }
+  */
   static _hashstream({ algorithm = 'sha1' } = {}) {
     /*
         Return a hashstream which can be piped through, it stores the digest of the stream in ".actual" after its ._flush is called
-         */
+        Note this is a node style transform stream, not a TransformStream as in https://developer.mozilla.org/en-US/docs/Web/API/TransformStream
+    */
     const hash = crypto.createHash(algorithm);
     const stream = new Transform();
     stream._transform = function (chunk, encoding, cb) {
