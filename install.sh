@@ -50,6 +50,7 @@ step 00 Determining what kind of box this is
 case `uname -m` in
 "armv7l") ARCHITECTURE="arm";;    # e.g. Raspberry 3 or OrangePiZero. Note armv8 and above would use what IPFS has as arm64, armv7 and down want "arm"
 "x86_64") ARCHITECTURE="amd64";;  # e.g. a Mac OSX
+"arm64") ARCHITECTURE="arm64";; # e.g. a newer Mac OSX
 "i?86") ARCHITECTURE="386";;      # e.g. a Rachel3+
 *) echo "Unknown processor type `uname -m`, needs configuring"; ARCHITECTURE="unknown";;
 esac
@@ -84,7 +85,9 @@ case "${PLATFORM}" in
 "rachel") CACHEDIR="/.data/archiveorg";;
 esac
 case "${ARCHITECTURE}" in
+"unknown") YARNCONCURRENCY=1;;
 "386") YARNCONCURRENCY=2;;
+"arm64") YARNCONCURRENCY=4;;
 "amd64") YARNCONCURRENCY=4;;
 esac
 
@@ -145,9 +148,29 @@ fi
 # yarn global add node-pre-gyp
 # [ -d node_modules/cmake ] || [ -d /usr/local/share/.config/yarn/global/node_modules/cmake/ ] || sudo yarn global add cmake
 
-step XXX "Creating cache directory for content"
-sudo mkdir -p ${CACHEDIR} && sudo chown ${USER} ${CACHEDIR}
-
+step XXX "Checking cache directory for content ${CACHEDIR} exists and is writable"
+if [ ! -d ${CACHEDIR} ]
+then
+  step XXX "Creating cache directory for content ${CACHEDIR}"
+  if ! mkdir -p ${CACHEDIR}
+  then
+    set +x # Make visible request for sudo
+    sudo mkdir -p ${CACHEDIR}
+    set -x
+  fi
+  [ -d ${CACHEDIR} ]
+fi
+if [ ! -w ${CACHEDIR} ]
+then
+  step XXX "Making cache directory for content writable by ${USER}"
+  if ! chown ${USER} ${CACHEDIR}
+  then
+    set -x # Make visible request for sudo
+    sudo chown ${USER} ${CACHEDIR}
+    set +x
+  fi
+  [ -w ${CACHEDIR} ] # Fail if cannot write ${CACHEDIR}
+fi
 step XXX "Yarn install or update dweb-mirror"
 cd ${INSTALLDIR} # By default ${HOME}
 yarn config set child-concurrency ${YARNCONCURRENCY}
