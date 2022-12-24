@@ -443,6 +443,7 @@ function mirrorHttp(config, cb0) {
         rotate: req.query.rotate,
         itemPath: req.query.itemPath, // Preview only
         subPrefix: req.query.subPrefix, // Preview only
+        id: req.query.id, // Seems to be required by datanode, and supplied in req by client, as of Dec2022 (see issue#372)
         noCache: req.opts.cache
       },
       (err, s) => _proxy(req, res, next, err, s, { 'Content-Type': 'image/jpeg' }));

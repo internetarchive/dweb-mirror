@@ -244,13 +244,13 @@
     prettier-bytes "^1.0.4"
     simple-sha1 "^3.0.1"
 
-"@internetarchive/dweb-transports@^0.2.21":
-  version "0.2.21"
-  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.21.tgz#a260b14cc1cc8069a03363d0f488cbb75beb30a1"
-  integrity sha512-z5Y/1jnH430AukbcCYbbZyC4NCHmkGq94t/msXSTyBSL1hTPSc7/J5R9AlrkfT7A96OZ5fBRqUW7JmycUKW+1A==
+"@internetarchive/dweb-transports@^0.2.22":
+  version "0.2.22"
+  resolved "https://registry.yarnpkg.com/@internetarchive/dweb-transports/-/dweb-transports-0.2.22.tgz#5610d1a8f21a2f9926fe8719feef3bb652db5fc4"
+  integrity sha512-xxmNBP6hB+tRokYEGXyJ42jgla11J37iUphf+PeordsTLyOjCxENwYFbo8fzjVgD2JLv855AfKUZ7KRVL9+5ww==
   dependencies:
     "@stratumn/canonicaljson" "^1.0.3"
-    async "^2.6.3"
+    async "^3.0.0"
     debug "^4.1.1"
     node-fetch "^2.3.0"
     readable-stream "^3.3.0"
@@ -492,12 +492,17 @@ astral-regex@^1.0.0:
   resolved "https://registry.yarnpkg.com/astral-regex/-/astral-regex-1.0.0.tgz#6c8c3fb827dd43ee3918f27b82782ab7658a6fd9"
   integrity sha512-+Ryf6g3BKoRc7jfp7ad8tM4TtMiaWvbF/1/sQcZPkkS7ag3D5nMBCe2UfOTONtAkaG0tO0ij3C5Lwmf1EiyjHg==
 
-async@^2.6.2, async@^2.6.3:
+async@^2.6.2:
   version "2.6.4"
   resolved "https://registry.yarnpkg.com/async/-/async-2.6.4.tgz#706b7ff6084664cd7eae713f6f965433b5504221"
   integrity sha512-mzo5dfJYwAn29PeiJ0zvwTo04zj8HDJj0Mn8TD7sno7q12prdbnasKJHhkm2c1LgrhlJ0teaea8860oxi51mGA==
   dependencies:
     lodash "^4.17.14"
+
+async@^3.0.0:
+  version "3.2.4"
+  resolved "https://registry.yarnpkg.com/async/-/async-3.2.4.tgz#2d22e00f8cddeb5fde5dd33522b56d1cf569a81c"
+  integrity sha512-iAB+JbDEGXhyIUavoDl9WP/Jj106Kz9DEn1DPgYw5ruDn0e3Wgi3sKFm55sASdGBNOQB8F59d9qQ7deqrHA8wQ==
 
 axe-core@^4.4.3:
   version "4.5.2"

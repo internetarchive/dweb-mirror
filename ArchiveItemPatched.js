@@ -367,12 +367,12 @@ ArchiveItem.prototype.fetch_page = function ({
   wantStream = false, wantSize = false, noCache = false,
   zip = undefined, file = undefined, scale = undefined, rotate = undefined,
   page = undefined, skipNet = false, skipFetchFile = undefined,
-  itemPath = undefined, subPrefix = undefined,
+  itemPath = undefined, subPrefix = undefined, id = undefined,
   copyDirectory = undefined
 } = {}, cb) { // TODO-API noCache
 
   let zipfile;
-  debug('fetch_page:%s%s subPrefix=%s zip=%s file=%s page=%s scale=%s rotate=%s', skipNet ? ' (skipNet)' : '', skipFetchFile ? ' (skipFetchFile)' : '', subPrefix, zip, file, page, scale, rotate);
+  debug('fetch_page:%s%s subPrefix=%s zip=%s file=%s page=%s scale=%s rotate=%s id=%s', skipNet ? ' (skipNet)' : '', skipFetchFile ? ' (skipFetchFile)' : '', subPrefix, zip, file, page, scale, rotate, id);
   // page = cover_t.jpg - bookreader cover page
   // page=leaf1_w2000 meaning page 1, with ideal width 2000 pixels, comes from Palmleaf wiki
   // page=leaf1 scale=10.1234 subPrefix=IDENTIFIER zipfile=undefined from BookReaderPreview call made when book unavailable
@@ -398,7 +398,7 @@ ArchiveItem.prototype.fetch_page = function ({
       if (zip) zipfile = zip.split('/')[4];
       // Reconstruct url as we will quantize the scale
       const urls = (zip && file)
-        ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderImages.php?${parmsFrom({ zip, file, scale, rotate })}`
+        ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderImages.php?${parmsFrom({ zip, file, scale, rotate, id })}`
         : page
         ? `https://www-dweb-cors.dev.archive.org/BookReader/BookReaderPreview.php?${parmsFrom({ subPrefix, page, scale, rotate, id: this.identifier, itemPath: this.dir, server: 'www-dweb-cors.dev.archive.org' })}`
         : undefined; // This would be an error

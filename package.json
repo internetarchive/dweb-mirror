@@ -13,7 +13,7 @@
     "@internetarchive/bookreader": "^4.40.2",
     "@internetarchive/dweb-archive-dist": "^0.2.28",
     "@internetarchive/dweb-archivecontroller": "^0.2.13",
-    "@internetarchive/dweb-transports": "^0.2.21",
+    "@internetarchive/dweb-transports": "^0.2.22",
     "@stratumn/canonicaljson": "^1.0.3",
     "async": "^2.6.2",
     "child_process": "^1.0.2",
@@ -57,5 +57,5 @@
     "dependers": "grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json",
     "editdependers": "vi `grep -l dweb-mirror ../dweb*/package.json | grep -v dweb-mirror/package.json`"
   },
-  "version": "0.2.90"
+  "version": "0.2.91"
 }

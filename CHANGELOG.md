@@ -5,6 +5,13 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.91: 
+  * Fix some installation problems; 
+  * includes NOMAD code to allow easier deployment of instance on IA 
+  * Make sure use latest sharp (compatability issues)
+  * Installer update to handle newer (arm64) Macs
+  * Depends on fix in DwebTransports 0.2.22 for issue#389
+  * id= is required by BookReaderImages.php see issue#372
 * 0.2.90: Fix git:// to https://
 * 0.2.89: Fix installation issue with yarn
 * 0.2.88: Fix install issues and dependencies
