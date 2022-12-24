@@ -24,7 +24,8 @@
 # alpine images are missing git, which is needed for dependencies of dweb-archive-dist
 # and node:12 not available on i386 and is missing apk
 # www-dweb-mirror uses node:12 OLIP uses node:12-alpine
-FROM node:12
+# BUT sharp requires node:14 so updating here.
+FROM node:14
 # OLIP uses ...
 #ARG ARCH
 #FROM $ARCH/node:12-alpine
