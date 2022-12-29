@@ -135,7 +135,7 @@ class CrawlManager {
       // Tasks will loop from 1-5 secs if disconnected, the randomness is to spread tasks out.
       asyncUntil(
         // TODO maybe push this to dweb-transports as waitConnected:true argument to statuses
-        () => DwebTransports.statuses({ connected: true }).length && (this.copyDirectory || MirrorFS.directories.length),
+        cb3 => cb3(DwebTransports.statuses({ connected: true }).length && (this.copyDirectory || MirrorFS.directories.length)),
         cb2 => setTimeout(cb2, Math.floor(1000 + 4000 * Math.random())),
         (unusedErr) => {
           task.process(this, (err) => {
@@ -147,7 +147,9 @@ class CrawlManager {
         }
       );
     }, this.concurrency);
-    this._taskQ.drain = () => this.drained.call(this);
+    let bounddrained = this.drained.bind(this);
+    this._taskQ.drain(bounddrained); // async3
+
     if (typeof CrawlManager.crawls === 'undefined') CrawlManager.crawls = [];
     CrawlManager.crawls.push(this); // Make crawl findable
   }
