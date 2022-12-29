@@ -119,7 +119,7 @@ class ConfigController {
     Throws errors on failure to read, or failure to parse.
      */
     try {
-      return yaml.safeLoad(fs.readFileSync(this.resolve(filename), 'utf8'));
+      return yaml.load(fs.readFileSync(this.resolve(filename), 'utf8'));
     } catch (err) {
       debug('Error reading user configuration: %s', err.message);
       return {}; // Caller is free to ignore err and treat {} as an empty set of config params
@@ -140,7 +140,7 @@ class ConfigController {
         cb(err, {});
       } else {
         try {
-          const o = yaml.safeLoad(yamlstr);
+          const o = yaml.load(yamlstr);
           try { cb(null, o); } catch (err) { debug('ERROR: Uncaught err in readYaml cb %o', err); }
         } catch (err) {
           debug('Unable to parse yaml: %s', err.message);

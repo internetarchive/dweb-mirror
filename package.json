@@ -21,7 +21,7 @@
     "express": "^4.18.2",
     "getopts": "^2.2.5",
     "glob": "^7.1.4",
-    "js-yaml": "^3.13.1",
+    "js-yaml": "^4.1.0",
     "level": "^5.0.1",
     "morgan": "^1.9.1",
     "multicast-dns": "^7.2.0",
@@ -33,7 +33,7 @@
     "readable-stream": "^3.4.0",
     "readable-stream-clone": "https://github.com/mitra42/readable-stream-clone.git",
     "sha": "^2.0.1",
-    "sharp": "^0.31.3"
+    "sharp": "^0.31.2"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "devDependencies": {
