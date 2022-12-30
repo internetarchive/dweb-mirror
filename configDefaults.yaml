@@ -30,6 +30,9 @@ epubreader:
     - ../epubreader/reader # Try a repo cloned to a directory parallel or installed to this one, which is presumably for development
     - ../../@futurepress/epubjs-reader/reader # Try repo installed as dependency at same level
     - node_modules/@futurepress/epubjs-reader/reader # Or a repo installed as a dependency via 'yarn install'
+nodemodules:
+  directories: # Note the code uses the first of these found to exist
+    - node_modules
 # How to connect to the net, for dweb-mirror HTTP directly to the gateway is usually the best way
 # especially for low CPU/low bandwidth environments.
 connect:
