@@ -1,3 +1,6 @@
+// This is level 5, there are major differences in level 8
+// see https://github.com/Level/level/blob/master/UPGRADING.md
+// The changes should be contained here, but might not be trivial and its unclear what if any value gained.
 const level = require('level');
 const debug = require('debug')('dweb-mirror:HashStore');
 const each = require('async/each');

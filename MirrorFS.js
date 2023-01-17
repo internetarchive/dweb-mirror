@@ -25,7 +25,9 @@ const { routed } = require('@internetarchive/dweb-archivecontroller'); // for Ob
 // other packages in this repo - note it is intentional that this does not depend on config
 const HashStore = require('./HashStore');
 
-function multihash58sha1(buf) { return multihashes.toB58String(multihashes.encode(buf, 'sha1')); }
+function multihash58sha1(buf) {
+  return multihashes.toB58String(multihashes.encode(buf, 'sha1'));
+}
 
 
   /**
@@ -145,11 +147,13 @@ class MirrorFS {
    * @param options  { algorithm, format }
    * @returns {string}
    */
+  /*
+  // This does not appear to be used
   static quickhash(str, options = {}) {
     const hash = crypto.createHash(options.algorithm || 'sha1').update(str);
     return options.format === 'multihash58' ? multihash58sha1(hash.digest()) : hash.digest('hex');
   }
-
+  */
   static _streamhash(s, options = {}, cb) {
     /*  Calculate hash on a stream, which it consumes
             algorithm: Hash algorithm to be used, (only tested with sha1)
