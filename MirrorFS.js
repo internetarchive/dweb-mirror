@@ -6,7 +6,10 @@ const fs = require('fs'); // See https://nodejs.org/api/fs.html
 const path = require('path');
 const canonicaljson = require('@stratumn/canonicaljson');
 // noinspection JSUnresolvedVariable
-const Transform = require('stream').Transform || require('readable-stream').Transform;
+// readable-stream isn't needed since MirrorFS only runs in node, which already has require('stream').Transform
+// so dependency removed. If needed, the code known to work is v3.4.0, v4.3.0 may have probles as
+// reflects breaking changes in later versions of node.
+const Transform = require('stream').Transform // || require('readable-stream').Transform;
 const debug = require('debug')('dweb-mirror:MirrorFS');
 const multihashes = require('multihashes');
 const detect = require('async/detect');
