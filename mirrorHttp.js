@@ -24,7 +24,6 @@ const express = require('express'); // http://expressjs.com/
 const morgan = require('morgan'); // https://www.npmjs.com/package/morgan
 const path = require('path');
 const fs = require('fs'); // See https://nodejs.org/api/fs.html
-// const ParallelStream = require('parallel-streams');
 const waterfall = require('async/waterfall');
 const parallel = require('async/parallel');
 const sharp = require('sharp');
@@ -275,10 +274,7 @@ function mirrorHttp(config, cb0) {
           if (req.opts.end) res.set('Content-Range', `bytes ${req.opts.start}-${Math.min(req.opts.end, af.metadata.size) - 1}/${af.metadata.size}`);
           // noinspection JSUnresolvedVariable
           res.set('Content-Type', af.mimetype()); // Not sure what happens if doesn't find it.
-          // Uncomment first .pipe to log bytes on way out.
-          s
-          // .pipe(ParallelStream.log(m => `${identifier}/${filename} ${JSON.stringify(opts)} len=${m.length}`, {name: "crsdata",  objectMode: false }))
-            .pipe(res);
+          s.pipe(res);
         }
       });
     } catch (err) {

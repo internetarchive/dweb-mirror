@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* parallel-streams:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
+process.env.DEBUG="dweb-transports dweb-transports:* dweb-archivecontroller:* dweb-mirror:* dweb-mirror:HashStore";  // Get highest level debugging of these two libraries, must be before require(dweb-transports)
 //process.env.DEBUG=process.env.DEBUG + " bittorrent-tracker:*";  // Add Webtorrent debugging
 
 // TODO-GUN check using GUN for metadata

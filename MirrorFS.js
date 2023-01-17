@@ -19,7 +19,6 @@ const exec = require('child_process').exec;
 const ReadableStreamClone = require('readable-stream-clone'); // Allow safe duplication of readable-stream
 
 // other packages of ours
-const ParallelStream = require('parallel-streams');
 const { routed } = require('@internetarchive/dweb-archivecontroller'); // for Object.fromEntries
 
 // other packages in this repo - note it is intentional that this does not depend on config
@@ -722,27 +721,6 @@ class MirrorFS {
     });
   }
 
-  static _streamOfCachedItemPaths({ cacheDirectory = undefined }) {
-    // Note returns stream 's' immediately, then asynchronous reads directories and pipes relFilePath <item>/<file> or <item>/<subdir>/<file> into s.
-    // Runs in parallel 100 at a time,
-    const s = new ParallelStream({ name: 'Cached Item Paths' });
-    fs.readdir(cacheDirectory, (err, files) => {
-      if (err) {
-        debug('Failed to read directory %s', cacheDirectory);
-        files = [];
-      }
-      return ParallelStream.from(files.filter(f => !f.startsWith('.')), { name: 'stream of item directories', paralleloptions: { silentwait: true } }) // Can exclude other non hashables here
-        .map((identifier, cb) => this._readDirRecursive(cacheDirectory, identifier, cb), // Stream of arrays - it does it recursively
-          { name: 'Read files dirs', async: true, paralleloptions: { limit: 100, silentwait: true } }) //  [ /foo/mirrored/<item>/<file>* ]
-      // Stream of arrays of [IDENTIFIER/FILENAME or IDENTIFIER/SUBDIRNAME/FILENAME] to whatever depth required
-        .flatten({ name: 'Flatten arrays' }) //  /foo/mirrored/<item>/<file>
-      // Stream of FILENAME (unlikely) and IDENTIFIER/FILENAME and IDENTIFIER/SUBDIRNAME/FILENAME
-      // Flatten once more to handle subdirs
-        .pipe(s);
-    });
-    return s;
-  }
-
   static _maintainCachedItem({ identifier = undefined, cacheDirectory = undefined }, cb) {
     // debug("maintaining %s", identifier);
     fs.readFile([cacheDirectory, identifier, `${identifier}_meta.json`].join('/'), (err, jsonstring) => {
@@ -771,7 +749,6 @@ class MirrorFS {
   }
 
   static _maintainCacheDirectory(cacheDirectory, cb) {
-    // UNUSED SO FAR SHOULD BE PART OF TODO REBUILD MAINTENANCE W/O PARALLELSTREAMS
     debug('maintaining: %s', cacheDirectory);
     this._arrayOfIdentifiers(cacheDirectory, (err, identifiers) => {
       each(identifiers,
@@ -795,87 +772,10 @@ class MirrorFS {
   static maintenance({ cacheDirectories = undefined }, cb) {
     debug('Maintaining File Sytem');
     each(cacheDirectories,
-      (cacheDirectory, cb) => this._maintainCacheDirectory(cacheDirectory, cb),
+      (cacheDirectory, cb1) => this._maintainCacheDirectory(cacheDirectory, cb1),
       (err) => {
         if (err) debug('maintenance failed %o', err);
         cb(err);
-      });
-  }
-
-  // maybe redo to use async.each etc
-  static maintenanceOLD({ cacheDirectories = undefined, algorithm = 'sha1', ipfs = false }, cb) {
-    /*
-        Perform maintenance on the system.
-        Clear out old hashes and load all the hashes in cacheDirectories or config.directories into hashstores table='<algorithm>.filepath'.
-        Make sure all applicable files are in IPFS.
-        Delete any .part files (typically these come from a server crash while something is partially streamed in)
-
-        Stores hashes of files under cacheDirectory to hashstore table=<algorithm>.filepath
-        Runs in parallel 100 at a time,
-        It catches the following issues.
-        - rebuilds hash tables at top of each volume (no report as we just rebuild it)
-        - Unlinks any files ending in part
-        */
-    const tablename = `${algorithm}.relfilepath`;
-    const errs = [];
-    each((cacheDirectories && cacheDirectories.length) ? cacheDirectories : this.directories,
-      (cacheDirectory, cb1) => {
-        this._hashstore(cacheDirectory).destroy(tablename, (err, unusedRes) => {
-          if (err) {
-            debug('Unable to destroy hashstore %s in %s', tablename, cacheDirectory);
-            cb1(err);
-          } else {
-            MirrorFS._streamOfCachedItemPaths({ cacheDirectory }) // Stream of relative file paths //TODO should be a stream of AF
-              .filter(relFilePath => {
-                if (relFilePath.endsWith('.part')) {
-                  // Note the unlink is async, but we are not waiting for it.
-                  fs.unlink(path.join(cacheDirectory, relFilePath), (err) => debug('unlink %s %s', relFilePath, err ? 'Failed ' + err.message : ''));
-                  errs.push({ cacheDirectory, relFilePath, err: new Error('found file ending in .part') });
-                  return false; // Dont hash or add to IPFS
-                } else {
-                  return true;
-                }
-              })
-              .map((relFilePath, cb2) => this._streamhash(fs.createReadStream(path.join(cacheDirectory, relFilePath)), {
-                format: 'multihash58',
-                algorithm
-              },
-              (err, multiHash) => {
-                if (err) {
-                  debug('loadHashTable saw error: %s', err.message);
-                  errs.push({ cacheDirectory, relFilePath, err });
-                  cb2(err);
-                } else {
-                  this._hashstore(cacheDirectory).put(tablename, multiHash, relFilePath, (err, unusedRes) => {
-                    if (err) { debug('failed to put table:%s key:%s val:%s %s', tablename, multiHash, relFilePath, err.message); cb2(err); } else {
-                      cb2(null, relFilePath);
-                    }
-                  });
-                }
-              }),
-              { name: 'Hashstore', async: true, paralleloptions: { limit: 100, silentwait: true } })
-              .map((relFilePath, cb3) => {
-                if (ipfs && !this.isSpecialFile(relFilePath)) {
-                  this.seed({ directory: cacheDirectory, relFilePath }, cb3);
-                } else { cb3(); }
-              },
-              {
-                name: 'seed', async: true, justReportError: true, paralleloptions: { limit: 0 }
-              })
-              .reduce(undefined, undefined, unusedRes => cb1(null));
-          }
-        });
-      },
-      (err, unusedRes) => {
-        if (err) {
-          debug('maintenance failed with err = %o', err);
-        } else {
-          debug('maintenance completed successfully');
-        }
-        debug('===== Completed last directory, error summary ==========');
-        // TODO make sure catch all errors here, (all should push to errs)
-        errs.forEach(e => debug('%s/%s %o', e.cacheDirectory, e.relFilePath, err));
-        cb();
       });
   }
 
@@ -900,11 +800,11 @@ class MirrorFS {
     });
   }
 
-    /**
+  /**
      * True if its one of the files used by ArchiveItem, ArchiveFile, ArchiveMember that shouldnt be seeded.
      * @param relFilePath
      * @returns {boolean}
-     */
+   */
   static isSpecialFile(relFilePath) { // Note special files should match between MirrorFS.isSpecialFile and ArchiveItemPatched.save
     // SEE-OTHER-ADD-METADATA-API-TOP-LEVEL in dweb-mirror and dweb-archivecontroller
     return ['_meta.json', '_extra.json', '_member.json', '_cached.json', '_members.json', '_files.json', '_extra.json', '_reviews.json', '.part', '_related.json', '_playlist.json', '_bookreader.json', '_speech_vs_music_asr'].some(ending => relFilePath.endsWith(ending));
