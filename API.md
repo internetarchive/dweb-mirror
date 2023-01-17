@@ -22,7 +22,7 @@ archive.org or DATANODE.archive.org except as where noted,
 though given all the Internet Archive edge cases and exceptions 
 there may be unknown places where certain options are not supported.
 
-Some archivelab.org API's are also (partially) supported (/books and /iiif)
+Some archivelab.org APIs are also (partially) supported (/books and /iiif)
 largely because Palmleaf's extensions to Mediawiki use them.
 
 |url|notes|
@@ -46,7 +46,7 @@ largely because Palmleaf's extensions to Mediawiki use them.
 |/services/img/IDENTIFIER  <br>/download/IDENTIFIER/__ia_thumb.jpg|Return the thumbnail|
 |/images/FILE   <br>/includes/FILE   <br>/jw/FILE   <br>/bookreader/BookReader/FILE  <br>/favicon.ico |Return static files as on IA|
 
-In addition there are URI's unique to dweb-mirror:
+In addition, there are URI's unique to dweb-mirror:
 
 |url|notes|
 |---|-----|
