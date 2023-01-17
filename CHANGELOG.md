@@ -5,6 +5,8 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.93
+  * Remove or Upgrade a bunch of dependencies to current versions - see #issue374 for outstanding
 * 0.2.92
   * Move to dweb-archive 0.2.29 and dweb-archivecontroller 0.2.14 but not bookreader 5.x.x
 * 0.2.91: 
