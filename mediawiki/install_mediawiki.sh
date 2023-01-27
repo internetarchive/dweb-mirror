@@ -58,7 +58,7 @@ then
   fi
 else # !PLATFORM==iiab
   MEDIAWIKI=/var/lib/mediawiki
-  # On Nuc had it at... but dont have test for Nuc yet
+  # On Nuc had it at... but do not have test for Nuc yet
   #MEDIAWIKI=/usr/share/mediawiki
 fi
 
@@ -306,7 +306,7 @@ if [ ${STEP} -le 7 ]; then
 
     You will need the following info:
 
-    Mysql user and password (you probably dont need this)
+    Mysql user and password (you probably do not need this)
     $MYSQLUSERPASS
 
     Database host: localhost
@@ -487,9 +487,9 @@ if [ ${STEP} -le 15 ]; then
         echo "We had success on iiab last time, adding 'pi' to the www-data group and making ${MEDIAWIKI}/images group writable"
         exit
       else
-        rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Dont import thumbnails
-        rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Dont import archived images
-        rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Dont import temp files left over from some other process
+        rm -rf "${HOME}/opt/mediawiki/w/images/thumb" # Do not import thumbnails
+        rm -rf "${HOME}/opt/mediawiki/w/images/archive" # Do not import archived images
+        rm -rf "${HOME}/opt/mediawiki/w/images/temp" # Do not import temp files left over from some other process
       fi
     fi
 
@@ -497,7 +497,7 @@ if [ ${STEP} -le 15 ]; then
 
   echo "If that worked enter './install_mediawiki.sh 16' to do the import"
   echo "==== NOTE THIS CAN TAKE SEVERAL HOURS !  ===== "
-  echo "If you dont have a couple of hours enter ..."
+  echo "If you do not have a couple of hours enter ..."
   echo "cd ${MEDIAWIKI}; nohup php maintenance/importImages.php --search-recursively ${IMAGEBASEDIR} &"
   echo "You can then come back and enter './install_mediawiki.sh 16' which will skip over the import"
   exit
@@ -557,7 +557,7 @@ if [ ${STEP} -le 21 ]; then
     exit
   else
     cp -r ${ARCHIVEMIRADOR} ${MEDIAWIKI}/extensions/ArchiveMirador
-    # TODO would be better to get from repo - but dont know where it is (asked David 27Dec)
+    # TODO would be better to get from repo - but do not know where it is (asked David 27Dec)
     appendOrReplaceBegin
     appendOrReplace "wfLoadExtension.*ArchiveMirador" 'wfLoadExtension( "ArchiveMirador" );'
     appendOrReplaceEnd

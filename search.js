@@ -58,7 +58,7 @@ function atomFeedInfo(resp, {query, opts}) {
   `;
 }
 function atomEntry(m, {protoHost}) {
-  // TODO note archive search results dont usually include description field as can be large so <content/> omitted
+  // TODO note archive search results do not usually include description field as can be large so <content/> omitted
   return `
     <entry>
       <title>${m.title}</title>

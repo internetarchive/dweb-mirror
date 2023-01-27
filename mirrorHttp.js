@@ -207,7 +207,7 @@ function mirrorHttp(config, cb0) {
       debug('Failed to proxy', err.message);
       errAndNext(req, res, next, err);
     } else {
-      res.status(200); // Assume error if dont get here
+      res.status(200); // Assume error if do not get here
       res.set(headers);
       s.pipe(res);
       s.on('error', err0 => { // Make sure to catch error though too late to do anything useful with it.
@@ -254,7 +254,7 @@ function mirrorHttp(config, cb0) {
       debug('Sending ArchiveFile %s/%s', identifier, filename);
       const ai = new ArchiveItem({ identifier });
       waterfall([
-        (cb) => ai.fetch_metadata({ copyDirectory: req.opts.copyDirectory }, cb), // Dont pass on noCache, we'll be streaming after already fetched
+        (cb) => ai.fetch_metadata({ copyDirectory: req.opts.copyDirectory }, cb), // Do not pass on noCache, we'll be streaming after already fetched
         (archiveitem, cb) => ArchiveFile.new({ archiveitem, filename, copyDirectory: req.opts.copyDirectory }, cb),
         // Note will *not* cache if pass opts other than start:0 end:undefined|Infinity
         (archivefile, cb) => {
@@ -293,7 +293,7 @@ function mirrorHttp(config, cb0) {
       // Special case: query just looking for members of a collection
       // e.g. collection%3Amitratest%20OR%20simplelists__items%3Amitratest%20OR%20simplelists__holdings%3Amitratest%20OR%20simplelists__items%3Amitratest
       const identifier = req.query.q.split(' OR ')[0].split(':')[1];
-      o = new ArchiveItem({ sort: req.query.sort, identifier }); // Dont set query, allow _fetch_query to build default
+      o = new ArchiveItem({ sort: req.query.sort, identifier }); // Do not set query, allow _fetch_query to build default
       wantCrawlInfo = true;
       // Another special case - a query just looking to expand identifiers
     } else if (req.query.q && req.query.q.startsWith('identifier:')
@@ -316,7 +316,7 @@ function mirrorHttp(config, cb0) {
     // as array of unexpanded members (which fetch_query|_fetch_query will get)
     o.rows = parseInt(req.query.rows, 10) || 75;
     o.page = parseInt(req.query.page, 10) || 1; // Page incrementing is done by anything iterating over pages, not at this point
-    o.and = req.query.and; // I dont believe this is used anywhere
+    o.and = req.query.and; // I do not believe this is used anywhere
     req.opts.wantCrawlInfo = wantCrawlInfo;
     doQuery(o, req.opts, config, (err, resp) => {
       if (err) {
@@ -338,7 +338,7 @@ function mirrorHttp(config, cb0) {
          */
     function sendJpegStream(s) {
       // Stream back with appropriate status and Content-type
-      res.status(200); // Assume error if dont get here
+      res.status(200); // Assume error if do not get here
       res.set({ 'Content-Type': 'image/jpeg; charset=UTF-8' });
       s.pipe(res);
     }
@@ -356,7 +356,7 @@ function mirrorHttp(config, cb0) {
         if (!err) {
           sendJpegStream(fs.createReadStream(existingFilePath));
         } else {
-          // We dont already have the file
+          // We do not already have the file
           const ai = new ArchiveItem({ identifier });
           waterfall([
             (cb) => ai.fetch_metadata({ noCache, copyDirectory: req.opts.copyDirectory }, cb),
@@ -605,7 +605,7 @@ function mirrorHttp(config, cb0) {
   app.get('/favicon.ico', (req, res, unusedNext) => res.sendFile(config.archiveui.directory + '/favicon.ico', {
     maxAge: '86400000',
     immutable: true
-  }, (err) => (err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico')))); // Dont go to Error, favicons often aborted
+  }, (err) => (err ? debug('favicon.ico %s', err.message) : debug('sent /favicon.ico')))); // Do not go to Error, favicons often aborted
 
   app.get('/info', sendInfo);
   // IIF support e.g. https://iiif.archivelab.org/iiif/mantra-pangwisesan%240/1026,1245,2316,617/full/0/default.jpg

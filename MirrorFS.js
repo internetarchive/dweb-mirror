@@ -1,4 +1,5 @@
 /* global DwebTransports */
+/* eslint-disable no-use-before-define,no-console,no-unused-vars */
 // process.env.NODE_DEBUG="fs";    // Uncomment to test fs
 // Node packages
 const crypto = require('crypto');
@@ -7,9 +8,9 @@ const path = require('path');
 const canonicaljson = require('@stratumn/canonicaljson');
 // noinspection JSUnresolvedVariable
 // readable-stream isn't needed since MirrorFS only runs in node, which already has require('stream').Transform
-// so dependency removed. If needed, the code known to work is v3.4.0, v4.3.0 may have probles as
+// so dependency removed. If needed, the code known to work is v3.4.0, v4.3.0 may have problems as
 // reflects breaking changes in later versions of node.
-const Transform = require('stream').Transform // || require('readable-stream').Transform;
+const Transform = require('stream').Transform; // || require('readable-stream').Transform;
 const debug = require('debug')('dweb-mirror:MirrorFS');
 const multihashes = require('multihashes');
 const detect = require('async/detect');
@@ -31,8 +32,7 @@ function multihash58sha1(buf) {
   return multihashes.toB58String(multihashes.encode(buf, 'sha1'));
 }
 
-
-  /**
+/**
     Utility subclass that knows about the file system.
 
     All the methods of MirrorFS are static
@@ -61,7 +61,7 @@ function multihash58sha1(buf) {
     scale       Factor to scale down an image
     sha1:           If defined, the result must match this sha1 or will be rejected (it comes from metadata)
     rotate      Factor to rotate an image
-    skipFetchFile:  If true, then dont actually fetch the file (used for debugging)
+    skipFetchFile:  If true, then do not actually fetch the file (used for debugging)
     noCache:    if set then do not check cache for results
     noStore:    if set then do not store in the cache
     skipNet:    if set then do not try and fetch from the net
@@ -88,7 +88,7 @@ class MirrorFS {
   }
 
   static setState({ directories = undefined }) {
-    // Indicate to MirrorFS that state has changed, specifically causes it to set its directories property.
+    // Indicate to MirrorFS that state has changed, specifically causes it to set it's directories property.
     // directories: [PATH]
     if (directories) this.directories = directories;
   }
@@ -102,12 +102,12 @@ class MirrorFS {
       if (err && !(err.code === 'EEXIST')) {
         if (err.code === 'ENOENT') { // missing parent dir
           const parentdir = path.dirname(dirname);
-          MirrorFS._mkdir(parentdir, err => {
-            if (err && !(err.code === 'EEXIST')) { // Its quite possible (likely) two attempts to create same directory at same time when loading many files in same dir
-              cb(err);
-            } else { // Dont know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it doesnt exist
-              fs.mkdir(dirname, err => {
-                if (err && !(err.code === 'EEXIST')) { cb(err); } else { cb(null); }
+          MirrorFS._mkdir(parentdir, err2 => {
+            if (err2 && !(err2.code === 'EEXIST')) { // it is quite possible (likely) two attempts to create same directory at same time when loading many files in same dir
+              cb(err2);
+            } else { // Do not know how to tackle error from _mkdir, note that EEXIST would be odd since ENOENT implies it does not exist
+              fs.mkdir(dirname, err1 => {
+                if (err1 && !(err1.code === 'EEXIST')) { cb(err1); } else { cb(null); }
               });
             }
           });
@@ -130,12 +130,12 @@ class MirrorFS {
     return this.hashstores[dir];
   }
 
-  static _rmdir(path, cb) {
-    // var path = '/path/to/the/dir';
+  static _rmdir(dirpath, cb) {
+    // var dirpath = '/path/to/the/dir';
     // Remove a directory using the system function because can do so recursively
-    exec('rm -r ' + path, (err, stdout, stderr) => {
+    exec('rm -r ' + dirpath, (err, unusedstdout, unusedstderr) => {
       if (err) {
-        debug('failed to rm -r %s', path);
+        debug('failed to rm -r %s', dirpath);
         cb(err);
       } else {
         cb(null);
@@ -185,7 +185,7 @@ class MirrorFS {
         controller.enqueue(chunk);
       },
       flush() {
-        stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with with sha1 in metadata
+        stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with sha1 in metadata
       }
     })
     return stream;
@@ -193,7 +193,7 @@ class MirrorFS {
   */
   static _hashstream({ algorithm = 'sha1' } = {}) {
     /*
-        Return a hashstream which can be piped through, it stores the digest of the stream in ".actual" after its ._flush is called
+        Return a hashstream which can be piped through, it stores the digest of the stream in ".actual" after it is ._flush is called
         Note this is a node style transform stream, not a TransformStream as in https://developer.mozilla.org/en-US/docs/Web/API/TransformStream
     */
     const hash = crypto.createHash(algorithm);
@@ -204,7 +204,7 @@ class MirrorFS {
       cb();
     };
     stream._flush = function (cb) {
-      stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with with sha1 in metadata
+      stream.actual = hash.digest(); // digest('hex').toLowerCase().trim() is what can compare with sha1 in metadata
       cb(null);
     };
     return stream;
@@ -244,10 +244,13 @@ class MirrorFS {
           if (copyDirectory) {
             cb1(null, copyDirectory);
           } else {
-            this.checkWhereValidFile(relFilePath.split('/')[0], {},
+            this.checkWhereValidFile(
+              relFilePath.split('/')[0],
+              {},
               (err, res) => cb1(null, err
                 ? this.directories[0] // Didn't find it, use first directory.
-                : path.dirname(res))); // Found a path, return directory its in
+                : path.dirname(res))
+            ); // Found a path, return directory it is in
           }
         },
         (dir, cb2) => {
@@ -273,10 +276,10 @@ class MirrorFS {
         debug('ERROR: MirrorFS._copyFile: Cannot mkdir %s: %s', path.dirname(destnPath), err.message);
         cb(err);
       } else {
-        fs.copyFile(sourcePath, destnPath, (err) => {
-          if (err) {
-            debug('ERROR: MirrorFS._copyFile: Unable to copy %s to %s: %s', sourcePath, destnPath, err.message);
-            cb(err);
+        fs.copyFile(sourcePath, destnPath, (err1) => {
+          if (err1) {
+            debug('ERROR: MirrorFS._copyFile: Unable to copy %s to %s: %s', sourcePath, destnPath, err1.message);
+            cb(err1);
           } else {
             cb(null);
           }
@@ -296,22 +299,22 @@ class MirrorFS {
       const filepath = path.join(cacheDirectory, relFilePath);
       fs.open(filepath, 'w', (err, fd) => {
         if (err) {
-          if (err.code === 'ENOENT') { // Doesnt exist, which means the cacheDirectory or subdir -
+          if (err.code === 'ENOENT') { // Does not exist, which means the cacheDirectory or subdir -
             // noinspection JSUnusedLocalSymbols
-            fs.stat(cacheDirectory, (err, unusedStats) => {
-              if (err) throw new Error(`The root directory for mirroring: ${cacheDirectory} is missing - please create by hand`);
+            fs.stat(cacheDirectory, (err1, unusedStats) => {
+              if (err1) throw new Error(`The root directory for mirroring: ${cacheDirectory} is missing - please create by hand`);
               debug('MirrorFS creating directory: %s', path.dirname(filepath));
-              MirrorFS._mkdir(path.dirname(filepath), err => {
-                if (err) {
+              MirrorFS._mkdir(path.dirname(filepath), err3 => {
+                if (err3) {
                   debug('ERROR: Failed to mkdir for', filepath, err.message);
-                  cb(err);
+                  cb(err3);
                 } else {
-                  fs.open(filepath, 'w', (err, fd) => {
-                    if (err) { // This shouldnt happen, we just checked the cacheDirectory.
+                  fs.open(filepath, 'w', (err2, fd1) => {
+                    if (err2) { // This should not happen, we just checked the cacheDirectory.
                       debug('ERROR: Failed to open', filepath, 'after mkdir');
-                      cb(err);
+                      cb(err2);
                     } else {
-                      cb(null, fd);
+                      cb(null, fd1);
                     }
                   });
                 }
@@ -330,16 +333,16 @@ class MirrorFS {
     }
   }
 
-    /**
-     * Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return its path if found.
+  /**
+     * Look for appropriate cached file such as RELFILEDIR/scale2/rotate4/FILE and return it is path if found.
      * @param bestEffort  if set, then return the best file we have first looking for larger files, then smaller.
      * @param relFileDir  Item's dir
      * @param file        File within dir
      * @param scale       scale wanted at
      * @param rotate      rotation wanted
-     * @param noCache     Dont check cache for it
+     * @param noCache     Do not check cache for it
      * @param copyDirectory
-     * @param cb(err, filepath) Careful, its err,undefined if not found unlike checkWhereValidFile
+     * @param cb(err, filepath) Careful, it is err,undefined if not found unlike checkWhereValidFile
      */
   static checkWhereValidFileRotatedScaled({
     bestEffort = false, relFileDir = undefined, file = undefined, scale = undefined, rotate = undefined,
@@ -352,12 +355,14 @@ class MirrorFS {
     if (bestEffort) { // typically this is the test to do if fails
       for (let i = idealScale + 1; i <= 32; i++) { scales.push(i); } // A = e.g. [ 9..32 ]
     }
-    detectSeries(scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
+    detectSeries(
+      scales.map(s => `${relFileDir}/scale${s}/rotate${rotate}/${file}`),
       (rel, cb2) => this.checkWhereValidFile(rel, { noCache, copyDirectory }, (err, unusedRes) => cb2(null, !err)), // Find the first place having a file bigger (i.e. smaller 'scale') or same size as
-      cb);
+      cb
+    );
   }
 
-    /**
+  /**
      * Checks if file or digest exists in one of the cache Directories.
      *
      * Note - either relFilePath or digest/format/algorithm can be omitted,
@@ -388,11 +393,12 @@ class MirrorFS {
         cb(err, filepath)
          */
     if (noCache && !digest) {
-      cb(new Error('no-cache')); // Dont use cached version
+      cb(new Error('no-cache')); // Do not use cached version
     } else if (existingFilePath) {
       cb(null, existingFilePath); // Got it
     } else {
-      detect(copyDirectory ? [].concat(copyDirectory, this.directories) : this.directories, // If copyDirectory specified then look there first whether or not its in this.directories
+      detect(
+        copyDirectory ? [].concat(copyDirectory, this.directories) : this.directories, // If copyDirectory specified then look there first whether or not it is in this.directories
         (cacheDirectory, cb2) => { // Looking for first success
           waterfall([
             (cb3) => { // if no relFilePath check the hashstore
@@ -403,7 +409,7 @@ class MirrorFS {
               } else { // Didn't find the file, but have a digest so can look for it cache
                 this._hashstore(cacheDirectory).get(algorithm + '.relfilepath', digest, (err, res) => {
                   relFilePath = res; // poss undefined - saving over relFilePath parameter which is undefined
-                  cb3(err || !relFilePath); // Shouldnt be error but fail this waterfall if didn't find hash in this cache.
+                  cb3(err || !relFilePath); // Should not be error but fail this waterfall if did not find hash in this cache.
                 });
               }
             },
@@ -411,17 +417,17 @@ class MirrorFS {
               // noinspection JSUnresolvedVariable
               fs.access(path.join(cacheDirectory, relFilePath), fs.constants.R_OK, cb4);
             },
-            (cb5) => { // Check its not zero-size
-              const existingFilePath = path.join(cacheDirectory, relFilePath);
-              fs.stat(existingFilePath, (err, stats) => {
+            (cb5) => { // Check it is not zero-size
+              const existingFilePath1 = path.join(cacheDirectory, relFilePath);
+              fs.stat(existingFilePath1, (err, stats) => {
                 if (!err && (stats.size === 0)) {
-                  err = new Error(`Zero length file at ${existingFilePath} ignoring`);
+                  err = new Error(`Zero length file at ${existingFilePath1} ignoring`);
                   debug('ERROR %s', err.message);
                 }
                 cb5(err);
               });
             },
-            (cb6) => { // if digest, then test its correct
+            (cb6) => { // if digest, then test it is correct
               if (!digest) {
                 cb6();
               } else {
@@ -434,7 +440,7 @@ class MirrorFS {
                     err = new Error(errmsg);
                     fs.unlink(filepath, err2 => {
                       if (err2) {
-                        debug(err2.message); // Log failure to unlinke
+                        debug(err2.message); // Log failure to unlink
                         err = err2;
                       } // Return most recent error (which will be lost after testing)
                     });
@@ -444,16 +450,18 @@ class MirrorFS {
               }
             }
           ], (err, unused) => cb2(null, !err)); // Did the detect find one
-        }, (err, res) => {
+        },
+        (err, res) => {
           // Three possibilities - err (something failed) res (found) !err && !res (not found), but return error on fail anyway
           if (err && (err instanceof Error)) cb(err);
           else if (!res) cb(new Error(`${relFilePath} not found in caches`));
           else cb(null, path.join(res, relFilePath)); // relFilePath should have been set by time get here
-        });
+        }
+      );
     }
   }
 
-    /*
+  /*
    Complicated function to encapsulate in one place the logic around the cache.
    See Common parameters above.
 
@@ -472,19 +480,29 @@ class MirrorFS {
    Behavior on error if wantStream:
        Handling errors on streams is hard as the stream can open, but then never pass data.
        For this reason the stream is only returned via cb(null, stream) when data starts to be received,
-       otherwise an cb(err) allows consumer to take a fallback behavior
+       otherwise a cb(err) allows consumer to take a fallback behavior
    */
-  static cacheAndOrStream({
-    relFilePath = undefined,
-    existingFilePath = undefined,
-    debugname = 'UNDEFINED', urls = undefined,
-    expectsize = undefined, sha1 = undefined, ipfs = undefined, skipFetchFile = false,
-    wantStream = false, wantBuff = false, wantSize = false,
-    noCache = false, skipNet = false,
-    start = 0, end = undefined,
-    copyDirectory = undefined
-  } = {},
-  cb) {
+  static cacheAndOrStream(
+    {
+      relFilePath = undefined,
+      existingFilePath = undefined,
+      debugname = 'UNDEFINED',
+      urls = undefined,
+      expectsize = undefined,
+      sha1 = undefined,
+      // ipfs = undefined, // unused
+      skipFetchFile = false,
+      wantStream = false,
+      wantBuff = false,
+      wantSize = false,
+      noCache = false,
+      skipNet = false,
+      start = 0,
+      end = undefined,
+      copyDirectory = undefined
+    } = {},
+    cb
+  ) {
     const cacheDirectory = copyDirectory || this.directories[0]; // Where the file should be put if creating it
     let cbCalledOnFirstData = false;
     if (noCache) {
@@ -492,115 +510,122 @@ class MirrorFS {
     } else {
       tryCacheThenNet.call(this, cb);
     }
-    function tryNetThenCache(cb) {
+    function tryNetThenCache(cb1) {
       _notcached.call(this, (err, s) => {
         if (!err) { // Great - read it
-          cb(null, s);
+          cb1(null, s);
         } else {
-          this.checkWhereValidFile(relFilePath, {
-            existingFilePath, noCache: false, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory
-          },
-          (err, existingFilePath) => {
-            if (err) {
-              cb(err); // Not on net, and not in cache either, so fail
-            } else {
-              haveExistingFile.call(this, existingFilePath, sha1, cb);
+          this.checkWhereValidFile(
+            relFilePath,
+            {
+              existingFilePath, noCache: false, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory
+            },
+            (err1, existingFilePath1) => {
+              if (err1) {
+                cb1(err1); // Not on net, and not in cache either, so fail
+              } else {
+                haveExistingFile.call(this, existingFilePath1, sha1, cb1);
+              }
             }
-          });
+          );
         }
       });
     }
 
-    function tryCacheThenNet(cb) {
-      this.checkWhereValidFile(relFilePath, {
-        existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory
-      },
-      (err, existingFilePath) => {
-        if (err) { // Doesn't match cache
+    function tryCacheThenNet(cb1) {
+      this.checkWhereValidFile(
+        relFilePath,
+        {
+          existingFilePath, noCache, digest: sha1, format: 'hex', algorithm: 'sha1', copyDirectory
+        },
+        (err, existingFilePath1) => {
+          if (err) { // Doesn't match cache
           // retrieve and cache (will fail if no urls, which is readable as consumer such as AF.cacheOrStream might then find URLS and try again
-          _notcached.call(this, cb);
-        } else { // sha1 matched, skip fetching, just stream from saved
-          haveExistingFile.call(this, existingFilePath, sha1, cb);
+            _notcached.call(this, cb1);
+          } else { // sha1 matched, skip fetching, just stream from saved
+            haveExistingFile.call(this, existingFilePath1, sha1, cb1);
+          }
         }
-      });
+      );
     }
-    function haveExistingFile(existingFilePath, sha1, cb) {
-      if (copyDirectory && !existingFilePath.startsWith(copyDirectory)) {
+    function haveExistingFile(existingFilePath1, sha11, cb1) {
+      if (copyDirectory && !existingFilePath1.startsWith(copyDirectory)) {
         // We have the right file, but in the wrong place
         const copyFilePath = path.join(copyDirectory, relFilePath);
-        this._copyFile(existingFilePath, copyFilePath, (err) => {
+        this._copyFile(existingFilePath1, copyFilePath, (err) => {
           if (err) {
             debug('ERROR: MirrorFS.cacheAndOrStream of %s failed %s', relFilePath, err.message);
           } else {
-            debug('Copied existing file %sfrom %s to %s', sha1 ? 'with matching sha1 ' : '', existingFilePath, copyFilePath);
-            callbackEmptyOrDataOrStream(existingFilePath, sha1, cb);
+            debug('Copied existing file %sfrom %s to %s', sha11 ? 'with matching sha1 ' : '', existingFilePath1, copyFilePath);
+            callbackEmptyOrDataOrStream(existingFilePath1, sha11, cb1);
           }
         });
       } else {
-        // Write file and either right place, or we dont care where
-        debug('Already cached existing file %s%s %s', sha1 ? 'with matching sha1 ' : '', existingFilePath);
-        callbackEmptyOrDataOrStream(existingFilePath, sha1, cb);
+        // Write file and either right place, or we do not care where
+        debug('Already cached existing file %s%s %s', sha11 ? 'with matching sha1 ' : '', existingFilePath1);
+        callbackEmptyOrDataOrStream(existingFilePath1, sha11, cb1);
       }
     }
-    function callbackEmptyOrData(existingFilePath, cb) {
+    function callbackEmptyOrData(existingFilePath1, cb1) {
       if (wantBuff) {
-        fs.readFile(existingFilePath, cb); // No encoding specified so cb(err, buffer)
+        fs.readFile(existingFilePath1, cb1); // No encoding specified so cb(err, buffer)
       } else if (wantSize) {
-        fs.stat(existingFilePath, (err, stats) => {
-          cb(err, stats && stats.size);
+        fs.stat(existingFilePath1, (err, stats) => {
+          cb1(err, stats && stats.size);
         });
       } else {
-        cb();
+        cb1();
       }
     }
-    function callbackEmptyOrDataOrStream(existingFilePath, sha1, cb) {
+    function callbackEmptyOrDataOrStream(existingFilePath1, sha11, cb1) {
       if (wantStream) {
-        debug('streaming %s from cache', existingFilePath);
-        cb(null, fs.createReadStream(existingFilePath, { start, end })); // Already cached and want stream - read from file
+        debug('streaming %s from cache', existingFilePath1);
+        cb1(null, fs.createReadStream(existingFilePath1, { start, end })); // Already cached and want stream - read from file
       } else {
-        callbackEmptyOrData(existingFilePath, cb);
+        callbackEmptyOrData(existingFilePath1, cb1);
       }
     }
-    function _cleanupOnFail(filepathTemp, mess, cb) {
+    function _cleanupOnFail(filepathTemp, mess, cb1) {
       // TODO See https://nodejs.org/api/stream.html#stream_readable_pipe_destination_options re closing the writable on error
       if (filepathTemp) {
         fs.unlink(filepathTemp, (err) => {
-          if (err) { debug("ERROR: Can't delete %s", filepathTemp); } // Shouldnt happen
+          if (err) { debug("ERROR: Can't delete %s", filepathTemp); } // Should not happen
         });
       }
-      if (!wantStream || !cbCalledOnFirstData) cb(new Error(mess)); // Cant send err if wantStream && cbCalledOnFirstData as already done it
+      if (!wantStream || !cbCalledOnFirstData) cb1(new Error(mess)); // Cant send err if wantStream && cbCalledOnFirstData as already done it
     }
 
     function _closeWriteToCache({
       hashstreamActual, writable, filepathTemp, newFilePath
-    }, cb) {
-      // noinspection JSCheckFunctionSignatures
+    }, cb1) {
       // The hashstream is upstream so should have flushed first.
+      // noinspection JSCheckFunctionSignatures
       const hexhash = hashstreamActual.toString('hex');
       // noinspection EqualityComparisonWithCoercionJS
+      // eslint-disable-next-line eqeqeq
       if ((expectsize && (expectsize != writable.bytesWritten)) || ((typeof sha1 !== 'undefined') && (hexhash !== sha1))) { // Intentionally != as metadata is a string
         // noinspection JSUnresolvedVariable
         const message = `File ${debugname} size=${writable.bytesWritten} sha1=${hexhash} doesnt match expected ${expectsize} ${sha1}, deleting`;
         debug('ERROR %s', message);
-        _cleanupOnFail(filepathTemp, message, cb);
+        _cleanupOnFail(filepathTemp, message, cb1);
       } else {
         fs.rename(filepathTemp, newFilePath, (err) => {
           if (err) {
-            debug('ERROR: Failed to rename %s to %s', filepathTemp, newFilePath); // Shouldnt happen
-            if (!wantStream) cb(err); // If wantStream then already called cb
+            debug('ERROR: Failed to rename %s to %s', filepathTemp, newFilePath); // Should not happen
+            if (!wantStream) cb1(err); // If wantStream then already called cb1
           } else {
-            this._hashstore(cacheDirectory).put('sha1.relfilepath', multihash58sha1(hashstreamActual), relFilePath, (err) => {
-              debug(`Closed ${debugname} size=${writable.bytesWritten} %s`, err ? err.message : '');
+            this._hashstore(cacheDirectory).put('sha1.relfilepath', multihash58sha1(hashstreamActual), relFilePath, (err1) => {
+              debug(`Closed ${debugname} size=${writable.bytesWritten} %s`, err1 ? err1.message : '');
               this.seed({
                 relFilePath,
                 directory: cacheDirectory
               }, (unusedErr, unusedRes) => {
               }); // Seed to IPFS, WebTorrent etc
-              // Ignore err & res, its ok to fail to seed and will be logged inside seed()
-              // Also - its running background, we are not making caller wait for it to complete
+              // Ignore err1 & res, it is ok to fail to seed and will be logged inside seed()
+              // Also - it is running background, we are not making caller wait for it to complete
               // noinspection JSUnresolvedVariable
-              if (!wantStream) { // If wantStream then already called cb, otherwise cb signifies file is written
-                callbackEmptyOrData(newFilePath, cb);
+              if (!wantStream) { // If wantStream then already called cb1, otherwise cb1 signifies file is written
+                callbackEmptyOrData(newFilePath, cb1);
               }
             });
           }
@@ -608,7 +633,7 @@ class MirrorFS {
       }
     }
 
-    function _notcached(cb) {
+    function _notcached(cb1) {
       /*
             Four possibilities - wantstream &&|| partialrange
             ws&p: net>stream; ws&!p: net>disk, net>stream; !ws&p; unsupported, though could be in callbackEmptyOrData; !ws&!p caching
@@ -616,15 +641,15 @@ class MirrorFS {
       const routedUrls = routed(urls);
       if (skipFetchFile) {
         debug('skipFetchFile set (testing) would fetch: %s', debugname);
-        cb();
+        cb1();
       } else if (!routedUrls.length || skipNet) {
-        cb(new Error('No urls or skipNet specified to cacheAndOrStream')); // This might be totally normal, if looking for only local
+        cb1(new Error('No urls or skipNet specified to cacheAndOrStream')); // This might be totally normal, if looking for only local
       } else {
         const partial = (start > 0 || end < Infinity);
         console.assert(wantStream || !partial, 'ArchiveFile.cacheAndOrStream - it makes no sense to request a partial fetch without a stream output');
-        if (partial) { // start or end undefined dont satisfy this test
+        if (partial) { // start or end undefined do not satisfy this test
           debug('Not caching %s because specifying a range %s:%s and wantStream', debugname, start, end);
-          DwebTransports.createReadStream(routedUrls, { start, end, preferredTransports: this.preferredStreamTransports }, cb); // Dont cache a byte range, just return it
+          DwebTransports.createReadStream(routedUrls, { start, end, preferredTransports: this.preferredStreamTransports }, cb1); // Do not cache a byte range, just return it
         } else {
           DwebTransports.createReadStream(routedUrls, {
             start, end, preferredTransports: this.preferredStreamTransports, silentFinalError: true
@@ -633,17 +658,17 @@ class MirrorFS {
             // For HTTP s is result of piping .body from fetch (a stream) to a through stream
             if (err) {
               debug('cacheAndOrStream had error reading', debugname, err.message);
-              cb(err); // Note if dont want to trigger an error when used in streams, then set justReportError=true in stream
-              // Dont try and write it
+              cb1(err); // Note if you do not want to trigger an error when used in streams, then set justReportError=true in stream
+              // Do not try and write it
             } else if (!cacheDirectory) {
               // Note - hard to see how this makes sense if !wantStream
               if (!wantStream) {
-                cb(new Error('No Cache Directory, dont want a stream so fail in MirrorFScacheAndOrStream'));
+                cb1(new Error('No Cache Directory, do not want a stream so fail in MirrorFScacheAndOrStream'));
               } else {
                 debug('WARNING: No Cache Directory but still returning stream');
                 if (wantStream && !cbCalledOnFirstData) {
                   cbCalledOnFirstData = true;
-                  cb(null, s);
+                  cb1(null, s);
                 }
               }
             } else {
@@ -652,15 +677,15 @@ class MirrorFS {
               const relFilePathTemp = relFilePath + '.part';
               const filepathTemp = path.join(cacheDirectory, relFilePathTemp);
 
-              MirrorFS._fileopenwrite({ relFilePath: relFilePathTemp, cacheDirectory }, (err, fd) => { // Will make directory if reqd
-                if (err) {
-                  debug('ERROR MirrorFS.cacheAndOrStream: Unable to write to %s: %s', filepathTemp, err.message);
-                  cb(err);
+              MirrorFS._fileopenwrite({ relFilePath: relFilePathTemp, cacheDirectory }, (err1, fd) => { // Will make directory if reqd
+                if (err1) {
+                  debug('ERROR MirrorFS.cacheAndOrStream: Unable to write to %s: %s', filepathTemp, err1.message);
+                  cb1(err1);
                 } else {
                   // fd is the file descriptor of the newly opened file;
                   const hashstream = this._hashstream();
                   const writable = fs.createWriteStream(null, { fd });
-                  // Note at this point file is neither finished, nor closed, its a stream open for writing.
+                  // Note at this point file is neither finished, nor closed, it is a stream open for writing.
                   writable.on('close', () => {
                     // fs.close(fd); Should be auto closed when stream to it finishes
                     _closeWriteToCache.call(this, {
@@ -668,34 +693,34 @@ class MirrorFS {
                       writable,
                       newFilePath,
                       filepathTemp
-                    }, cb);
+                    }, cb1);
                   });
                   try {
                     const s1 = new ReadableStreamClone(s); // Will be stream to file
                     const s2 = new ReadableStreamClone(s); // Will be stream for consumer
                     // TODO consider only opening hashstream and writable if the stream starts (i.e. 'readable')
                     s1.pipe(hashstream).pipe(writable); // Pipe the stream from the HTTP or Webtorrent read etc to the stream to the file.
-                    s1.once('error', (err) => {
-                      // Dont report error - its already reported
-                      s1.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
+                    s1.once('error', (unusederr) => {
+                      // Do not report error - it is already reported
+                      s1.destroy(); // Do not pass error down as will get unhandled error message unless implement on hashstream
                     });
-                    s2.once('error', (err) => {
-                      const message = `Failed to read ${routedUrls} from net err=${err.message}`;
+                    s2.once('error', (err2) => {
+                      const message = `Failed to read ${routedUrls} from net err=${err2.message}`;
                       debug('ERROR %s', message);
-                      _cleanupOnFail(filepathTemp, message, cb);
-                      s2.destroy(); // Dont pass error down as will get unhandled error message unless implement on hashstream
+                      _cleanupOnFail(filepathTemp, message, cb1);
+                      s2.destroy(); // Do not pass error down as will get unhandled error message unless implement on hashstream
                     });
                     s2.once('readable', () => {
                       // If !wantStream the callback happens when the file is completely read
                       // If !wantStream the callback happens when the file is completely read
                       if (wantStream && !cbCalledOnFirstData) {
                         cbCalledOnFirstData = true;
-                        cb(null, s2);
+                        cb1(null, s2);
                       }
                     });
-                  } catch (err) {
-                    debug('ERROR: ArchiveFilePatched.cacheAndOrStream failed %o', err);
-                    if (wantStream) cb(err);
+                  } catch (err2) {
+                    debug('ERROR: ArchiveFilePatched.cacheAndOrStream failed %o', err2);
+                    if (wantStream) cb1(err2);
                   }
                 }
               });
@@ -711,15 +736,17 @@ class MirrorFS {
       if (err) { // Probably a directory
         cb(null, [relpath]);
       } else {
-        map(files.map(f => path.join(relpath, f)),
+        map(
+          files.map(f => path.join(relpath, f)),
           (relpathfile, cb1) => this._readDirRecursive(basedir, relpathfile, cb1),
-          (err, res) => { // res = [ [ ]* ]
-            if (err) {
-              cb(err);
+          (err3, res) => { // res = [ [ ]* ]
+            if (err3) {
+              cb(err3);
             } else {
               cb(null, [].concat(...res)); // Flatten and return array via cb
             }
-          });
+          }
+        );
       }
     });
   }
@@ -743,7 +770,7 @@ class MirrorFS {
     // Return array of items in a cacheDirectory
     fs.readdir(dir, (err, files) => {
       if (err) {
-        debug('Failed to read directory %s', cacheDirectory);
+        debug('Failed to read directory %s', dir);
         cb(err);
       } else {
         cb(null, files.filter(f => !f.startsWith('.')));
@@ -754,12 +781,14 @@ class MirrorFS {
   static _maintainCacheDirectory(cacheDirectory, cb) {
     debug('maintaining: %s', cacheDirectory);
     this._arrayOfIdentifiers(cacheDirectory, (err, identifiers) => {
-      each(identifiers,
-        (identifier, cb) => this._maintainCachedItem({ identifier, cacheDirectory }, cb),
-        (err) => {
-          if (err) debug('maintainCacheDirectory failed %o', err);
-          cb(err);
-        });
+      each(
+        identifiers,
+        (identifier, cb1) => this._maintainCachedItem({ identifier, cacheDirectory }, cb1),
+        (err4) => {
+          if (err4) debug('maintainCacheDirectory failed %o', err4);
+          cb(err4);
+        }
+      );
     });
   }
 
@@ -773,13 +802,15 @@ class MirrorFS {
    * @param cb
    */
   static maintenance({ cacheDirectories = undefined }, cb) {
-    debug('Maintaining File Sytem');
-    each(cacheDirectories,
+    debug('Maintaining File System');
+    each(
+      cacheDirectories,
       (cacheDirectory, cb1) => this._maintainCacheDirectory(cacheDirectory, cb1),
       (err) => {
         if (err) debug('maintenance failed %o', err);
         cb(err);
-      });
+      }
+    );
   }
 
   /**
@@ -804,7 +835,7 @@ class MirrorFS {
   }
 
   /**
-     * True if its one of the files used by ArchiveItem, ArchiveFile, ArchiveMember that shouldnt be seeded.
+     * True if it is one of the files used by ArchiveItem, ArchiveFile, ArchiveMember that should not be seeded.
      * @param relFilePath
      * @returns {boolean}
    */

@@ -64,7 +64,7 @@ usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] 
                 "full"     and all the files in the item - beware, this can get very big.
     -r rows          : overrides any (simple) search string to crawl this number of items
     -d depth         : crawl collections found in this collection to a depth,
-                      (0 is none, dont even crawl this collection, 1 is normal, 2 is collections in this collection
+                      (0 is none, do not even crawl this collection, 1 is normal, 2 is collections in this collection
     --copydirectory path : Store a copy of the crawl in this directory (often used for a removable drive)
     --directory path : override the directory set in the configuration for the root of the cache
     --search json   : override default search string, strict json syntax only
@@ -74,7 +74,7 @@ usage: internetarchive [-hvscm] [--crawl] [--server] [--maintenance] [-l level] 
     --concurrency threads   : how many files or searches to be happening concurrently - use 1 for debugging, otherwise 10 is about right
     --limittotaltasks tasks : a maximum number of tasks to run, will be (approximately) the number of searches, plus the number of items crawled.
     --transport TRANSPORT   : The names of transport to use, by default its HTTP, but can currently add IPFS, WEBTORRENT GUN, (TODO must currently be upper case - allow both)
-    --skipfetchfile : Dont actually transfer the files (good for debugging)
+    --skipfetchfile : Do not actually transfer the files (good for debugging)
     --noCache       : Ignore current contents of cache and always refetch
     --mdns DOMAIN   : Respond with MDNS to DOMAIN.local (by default MDNS responds on archive.local)
     --nomdns        : Do not respond with MDNS on archive.local
@@ -165,7 +165,7 @@ function optsToConfig() {
     // Its an error not to specify directory if none are defined in defaults
     if (!config.directories.length) {
         debug("WARNING: Directory for the cache is not defined or doesnt exist - crawl will wait for disk to be available");
-        //Dont make this an error, crawl will wait and server SHOULD work without disk
+        //Do not make this an error, crawl will wait and server SHOULD work without disk
         // return new Error("ERROR: Directory for the cache is not defined or doesnt exist");
     }
     if (opts.search && (opts.rows || opts.depth)) {
@@ -273,7 +273,7 @@ function stopServer(cb) {
             if (err)
                 debug("Failed to stop server: %s, but it might just because it was already started", err.message);
             destroyMDNS();
-            cb(null); // Dont pass on failure, still want to stop transports
+            cb(null); // Do not pass on failure, still want to stop transports
         });
         server = undefined; // Its obviously not running
     } else {

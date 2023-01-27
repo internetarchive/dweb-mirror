@@ -208,7 +208,7 @@ First get in touch with Mitra Ardron at `mitra@archive.org`, as processes may ha
 
 You'll need to create an account for yourself at [archive.org](https://archive.org)
 
-We'll setup a collection for you of type `texts` - dont worry, you can put any kind of media in it. 
+We'll setup a collection for you of type `texts` - do not worry, you can put any kind of media in it. 
 
 Once you have a collection, lets say `kenyanhistory`
 you can upload materials to the Archive by hitting the Upload button and following the instructions.

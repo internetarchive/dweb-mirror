@@ -20,7 +20,7 @@ class ConfigController {
 
   Nothing in ConfigManager is specific to Mirror ... the Mirror specific stuff is in the class below ...
 
-  Dont use this class directly, build a subclass that provides at least writeUser(obj,cb) and initializeUserConfig(cb)
+  Do not use this class directly, build a subclass that provides at least writeUser(obj,cb) and initializeUserConfig(cb)
 
   */
   constructor(...objs) {
@@ -130,7 +130,7 @@ class ConfigController {
     /*
     Read YAML from filename and return via cb(err, res),
     or return error if unable to read or parse.
-    silent: if true then dont report error on failure to read
+    silent: if true then do not report error on failure to read
     */
     fs.readFile(filename, 'utf8', (err, yamlstr) => {
       if (err) {

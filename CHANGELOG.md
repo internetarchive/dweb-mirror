@@ -74,7 +74,7 @@
 * 0.2.48: config.directories fix; hashstores bug; Rachel install; error return from related
 * 0.2.47: install_armbian.sh
 * 0.2.46: install_dev.sh
-* 0.2.45: Handle /includes so dont have to edit less for font directories
+* 0.2.45: Handle /includes so do not have to edit less for font directories
 * 0.2.44: level to v5 (for compatability with node v12)
 * 0.2.43: yarn upgrade, and some Installation instructions
 * 0.2.42: Fix sort handling; Look for disk changes; MDNS on by default; Update dependencies; Installation docs upgrade
@@ -95,7 +95,7 @@
 * 0.2.24: Correct default user config
 * 0.2.23: Update default UserConfig
 * 0.2.22: home page; not stopping server didnt start; better HashStore error handling; simplelist/collection/search_collection; start on /local
-* 0.2.21: USING.md and some bug fixes (with 0.2.20), dont enable IPFS by default
+* 0.2.21: USING.md and some bug fixes (with 0.2.20), do not enable IPFS by default
 * 0.2.20: Installation doc reorganization; better manage http server; support crawl and downloaded fields;
 * 0.2.19: Installer for bookreader
 * 0.2.18: Initialize user config file if not there

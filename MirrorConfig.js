@@ -137,7 +137,7 @@ class MirrorConfig extends ConfigController {
       task = {};
     } else {
       const isDetailsOrMore = CrawlManager._levels.indexOf(task.level) >= CrawlManager._levels.indexOf('details');
-      const isSearch = query || (mediatype === 'collection'); // TODO-UXLOCAL need to catch searches (which dont use regular identifiers)
+      const isSearch = query || (mediatype === 'collection'); // TODO-UXLOCAL need to catch searches (which do not use regular identifiers)
       task.search = task.search || (isDetailsOrMore && isSearch && this.apps.crawl.opts.defaultDetailsSearch);
     }
     return task;

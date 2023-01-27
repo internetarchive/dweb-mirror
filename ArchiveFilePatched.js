@@ -18,9 +18,9 @@ const MirrorFS = require('./MirrorFS');
  * copyDirectory   points at top level of a cache where want a copy
  * relFilePath     path to file or item inside a cache IDENTIFIER/FILENAME
  * noCache         ignore anything in the cache - forces re-fetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
- * noStore         dont store results in cache
+ * noStore         do not store results in cache
  * skipFetchFile   as an argument causes file fetching to be suppressed (used for testing only)
- * skipNet         dont try and use the net for anything
+ * skipNet         do not try and use the net for anything
  * wantStream      Return results as a stream, just like received from the upstream.
  * wantSize        Return the size as a byte-count.
  * copyDirectory   Specify alternate directory to store results in rather than config.directories[0]

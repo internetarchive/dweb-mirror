@@ -119,7 +119,7 @@ and edit `$HOME/dweb-mirror.config.yaml` for now see `configDefaults.yaml` for i
 
   * `directories` if you plan on using places other than any of those in dweb-mirror.config.yaml 
   (/.data/archiveorg, and any USBs on Rachel3+, NOOBS or IIAB)
-  * `archiveui/directories` you probably dont need to change this as it will usually guess right, 
+  * `archiveui/directories` you probably do not need to change this as it will usually guess right, 
   but it points to the “dist” subdirectory of wherever dweb-archive is either cloned or installed by npm install.
   * `apps.crawl` includes a structure that lists what collections are to be installed, 
   I suggest testing and then editing

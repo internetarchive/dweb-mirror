@@ -26,9 +26,9 @@ const MirrorFS = require('./MirrorFS');
  * copyDirectory   points at top level of a cache where want a copy
  * relFilePath     path to file or item inside a cache IDENTIFIER/FILENAME
  * noCache         ignore anything in the cache - forces re-fetching and may cause upstream server to cache it TODO-API check this is not obsoleted by separate read and write skipping
- * noStore         dont store results in cache
+ * noStore         do not store results in cache
  * skipFetchFile   as an argument causes file fetching to be suppressed (used for testing only)
- * skipNet         dont try and use the net for anything
+ * skipNet         do not try and use the net for anything
  * wantStream      Return results as a stream, just like received from the upstream.
  * wantSize        Return the size as a byte-count.
  * copyDirectory   Specify alternate directory to store results in rather than config.directories[0]
@@ -105,7 +105,7 @@ ArchiveItem.prototype.save = function ({ copyDirectory = undefined } = {}, cb) {
       If not already done so, will `fetch_metadata` (but not query, as that may want to be precisely controlled)
   */
   if (!this.identifier) {
-    // Must be a Search so dont try and save files - might save members
+    // Must be a Search so do not try and save files - might save members
     debug('Search so not saving');
     cb(null, this);
   } else {
@@ -144,7 +144,7 @@ ArchiveItem.prototype.saveBookReader = function ({ copyDirectory = undefined } =
       .bookreader -> <IDENTIFIER>.bookreader.json =
   */
   if (!this.identifier) {
-    // Must be a Search so dont try and save files or bookreader - might save members
+    // Must be a Search so do not try and save files or bookreader - might save members
     debug('Search so not saving bookReader');
     cb(null, this);
   } else {
@@ -272,8 +272,8 @@ ArchiveItem.prototype.read_bookreader = function ({ copyDirectory = undefined },
   * More flexible version than dweb-archive.ArchiveItem
   * Monkey patched into dweb-archive.ArchiveItem so that it runs anywhere that dweb-archive attempts to fetch_bookreader
   * opts = {
-  *   noCache             Dont check cache, refetch from server, and store locally
-  *   noStore             Dont store result
+  *   noCache             Do not check cache, refetch from server, and store locally
+  *   noStore             Do not store result
   *   copyDirectory       Where to store result if not default
   * }
   * Alternatives/Strategy:
@@ -607,7 +607,7 @@ ArchiveItem.prototype.fetch_query = function (opts = {}, cb) {
       // Expand the membersSearch if necessary and possible locally, errors are ignored
       // unexpanded members typically come from either a direct req from client to server for identifier:...
       // Note this does not obey noCache, consumer should.
-      // Dont pass errors back, its ok not to read, or not to expand
+      // Do not pass errors back, its ok not to read, or not to expand
       _parse_common(namepart, part, { copyDirectory }, (err, arrObj) => {
         if (err) {
           this.membersSearch = [];
@@ -764,7 +764,7 @@ ArchiveItem.prototype.saveThumbnail = function ({
           // Exits, allowing recursable to recurse with next iteration
         } else { // Completed loop
           // cb will be set except in the case of wantStream in which case will have been called with first stream
-          if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and dont want a race condition
+          if (cb) cb(null, self); // Important to cb only after saving, since other file saving might check its SHA and do not want a race condition
         }
       };
       recursable(null, null);
@@ -898,7 +898,7 @@ ArchiveItem.addCrawlInfoRelated = function (rels, { copyDirectory, config = unde
           } else {
             Object.assign(hit._source.downloaded, ai.downloaded);
           }
-          cb1(null); // Dont pass on error
+          cb1(null); // Do not pass on error
         });
       }, cb2),
   ], cb);
@@ -936,7 +936,7 @@ ArchiveItem.prototype.addDownloadedInfoFiles = function ({ copyDirectory }, cb) 
   ], unusedErr => {
     // Done Report error because it could just be because have not downloaded files info via metadata API,
     // if (err) debug("Failure in addDownloadedInfoFiles for %s %O", this.identifier, err);
-    // Also dont block
+    // Also do not block
     cb(null, this); // AI is needed for callback in addDownloadedInfoMembers
   });
 };
@@ -956,7 +956,7 @@ ArchiveItem.prototype.pageQuantizedScale = function (idealScale) {
  * @parm fetchPageOpts {copyDirectory, wantSize, skipNet ...} // Any parms for fetchPage other than in manifestPage (override manifest)
  *  idealWidth if present is used to calculate the optimum quantized scale (next larger file)
  *  scale if present is quantized
- *    currently dont have a use case with both idealWidth and scale specified so undefined which will dominate.
+ *    currently do not have a use case with both idealWidth and scale specified so undefined which will dominate.
  * @returns { parameters for fetch_page }
  */
 ArchiveItem.prototype.pageParms = function (pageManifest, fetchPageOpts) {
@@ -978,7 +978,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
   // cb(err)
   this.fetch_metadata({ skipNet: true, copyDirectory }, (err, ai) => {
     if (err || !ai || !ai.metadata || (ai.metadata.mediatype !== 'texts') || (this.subtype() !== 'bookreader')) {
-      cb(null); // Not a book - dont consider when checking if downloaded
+      cb(null); // Not a book - do not consider when checking if downloaded
     } else {
       this.fetch_bookreader({ copyDirectory, skipNet: true }, (err1, unusedAi) => {
         if (err1 || !ai.bookreader) {
@@ -996,7 +996,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
               }, (err, res) => {
                 cover_t_size = res;
                 cb1(err, res);
-              }), // TODO Dont currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
+              }), // TODO Do not currently store the cover_t size/downloaded, its minor discrepancy since usually smaller and wont have full download without it anyway
               cb1 => each(
                 [].concat(...this.bookreader.brOptions.data),
                 (pageManifest, cb2) => {
@@ -1035,7 +1035,7 @@ ArchiveItem.prototype.addDownloadedInfoPages = function ({ copyDirectory = undef
 ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = undefined }, cb) {
   // Add data to all members - which can be done in parallel
   each((this.membersFav || []).concat(this.membersSearch || []),
-    // On each member, just adding info on files and pages, as dont want to recurse down (and possibly loop) on members that are collections
+    // On each member, just adding info on files and pages, as do not want to recurse down (and possibly loop) on members that are collections
     (member, cb1) => {
       const ai = new ArchiveItem({ identifier: member.identifier });
       waterfall([
@@ -1057,7 +1057,7 @@ ArchiveItem.prototype.addDownloadedInfoToMembers = function ({ copyDirectory = u
           }
           cb3(null);
         })
-      ], (err, res) => cb1(null)); // ignore error just dont add any downloaded field (e.g. if no metadata)
+      ], (err, res) => cb1(null)); // ignore error just do not add any downloaded field (e.g. if no metadata)
     },
     cb);
 };
@@ -1133,7 +1133,7 @@ ArchiveItem.prototype.addCrawlInfoMembers = function ({ config, copyDirectory = 
   }
   // Add data to all members - which can be done in parallel
   each((this.membersFav || []).concat(this.membersSearch || []),
-    // On each member, just adding info on files, as dont want to recurse down (and possibly loop) on members that are collections
+    // On each member, just adding info on files, as do not want to recurse down (and possibly loop) on members that are collections
     (member, cb1) => member.addCrawlInfo({ config, copyDirectory }, cb1),
     cb);
 };
@@ -1188,7 +1188,7 @@ ArchiveItem.prototype.addMagnetLink = function ({ copyDirectory = undefined } = 
         } else {
           this.magnetlink = dwebMagnetLinkFrom({ dwebTorrentUrl, archiveBuffer: buffer });
         }
-        cb(); // Dont pass error up, as failure to add Magnet isn't fatal
+        cb(); // Do not pass error up, as failure to add Magnet isn't fatal
       });
     } else { // No torrent file
       cb();

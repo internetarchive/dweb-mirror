@@ -144,7 +144,7 @@ else # Its darwin (Mac OSX)
   source ~/.bashrc # Fix up path
 fi
 
-# Previously used, but dont believe need now that not installing as many dependencies.
+# Previously used, but do not believe need now that not installing as many dependencies.
 # yarn global add node-pre-gyp
 # [ -d node_modules/cmake ] || [ -d /usr/local/share/.config/yarn/global/node_modules/cmake/ ] || sudo yarn global add cmake
 
@@ -182,7 +182,7 @@ then
   yarn install
   yarn upgrade
 else
-  # Not previously installed, install, but dont upgrade as it wastes time
+  # Not previously installed, install, but do not upgrade as it wastes time
   yarn add @internetarchive/dweb-mirror
   yarn install
 fi
@@ -214,7 +214,7 @@ then
   sudo chown -R www-data:www-data /var/www/modules/en-internet_archive
 fi
 
-# Dont try it on OSX, IIAB doesnt uses this installer,
+# Do not try it on OSX, IIAB doesnt uses this installer,
 # Tested on raw RPI, RPI+Rachel; armbian/orangepi not needed on RPI+IIAB which uses own installer;
 if [ "${PLATFORM}" = "rachel" -o "${OPERATINGSYSTEM}" = "raspbian" -o "${OPERATINGSYSTEM}" = "armbian" ]
 then

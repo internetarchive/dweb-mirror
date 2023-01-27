@@ -104,7 +104,7 @@ else
         cp ${IPFS_STARTSCRIPT} /usr/local/bin/start_ipfs
         echo "Start ipfs with: start_ipfs daemon"
     else
-        # If you need any config changes on existing packages and dont have start_ipfs they can go here
+        # If you need any config changes on existing packages and do not have start_ipfs they can go here
         ipfs config --json Experimental.FilestoreEnabled true
     fi
 fi

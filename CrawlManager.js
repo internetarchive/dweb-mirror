@@ -246,7 +246,7 @@ class CrawlManager {
     this.errors.forEach(e => debug('ERR:%o %s %o %o %s',
       e.task.parent.concat(e.task.debugname), e.task.level, e.task.search || '', e.task.related || '', e.error.message));
     const drainedCb = this.drainedCb;
-    if (this.callbackDrainOnce) { this.drainedCb = undefined; this.callbackDrainOnce = undefined; } // Dont call it if restarted
+    if (this.callbackDrainOnce) { this.drainedCb = undefined; this.callbackDrainOnce = undefined; } // Do not call it if restarted
     if (drainedCb) drainedCb();
   }
 
@@ -705,7 +705,7 @@ class CrawlItem extends Crawlable {
             cb3(null, this.item);
           }
         },
-        (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
+        (unused, cb4) => { // parameter Could be archiveItem or archiveSearchMember so do not use it
           // Find the minimum set of files and push to queue
           const asParent = this.asParent();
           if (this.identifier) { // (but only on items, not on searches)
@@ -724,7 +724,7 @@ class CrawlItem extends Crawlable {
             cb4a();
           }
         },
-        (cb5) => { // parameter Could be archiveItem or archiveSearchMember so dont use it
+        (cb5) => { // parameter Could be archiveItem or archiveSearchMember so do not use it
           // Get the related items
           if (this.identifier && (['details', 'all'].includes(this.level) || this.related)) {
             const taskparms = this.related || crawlmanager.defaultDetailsRelated;

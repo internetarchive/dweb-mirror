@@ -4,10 +4,10 @@ Please always feel free to ask questions on the
 [dweb-mirror repo](https://github.com/internetarchive/dweb-mirror). 
 
 #### Index
-1. How to connect to a RPI when dont have ethernet
+1. How to connect to a RPI when do not have ethernet
 
 
-#### 1. How to connect to a RPI when dont have ethernet
+#### 1. How to connect to a RPI when do not have ethernet
 
 A common scenario, you've got your RPI, and your laptop, 
 and a cellphone with data (or a WiFi at your accomodation),
