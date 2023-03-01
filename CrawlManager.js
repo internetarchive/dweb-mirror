@@ -141,7 +141,7 @@ class CrawlManager {
           task.process(this, (err) => {
             this.completed++;
             if (err) this.errors.push({ task, error: err, date: (new Date(Date.now()).toISOString()) });
-            // cb(err); // I'm seeign the crawler freeze and seems to be after an error so trying without passing error back up.
+            // cb(err); // I'm seeing the crawler freeze and seems to be after an error so trying without passing error back up.
             cb();
           }); // Task should be an instance of a class with a process method
         }
@@ -196,7 +196,7 @@ class CrawlManager {
   }
 
   /**
-   * Set any of the attributes, doing sme minimal preprocesssing first
+   * Set any of the attributes, doing some minimal preprocesssing first
    */
   setopts(opts = {}) {
     Object.entries(opts).forEach(kv => this[kv[0]] = kv[1]);

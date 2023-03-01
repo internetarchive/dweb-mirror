@@ -5,6 +5,8 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.94
+  * Move to latest dweb-archivecontroller 0.2.16 with fix for elasticsearch error messages see issue#364
 * 0.2.93
   * Remove or Upgrade a bunch of dependencies to current versions - see #issue374 for outstanding
 * 0.2.92
