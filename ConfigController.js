@@ -183,7 +183,7 @@ class ConfigController {
   static writeYaml(filename, obj, cb) {
     // Write yaml version of an object to a file
     try {
-      const y = yaml.safeDump(obj);
+      const y = yaml.dump(obj);
       fs.writeFile(filename, y, { encoding: 'utf8' }, (err) => {
         if (err) { debug('Unable to write yaml to %s: %s', filename, err.message); }
         cb(err);
