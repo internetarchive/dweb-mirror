@@ -5,6 +5,8 @@
 (See [dweb-mirror/issues](https://github.com/internetarchive/dweb-mirror/issues) for more detail)
 
 ## Release 0.2.x
+* 0.2.96
+  * depend on readable-stream-clone from nodejs not my fork 
 * 0.2.95
   * yaml.safeDump -> yaml.dump
 * 0.2.94
