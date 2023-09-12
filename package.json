@@ -22,14 +22,14 @@
     "getopts": "^2.3.0",
     "glob": "^8.1.0",
     "js-yaml": "^4.1.0",
-    "level": "^5.0.1",
+    "level": "^8.0.0",
     "morgan": "^1.10.0",
     "multicast-dns": "^7.2.5",
     "multihashes": "^4.0.3",
     "network-address": "^1.1.2",
     "prettier-bytes": "^1.0.4",
     "readable-stream-clone": "^0.0.7",
-    "sharp": "^0.31.2"
+    "sharp": "^0.32.5"
   },
   "description": "Javascript library for Internet Archive Decentralized Web project: Transport",
   "devDependencies": {
