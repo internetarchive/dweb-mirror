@@ -1,16 +1,10 @@
-name: CICD
 on: push
 jobs:
   cicd:
-    runs-on: ubuntu-latest
-    permissions: { contents: read, packages: write, id-token: write }
-    steps:
-      # https://github.com/internetarchive/cicd
-      - uses: internetarchive/cicd@v1
-        with:
-          BASE_DOMAIN: 'dev.archive.org'
-          NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
-          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NOMAD_VAR_HOSTNAMES: '["www-dweb-mirror.dev.archive.org"]'
-          NOMAD_VAR_CHECK_PROTOCOL: 'tcp'
-          NOMAD_VAR_PORTS: '{ 4244 = "http"}'
+    uses: internetarchive/cicd/.github/workflows/cicd.yml@main
+    with:
+      NOMAD_VAR_HOSTNAMES: '["www-dweb-mirror.dev.archive.org"]'
+      NOMAD_VAR_CHECK_PROTOCOL: 'tcp'
+      NOMAD_VAR_PORTS: '{ 4244 = "http"}'
+    secrets:
+      NOMAD_TOKEN: ${{ secrets.NOMAD_TOKEN }}
